@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-24 -- Betting data-flow diagram rebuilt
+
+- **Docs** `docs/diagrams/betting-data-flow.*` and `site/diagram/` rebuilt and re-pinned to the current master; `--check` is OK again.
+
 ## 2026-10-22 -- `betting-logic-review` frontmatter parses as YAML
 
 - **Fix** `skills/betting-logic-review/SKILL.md`: the `argument-hint` value is now quoted. Unquoted, a value
