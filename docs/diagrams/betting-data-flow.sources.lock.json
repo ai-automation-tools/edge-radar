@@ -1,5 +1,5 @@
 {
-  "revision": "8daeb154963e7b49cfb56185fc39c4f7d0ee4000",
+  "revision": "2d131f9646e86d28ff3056479eb7dcb6f3e54f5e",
   "files": {
     "scripts/kalshi/edge_detector.py": "fce2c542791a56d909df2c9d94df02885ed683fa",
     "scripts/kalshi/kalshi_client.py": "91721b96e8395cac37996ef766ab640a3b3928fb",
