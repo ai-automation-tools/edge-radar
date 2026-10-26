@@ -28,6 +28,9 @@ Live window since 09-28: 51 settled, −25.4% ROI, 19 wins against 24.3 model / 
   Pricing was never affected, since the model reads `floor_strike`. NO spread labels now name
   the other side of the line (`UTA +1.5`, not `Boston +2.5`). Team names now resolve within
   the ticker's own sport, so NFL `DAL` no longer shows as "Mavs".
+- **Diagram** re-pinned to `b8a384b`. The `edge_detector.py` ranges moved by +12/+29 lines, and
+  the "Fair probability" node's spread range now covers the new quoted-line guard. This also
+  clears the earlier un-rebuilt JSON drift.
 
 ## 2026-10-26 -- README gate table and filter counts match the code
 
