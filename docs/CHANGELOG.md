@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-10-26 -- README gate table and filter counts match the code
+
+- **Docs** `README.md`: the risk-gate table listed 13 gates with old defaults (a $0.06 price floor among
+  them). It now lists all 21 gates from the `AGENTS.md` gate table, without hard-coded thresholds; the
+  defaults stay in `AGENTS.md`. Badge and intro say 21 gates.
+- **Docs** Filter counts across `README.md` (27), `site/index.html` (30), `AGENTS.md` (30),
+  `SCRIPTS_REFERENCE.md` and `ARCHITECTURE.md` (27) now say 31: the game entries in
+  `edge_detector.FILTER_SHORTCUTS` (39 keys, 8 of them futures). Flagged by Org Upkeep.
+
 ## 2026-10-22 -- `betting-logic-review` frontmatter parses as YAML
 
 - **Fix** `skills/betting-logic-review/SKILL.md`: the `argument-hint` value is now quoted. Unquoted, a value

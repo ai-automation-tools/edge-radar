@@ -55,7 +55,7 @@ flowchart LR
 
     subgraph SPORTS ["🏀 Sports"]
         S1["edge_detector.py\nkalshi/"]
-        S1D["NBA · NHL · MLB · NFL\nNCAA · MLS · UFC · F1\n27 sport filters"]
+        S1D["NBA · NHL · MLB · NFL\nNCAA · MLS · UFC · F1\n31 sport filters"]
     end
 
     subgraph FUTURES ["🏆 Futures"]
