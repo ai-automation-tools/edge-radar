@@ -24,7 +24,6 @@ from daily_summary import (
     rolling_7d_context,
 )
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 NOW = datetime(2026, 4, 30, 20, 0, tzinfo=timezone.utc)  # 12 PM PST Apr 30
@@ -572,3 +571,37 @@ class TestPostKickoffInReport:
     def test_clean_day_says_nothing(self):
         out = build_report(NOW, 24, settlements=[], trades=[_late(-60)], balance=100.0)
         assert "AFTER kickoff" not in out
+
+
+class TestOneSidedSeries:
+    """2026-10-26 review #6: flag a series bet one way that loses to its own model."""
+
+    NOW = datetime(2026, 10, 26, 12, tzinfo=timezone.utc)
+
+    def _rows(self, prefix, n, wins, fv=0.3, side="yes"):
+        return [
+            {
+                "ticker": f"{prefix}-26OCT20AAABBB-AAA3",
+                "category": "spread",
+                "side": side,
+                "won": i < wins,
+                "fair_value": fv,
+                "market_price_at_entry": 0.18,
+                "contracts": 5,
+                "settled_at": (self.NOW - timedelta(days=3)).isoformat(),
+            }
+            for i in range(n)
+        ]
+
+    def test_flags_one_sided_underperformer(self):
+        from daily_summary import load_one_sided_series
+
+        out = load_one_sided_series(self._rows("KXNHLSPREAD", 12, 0), self.NOW, floors={})
+        assert [r["series"] for r in out] == ["KXNHLSPREAD"]
+
+    def test_quiet_when_on_model_or_switched_off(self):
+        from daily_summary import load_one_sided_series
+
+        assert load_one_sided_series(self._rows("KXNHLSPREAD", 12, 4), self.NOW, floors={}) == []
+        off = {"nhl_spread": 1.0}
+        assert load_one_sided_series(self._rows("KXNHLSPREAD", 12, 0), self.NOW, floors=off) == []

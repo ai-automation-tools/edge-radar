@@ -146,6 +146,8 @@ _KALSHI_ALIASES = {
 for alias, name in _KALSHI_ALIASES.items():
     TEAM_NAMES.setdefault(alias, name)
 
+_SPORT_TEAM_MAPS = {"mlb": MLB_TEAMS, "nba": NBA_TEAMS, "nhl": NHL_TEAMS}
+
 
 def _resolve_team_abbr(abbr: str, ticker: str = "") -> str:
     """Map a Kalshi team abbreviation to a display name.
@@ -156,6 +158,15 @@ def _resolve_team_abbr(abbr: str, ticker: str = "") -> str:
     """
     if ticker.startswith("KXWC"):
         return abbr
+    # Abbreviations collide across leagues (DAL = Mavs/Stars, WAS = Wizards,
+    # MTL = Canadiens), so resolve within the ticker's own sport. Sports with no
+    # map of their own (NFL, MLS, college) get MLB's plain city names or the raw
+    # code -- never another league's nickname. (2026-10-26 review #5.)
+    sport_map = _SPORT_TEAM_MAPS.get(_detect_sport(ticker))
+    if sport_map is not None:
+        return sport_map.get(abbr) or _KALSHI_ALIASES.get(abbr, abbr)
+    if ticker:
+        return MLB_TEAMS.get(abbr, abbr)
     return TEAM_NAMES.get(abbr, abbr)
 
 
@@ -313,8 +324,10 @@ def format_pick_label(ticker: str, title: str, side: str, category: str) -> str:
         if team and number:
             if side_upper == "YES":
                 return f"{team} -{number}"
-            else:
-                return f"{team} +{number}"
+            # NO on "team wins by over N" is the OTHER side of the same line:
+            # opponent +N. "team +N" was a different bet entirely.
+            opponent = _spread_opponent(ticker)
+            return f"{opponent} +{number}" if opponent else f"Not {team} -{number}"
         if team:
             return f"{team} covers" if side_upper == "YES" else f"{team} misses"
         return "Covers" if side_upper == "YES" else "Doesn't cover"
@@ -326,30 +339,55 @@ def format_pick_label(ticker: str, title: str, side: str, category: str) -> str:
 def _extract_strike_from_ticker(ticker: str, category: str):
     """Extract strike info from the ticker suffix.
 
-    Total tickers:  KXNBATOTAL-26APR02NOPPOR-247  -> "247.5" (adds .5)
-    Spread tickers: KXNBASPREAD-26APR02NOPPOR-POR7 -> ("Portland", "7.5")
+    The suffix integer N means "over N - 0.5" (MIA4 = "wins by over 3.5",
+    total -6 = "Over 5.5"), per the market titles. This used to print N + 0.5,
+    one point off on every label; the model reads `floor_strike` and was never
+    affected. (2026-10-26 review #3.)
+
+    Total tickers:  KXNBATOTAL-26APR02NOPPOR-247  -> "246.5"
+    Spread tickers: KXNBASPREAD-26APR02NOPPOR-POR7 -> ("Blazers", "6.5")
     """
     if "-" not in ticker:
         return None
     suffix = ticker.rsplit("-", 1)[-1]
 
     if category == "total":
-        # Suffix is just the integer part of the strike, e.g. "247" -> 247.5
         m = re.match(r"^[OoUu]?(\d+)$", suffix)
         if m:
-            return f"{m.group(1)}.5"
+            return f"{int(m.group(1)) - 1}.5"
         return None
 
     if category == "spread":
-        # Suffix is team abbreviation + integer, e.g. "POR7" -> Portland, 7.5
         m = re.match(r"^([A-Z]+?)(\d+)$", suffix)
         if m:
             team_abbr = m.group(1)
             team_name = _resolve_team_abbr(team_abbr, ticker)
-            return (team_name, f"{m.group(2)}.5")
+            return (team_name, f"{int(m.group(2)) - 1}.5")
         return None
 
     return None
+
+
+def _spread_opponent(ticker: str) -> str:
+    """Name the team on the other side of a spread ticker, or "" if unknown.
+
+    KXNFLSPREAD-26OCT25MIANYJ-MIA4 -> "NYJ" (the matchup minus the pick).
+    """
+    parts = ticker.split("-")
+    if len(parts) < 3:
+        return ""
+    m = re.match(r"^([A-Z]+?)\d+$", parts[-1])
+    teams = re.sub(r"^\d{2}[A-Z]{3}\d{2}(\d{4})?", "", parts[-2])
+    if not m or not teams:
+        return ""
+    pick = m.group(1)
+    if teams.startswith(pick):
+        other = teams[len(pick) :]
+    elif teams.endswith(pick):
+        other = teams[: -len(pick)]
+    else:
+        return ""
+    return _resolve_team_abbr(other, ticker) if other else ""
 
 
 def _extract_number_from_title(title: str) -> str:
@@ -479,8 +517,8 @@ def parse_matchup(ticker: str) -> str:
     if not home:
         return ""
 
-    away_name = TEAM_NAMES.get(away, away)
-    home_name = TEAM_NAMES.get(home, home)
+    away_name = _resolve_team_abbr(away, ticker)
+    home_name = _resolve_team_abbr(home, ticker)
     return f"{away_name} @ {home_name}"
 
 

@@ -855,6 +855,18 @@ def load_calibration_stdevs():
     )
 
 
+# Sports whose margin is a few discrete goals/runs: a normal CDF is only trusted
+# at a line the books quote, never extrapolated past it (see consensus_spread_prob).
+_DISCRETE_MARGIN_SPORTS = frozenset({"icehockey_nhl", "baseball_mlb", "soccer"})
+
+
+def _sport_for_ticker(ticker: str) -> str | None:
+    for prefix, sport in _PREFIX_TO_SPORT.items():
+        if ticker.startswith(prefix):
+            return sport
+    return None
+
+
 def _get_margin_stdev(ticker: str) -> float:
     """Look up the score margin standard deviation for a ticker's sport."""
     load_calibration_stdevs()
@@ -979,6 +991,23 @@ def consensus_spread_prob(
     # Kept for display/logging only; no longer feed the model.
     median_spread = weighted_median([s["spread"] for s in spread_data], sd_weights)
     median_implied = weighted_median([s["implied"] for s in spread_data], sd_weights)
+
+    # Discrete low-scoring sports: price only a strike some book actually
+    # quotes. Books hang one line (+/-1.5); Kalshi lists 2.5, 3.5, ... and a
+    # normal tail extrapolated past the quote ignores the mass that goals and
+    # runs pile at +/-1. Over 91 settled YES alt-spreads (MLB/NHL/WC/MLS) that
+    # extrapolation expected 21.3 wins; the market priced 14.6; 14 came in.
+    # (2026-10-26 betting-logic review #1.)
+    if _sport_for_ticker(ticker) in _DISCRETE_MARGIN_SPORTS and not any(
+        abs(strike + s["spread"]) < 0.5 for s in spread_data
+    ):
+        log.debug(
+            "consensus_spread_prob: %s strike %.1f is not a quoted line %s -- no edge",
+            ticker,
+            strike,
+            sorted({s["spread"] for s in spread_data}),
+        )
+        return None
 
     # Now calculate P(margin > strike)
     adjusted_prob = 1.0 - norm.cdf(strike, loc=mean_margin, scale=stdev)

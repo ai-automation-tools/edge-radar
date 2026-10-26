@@ -21,7 +21,6 @@ from ticker_display import (
 )
 from opportunity import Opportunity
 
-
 # ── _split_team_codes ────────────────────────────────────────────────────────
 
 
@@ -124,7 +123,39 @@ class TestParsePickTeam:
         # Spread label path (_extract_strike_from_ticker) had the same collision.
         label = format_pick_label("KXWCSPREAD-26JUN27COLPAR-COL2", "", "yes", "spread")
         assert "Colorado" not in label
-        assert label == "COL -2.5"
+        assert label == "COL -1.5"
+
+
+class TestPickLabelStrikes:
+    """2026-10-26 review #3-5: labels must match the Kalshi title's line."""
+
+    def test_spread_suffix_is_over_n_minus_half(self):
+        # Title: "Miami wins by over 3.5 points?"
+        t = "KXNFLSPREAD-26OCT25MIANYJ-MIA4"
+        assert format_pick_label(t, "", "yes", "spread") == "Miami -3.5"
+
+    def test_total_suffix_is_over_n_minus_half(self):
+        # Title: "Full Game: Over 6.5 goals scored"
+        assert format_pick_label("KXNHLTOTAL-26OCT15PHIDET-7", "", "yes", "total") == "Over 6.5"
+        assert format_pick_label("KXNHLTOTAL-26OCT15PHIDET-7", "", "no", "total") == "Under 6.5"
+
+    def test_no_spread_names_the_opponent(self):
+        # NO on "Boston wins by over 1.5" is Utah +1.5, not "Bruins +2.5".
+        assert format_pick_label("KXNHLSPREAD-26OCT08UTABOS-BOS2", "", "no", "spread") == "UTA +1.5"
+        assert (
+            format_pick_label("KXNFLSPREAD-26OCT08TBDAL-DAL3", "", "no", "spread")
+            == "Tampa Bay +2.5"
+        )
+
+    def test_team_names_stay_in_their_sport(self):
+        assert format_pick_label("KXNFLSPREAD-26OCT19WASSF-WAS4", "", "yes", "spread") == "WAS -3.5"
+        assert (
+            format_pick_label("KXNHLSPREAD-26OCT24BUFWSH-BUF3", "", "yes", "spread")
+            == "Sabres -2.5"
+        )
+        assert (
+            format_pick_label("KXMLSSPREAD-26OCT10TORMTL-MTL2", "", "yes", "spread") == "MTL -1.5"
+        )
 
 
 # ── format_bet_label ─────────────────────────────────────────────────────────
