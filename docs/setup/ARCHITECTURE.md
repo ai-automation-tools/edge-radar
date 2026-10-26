@@ -404,7 +404,7 @@ Edge-Radar/
 │   ├── kalshi/                        # Kalshi domain guides (grouped)
 │   │   ├── kalshi-futures-betting/    # Championship futures guide
 │   │   ├── kalshi-prediction-betting/ # Crypto, weather, S&P guides
-│   │   └── kalshi-sports-betting/     # 27 sport filters, MLB filtering, sports guide
+│   │   └── kalshi-sports-betting/     # 31 sport filters, MLB filtering, sports guide
 │   ├── ROADMAP.md                     # Enhancement roadmap (docs root)
 │   ├── scripts/                       # Per-script detailed docs
 │   ├── setup/                         # SETUP_GUIDE.md, AUTOMATION_GUIDE.md, mcp-servers.md

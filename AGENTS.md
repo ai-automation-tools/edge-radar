@@ -19,7 +19,7 @@
 
 | Domain | Coverage | Data Sources |
 |:-------|:---------|:-------------|
-| **Sports betting** | NBA, NHL, MLB, NFL, NCAA, MLS, soccer, UFC, boxing, F1, NASCAR, PGA, IPL, Wimbledon tennis, esports (30 filters). **World Cup (F3) is OFF; NFL and NCAAF are both on a 0.06 pilot floor (S1b/S21c, lowered from 0.08 on 2026-09-19)** | The Odds API, ESPN, NHL/MLB Stats, NWS |
+| **Sports betting** | NBA, NHL, MLB, NFL, NCAA, MLS, soccer, UFC, boxing, F1, NASCAR, PGA, IPL, Wimbledon tennis, esports (31 game filters, 8 futures). **World Cup (F3) is OFF; NFL and NCAAF are both on a 0.06 pilot floor (S1b/S21c, lowered from 0.08 on 2026-09-19)** | The Odds API, ESPN, NHL/MLB Stats, NWS |
 | **Prediction markets** | Crypto (BTC, ETH, XRP, DOGE, SOL), weather (13 cities), S&P 500 | CoinGecko, Yahoo Finance, NWS |
 | **Championship futures** | NFL, NBA, NHL, MLB, PGA | Sportsbook futures odds |
 | **Execution pipeline** | Unified scan → risk-check → size → execute | Kalshi API (RSA-signed) |

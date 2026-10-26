@@ -25,16 +25,16 @@
 <p align="center">
   <a href="https://kalshi.com"><img src="https://img.shields.io/badge/Kalshi-Live_Trading-e74c3c?style=for-the-badge" alt="Kalshi Live Trading"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.11+-2ea44f?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+"></a>
-  <a href="#-markets"><img src="https://img.shields.io/badge/markets-27_Sports-0078D4?style=for-the-badge" alt="Markets: 27 Sports"></a>
+  <a href="#-markets"><img src="https://img.shields.io/badge/markets-31_Sport_Filters-0078D4?style=for-the-badge" alt="Markets: 31 sport filters"></a>
 </p>
 
 <p align="center">
-  <a href="#-risk--position-sizing"><img src="https://img.shields.io/badge/risk-13_Gates_·_Kelly-e74c3c?style=flat-square" alt="Risk: 13 Gates + Kelly"></a>
+  <a href="#-risk--position-sizing"><img src="https://img.shields.io/badge/risk-21_Gates_·_Kelly-e74c3c?style=flat-square" alt="Risk: 21 Gates + Kelly"></a>
   <a href="#-data-sources"><img src="https://img.shields.io/badge/APIs-9_Free_·_Kalshi-F97316?style=flat-square" alt="APIs: 9 Free + Kalshi"></a>
   <a href="https://claude.ai/claude-code"><img src="https://img.shields.io/badge/Claude_Code-slash_commands-8B5CF6?style=flat-square" alt="Claude Code slash commands"></a>
 </p>
 
-> **Scans thousands of Kalshi markets, cross-references 12 sportsbooks and free data APIs, prices fair value with a normal-CDF model, and executes Kelly-sized limit orders** — every bet cleared through 13 risk gates and logged with fill-accurate accounting for closing-line-value tracking.
+> **Scans thousands of Kalshi markets, cross-references 12 sportsbooks and free data APIs, prices fair value with a normal-CDF model, and executes Kelly-sized limit orders** — every bet cleared through 21 risk gates and logged with fill-accurate accounting for closing-line-value tracking.
 
 ---
 
@@ -42,7 +42,7 @@
 
 | Category | Coverage | Data sources |
 |:---------|:---------|:-------------|
-| 🏟️ **Sports betting** | NFL, NBA, MLB, NHL, NCAAB/NCAAF, UFC, soccer/MLS, F1, NASCAR, PGA, IPL, esports — 27 filters across 18 sports | The Odds API (12 sportsbooks), ESPN, NHL/MLB Stats, NWS |
+| 🏟️ **Sports betting** | NFL, NBA, MLB, NHL, NCAAB/NCAAF, UFC, soccer/MLS, F1, NASCAR, PGA, IPL, esports: 31 game filters, plus 8 futures filters | The Odds API (12 sportsbooks), ESPN, NHL/MLB Stats, NWS |
 | 🏆 **Championship futures** | Super Bowl, NBA Finals, Stanley Cup, World Series, PGA Tour — priced with N-way de-vig | Sportsbook outright odds |
 | 📈 **Prediction markets** | Crypto (BTC, ETH, XRP, SOL, DOGE), S&P 500 + VIX, weather (13 cities), politics | CoinGecko, Yahoo Finance, NWS |
 
@@ -61,25 +61,33 @@ Fair value is a sport-specific normal-CDF model over a weighted-median consensus
 
 ## 🚦 Risk & Position Sizing
 
-### 13 Risk Gates
+### 21 Risk Gates
 
-Every order must clear gates 1-7 (including 3.5, 4.5, 4.6, 4.7). Gates 8-9 cap sizing instead of rejecting.
+Every order runs the gates in order. Gates 2b, 8 and 9 trim the size; every other gate rejects. The thresholds live in `.env`, and the defaults are in the [`AGENTS.md`](AGENTS.md) gate table.
 
 | # | Gate | Action |
 |:-:|:-----|:-------|
-| 1 | Daily loss limit | Reject at -$250 |
-| 2 | Position count | Reject at 50 open |
-| 3 | Edge threshold | Reject below floor (3% global; 4% MLB/NBA/NCAAB) |
-| 3.5 | Market price floor | Reject bets priced below `MIN_MARKET_PRICE` (default $0.06 — lottery-ticket filter) |
-| 4 | Composite score | Reject below 6.0/10 |
-| 4.5 | Min confidence | Reject below `MIN_CONFIDENCE` (default medium) |
-| 4.6 | NO-side favorite | Reject NO bets <25¢ unless edge ≥25% AND confidence=high |
-| 4.7 | Prediction-market safety | Reject crypto/weather/spx/mentions/companies/politics unless `ALLOW_PREDICTION_BETS=true` (R25) |
-| 5 | Duplicate check | Reject same market |
-| 6 | Per-event cap | Reject at 2/game |
-| 7 | Series dedup | Reject same matchup bet within window (MLB/NHL 72h, others 48h; per-sport via `SERIES_DEDUP_HOURS_<SPORT>`) |
-| 8 | Bet size cap | Cap at $100 |
-| 9 | Bet ratio cap | Cap at 3x batch median |
+| 1 | Daily loss limit | Reject |
+| 2 | Open position count | Reject |
+| 2b | Total and per-sport open exposure, as a fraction of equity | Reject + cap |
+| 3 | Edge threshold, per sport or global, **plus the exchange fee** | Reject |
+| 3.05 | Claimed edge above `MAX_EDGE` (a model or matching bug) | Reject |
+| 3.5 | Market price floor (lottery-ticket filter) | Reject |
+| 3.55 | Market price ceiling (cost/payout ratio) | Reject |
+| 3.6 | Bid/ask spread and 24h volume (liquidity) | Reject |
+| 3.7 | Days to event, game markets only (futures exempt) | Reject |
+| 4 | Composite score | Reject |
+| 4.5 | Minimum confidence | Reject |
+| 4.6 | Cheap NO bets need high edge and high confidence | Reject |
+| 4.6b | Edge floor on every NO bet | Reject |
+| 4.7 | Prediction categories (crypto, weather, SPX, mentions, companies, politics) off unless `ALLOW_PREDICTION_BETS=true` | Reject |
+| 4.8 | Games already in progress off unless `ALLOW_LIVE_BETS=true` | Reject |
+| 5 | Already holding this market | Reject |
+| 6 | Per-event cap | Reject |
+| 6b | Opposing side already held or resting on the game (futures exempt) | Reject |
+| 7 | Same matchup bet within the series-dedup window | Reject |
+| 8 | Bet size cap | Cap |
+| 9 | Bet ratio cap against the batch median | Cap |
 
 <sub>All limits configurable via <code>.env</code>. Every gate traces to a documented calibration finding — the per-rule history (why the price floor, the NO-side guard, the per-sport edge floors, one-way confidence bumps, and the prediction-market block exist) lives in <a href="docs/setup/ARCHITECTURE.md">Architecture → Risk Management</a>.</sub>
 
