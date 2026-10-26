@@ -449,6 +449,13 @@ Standing rules — do not reverse them without new settled evidence.
   gates only; portfolio gates still reject an `ok` row as before.
   *CHANGELOG 2026-09-19.*
 
+- **Discrete-margin sports are priced only at a line a book quotes.** For NHL, MLB and soccer,
+  `consensus_spread_prob` returns no edge on a strike more than 0.5 from every book's own line.
+  Extrapolating a normal tail from ±1.5 to Kalshi's 2.5/3.5 is what produced the one-sided YES
+  books behind the WC, MLB and MLS switch-offs: 91 bets, 14 wins against 21.3 model / 14.6 market.
+  **Do not widen the tolerance without a discrete (Skellam/Poisson) margin model behind it.**
+  The digest's one-sided-series alarm watches for the next sport. *CHANGELOG 2026-10-26.*
+
 - **No correlation guard exists, deliberately.** It was measured and rejected: the naive pooled rho of +0.181 is Simpson's paradox, and judged against per-stratum base rates it is +0.048 overall and −0.187 for totals. Re-run `scripts/backtest/correlation_check.py` as settlements accumulate — this is "no evidence of correlation", not proof of independence. *CHANGELOG 2026-07-27 (C11b).*
 
 ### Scoring & confidence rules
@@ -530,7 +537,7 @@ Standing rules — do not reverse them without new settled evidence.
 
 ## Risk Limits
 
-Code defaults below. The live `.env` overrides several (equity ≈ **$121.83** — **$88.06 cash + $33.77 in positions**, verified 2026-08-27 after two operator deposits totalling **$40**; historical entries below quote the ~$92 it stood at, so the shipped defaults are sized for a much larger account. **The cash figure is the sum across exchange shards** — $73.07 on shard 0, $15.00 on shard 3; run `doctor.py` for the split): `UNIT_SIZE=1.00`, `KELLY_FRACTION=0.5`, `MAX_BET_SIZE=8`, `MAX_DAILY_LOSS=30`, `MAX_BET_RATIO=5`, `MIN_EDGE_THRESHOLD_MLB=0.03`, `MIN_EDGE_THRESHOLD_MLB_SPREAD=1.0` (**off** since 2026-10-03: 0-9 lifetime, all YES big covers, postseason on a regular-season stdev; was 0.08 from 09-27 — *CHANGELOG 2026-10-03*), `MIN_EDGE_THRESHOLD_NHL_TOTAL=0.06` (2026-10-03: overs -17% lifetime), `MIN_EDGE_THRESHOLD_MLS_SPREAD=1.0` (**off** since 2026-10-12: 39/40 YES big covers, 3-20 since July, outcomes track the market — *CHANGELOG 2026-10-12*), `MIN_MARKET_PRICE=0.10`, and **`MIN_EDGE_THRESHOLD_NFL=0.06` (S1b pilot since 2026-09-13 at 0.08, lowered to 0.06 on 2026-09-19) and `MIN_EDGE_THRESHOLD_NCAAF=0.06` (S21c pilot since 2026-09-16 at 0.08, lowered to 0.06 on 2026-09-19; was the 1.0 S21 freeze) — none of these are in the code defaults**.
+Code defaults below. The live `.env` overrides several (equity ≈ **$121.83** — **$88.06 cash + $33.77 in positions**, verified 2026-08-27 after two operator deposits totalling **$40**; historical entries below quote the ~$92 it stood at, so the shipped defaults are sized for a much larger account. **The cash figure is the sum across exchange shards** — $73.07 on shard 0, $15.00 on shard 3; run `doctor.py` for the split): `UNIT_SIZE=1.00`, `KELLY_FRACTION=0.5`, `MAX_BET_SIZE=8`, `MAX_DAILY_LOSS=30`, `MAX_BET_RATIO=5`, `MIN_EDGE_THRESHOLD_MLB=0.03`, `MIN_EDGE_THRESHOLD_MLB_SPREAD=1.0` (**off** since 2026-10-03: 0-9 lifetime, all YES big covers, postseason on a regular-season stdev; was 0.08 from 09-27 — *CHANGELOG 2026-10-03*), `MIN_EDGE_THRESHOLD_NHL_TOTAL=0.06` (2026-10-03: overs -17% lifetime), `MIN_EDGE_THRESHOLD_MLS_SPREAD=1.0` (**off** since 2026-10-12: 39/40 YES big covers, 3-20 since July, outcomes track the market — *CHANGELOG 2026-10-12*), `MIN_EDGE_THRESHOLD_NHL_SPREAD=1.0` (**off** since 2026-10-26: same over-priced tail, 0-5 YES), `MIN_EDGE_THRESHOLD_NCAAB_SPREAD=0.08` (pilot since 2026-10-26: 8 wins vs 14.4 model / 5.0 market — *CHANGELOG 2026-10-26*), `MIN_MARKET_PRICE=0.10`, and **`MIN_EDGE_THRESHOLD_NFL=0.06` (S1b pilot since 2026-09-13 at 0.08, lowered to 0.06 on 2026-09-19) and `MIN_EDGE_THRESHOLD_NCAAF=0.06` (S21c pilot since 2026-09-16 at 0.08, lowered to 0.06 on 2026-09-19; was the 1.0 S21 freeze) — none of these are in the code defaults**.
 
 ```env
 UNIT_SIZE=1.00                  # Kelly floor per bet — the longshot knob (binds below ~30c)

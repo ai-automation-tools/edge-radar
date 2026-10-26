@@ -2,6 +2,36 @@
 
 ---
 
+## 2026-10-26 -- Discrete-sport spreads priced only at a quoted line; NHL spreads off; NCAAB spread pilot; pick labels
+
+From the [2026-10-26 betting-logic review](my-documents/repo-reviews/2026-10-26-betting-logic-review.md).
+Live window since 09-28: 51 settled, −25.4% ROI, 19 wins against 24.3 model / 19.8 market.
+
+- **Model** `consensus_spread_prob` refuses a strike that no book quotes for NHL, MLB and
+  soccer (`_DISCRETE_MARGIN_SPORTS`). Books hang ±1.5; extrapolating a normal tail to Kalshi's
+  2.5/3.5 over-priced big covers: **91 YES alt-spreads across MLB/NHL/WC/MLS, 14 wins against
+  21.3 model / 14.6 market** (2 vs 7.0 since 08-01). This is the shared cause behind the WC,
+  MLB and MLS switch-offs. Continuous sports (football, basketball) still extrapolate.
+- **`.env`** `MIN_EDGE_THRESHOLD_NHL_SPREAD=1.0` (off). NHL spread YES 0-5; on 10-24 it produced the
+  window's two largest edges and contract counts, both lost. The guard above now limits NHL to
+  the ±1.5 line, so this key can come out once the shadow book supports it.
+- **`.env`** `MIN_EDGE_THRESHOLD_NCAAB_SPREAD=0.08`, a pilot set before tip-off. Lifetime NCAAB
+  spread YES: 8 wins against 14.4 model / 5.0 market (z −2.5), the largest miss in the book.
+  The stdev 12.1 is the R2 fallback and has never been fitted.
+- **Shadow book** (`shadow_book.bat`, local) now also collects `KXNHLSPREAD` and `KXNCAAMBSPREAD`
+  pre-gate.
+- **Digest** `daily_summary.load_one_sided_series()`: flags a series bet ≥90% one way over 60 days
+  that trails its own model by ≥1.5σ. Series that are switched off are skipped. Replayed on
+  history, it would have flagged MLB spreads (0 of 9, z −1.9) before the 10-03 manual switch-off.
+- **Display** `ticker_display`: a ticker suffix N means "over N−0.5", but labels printed N+0.5,
+  one point off on every spread and total ("Miami −4.5" for over 3.5, "Over 6.5" for 5.5).
+  Pricing was never affected, since the model reads `floor_strike`. NO spread labels now name
+  the other side of the line (`UTA +1.5`, not `Boston +2.5`). Team names now resolve within
+  the ticker's own sport, so NFL `DAL` no longer shows as "Mavs".
+- **Diagram** re-pinned to `b8a384b`. The `edge_detector.py` ranges moved by +12/+29 lines, and
+  the "Fair probability" node's spread range now covers the new quoted-line guard. This also
+  clears the earlier un-rebuilt JSON drift.
+
 ## 2026-10-26 -- README gate table and filter counts match the code
 
 - **Docs** `README.md`: the risk-gate table listed 13 gates with old defaults (a $0.06 price floor among

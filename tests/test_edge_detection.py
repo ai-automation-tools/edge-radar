@@ -29,7 +29,6 @@ from edge_detector import (
 )
 from futures_edge import devig_nway, FUTURES_MAP
 
-
 # ── devig_nway ───────────────────────────────────────────────────────────────
 
 
@@ -1014,7 +1013,7 @@ class TestSpreadTotalDevig:
         # 0.5, so the inferred mean margin must equal the line (1.5) — no vig
         # leak. With the raw 0.5263 it would land above 1.5.
         ev = _spread_event("Brazil", "Japan", -1.5, 1.90, 1.90, self.FUTURE)
-        result = consensus_spread_prob([ev], "Brazil", 2.5, ticker="KXWCSPREAD-26JUL01BRAJPN-BRA3")
+        result = consensus_spread_prob([ev], "Brazil", 1.5, ticker="KXWCSPREAD-26JUL01BRAJPN-BRA2")
         assert result is not None
         _, d = result
         assert d["inferred_mean_margin"] == pytest.approx(1.5, abs=0.02)
@@ -2082,7 +2081,7 @@ class TestPerBookMeanConsensus:
                 ("book_c", -10.0, 5.0, 1.25),
             ]
         )
-        _, d = consensus_spread_prob([ev], "Brazil", 2.5, ticker="KXWCSPREAD-26JUL01BRAJPN-BRA3")
+        _, d = consensus_spread_prob([ev], "Brazil", 3.5, ticker="KXWCSPREAD-26JUL01BRAJPN-BRA4")
         means = sorted(b["mean"] for b in d["books"])
         assert d["inferred_mean_margin"] == pytest.approx(
             means[1], abs=0.01
@@ -2093,8 +2092,55 @@ class TestPerBookMeanConsensus:
     def test_agreeing_books_unchanged(self):
         # When every book posts the same line, per-book inversion == old result.
         ev = _spread_event("Brazil", "Japan", -1.5, 1.90, 1.90, self.FUTURE, books=("a", "b", "c"))
-        _, d = consensus_spread_prob([ev], "Brazil", 2.5, ticker="KXWCSPREAD-26JUL01BRAJPN-BRA3")
+        _, d = consensus_spread_prob([ev], "Brazil", 1.5, ticker="KXWCSPREAD-26JUL01BRAJPN-BRA2")
         assert d["inferred_mean_margin"] == pytest.approx(1.5, abs=0.02)
+
+
+class TestDiscreteSportQuotedLineOnly:
+    """2026-10-26 review #1: NHL/MLB/soccer spreads are priced only at a line a
+    book quotes. The normal tail extrapolated past +/-1.5 over-priced big covers
+    (91 YES bets: model 21.3 wins, market 14.6, actual 14)."""
+
+    FUTURE = "2099-08-16T14:00:00Z"
+
+    def _ev(self):
+        return _spread_event("Brazil", "Japan", -1.5, 1.90, 1.90, self.FUTURE)
+
+    def test_strike_past_the_quoted_line_is_refused(self):
+        assert (
+            consensus_spread_prob(
+                [self._ev()], "Brazil", 2.5, ticker="KXNHLSPREAD-26OCT24BRAJPN-BRA3"
+            )
+            is None
+        )
+        assert (
+            consensus_spread_prob(
+                [self._ev()], "Brazil", 2.5, ticker="KXMLBSPREAD-26OCT24BRAJPN-BRA3"
+            )
+            is None
+        )
+
+    def test_quoted_line_is_still_priced(self):
+        p, _ = consensus_spread_prob(
+            [self._ev()], "Brazil", 1.5, ticker="KXNHLSPREAD-26OCT24BRAJPN-BRA2"
+        )
+        assert p == pytest.approx(0.5, abs=0.01)
+
+    def test_underdog_big_cover_is_refused(self):
+        # Japan +1.5 is quoted; "Japan wins by over 1.5" is a different line.
+        assert (
+            consensus_spread_prob(
+                [self._ev()], "Japan", 1.5, ticker="KXMLSSPREAD-26OCT24BRAJPN-JPN2"
+            )
+            is None
+        )
+
+    def test_continuous_sports_still_extrapolate(self):
+        ev = _spread_event("Brazil", "Japan", -3.5, 1.90, 1.90, self.FUTURE)
+        assert (
+            consensus_spread_prob([ev], "Brazil", 7.5, ticker="KXNFLSPREAD-26OCT24BRAJPN-BRA8")
+            is not None
+        )
 
 
 class TestWeightedMedianTieBreak:

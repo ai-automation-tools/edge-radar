@@ -386,6 +386,68 @@ def load_post_kickoff_orders(rows: list[dict] | None, hours: int, now: datetime)
     return out
 
 
+def load_one_sided_series(
+    settlements: list[dict],
+    now: datetime,
+    days: int = 60,
+    min_n: int = 8,
+    floors: dict[str, float] | None = None,
+) -> list[dict]:
+    """Series whose recent book is >= 90% one side AND loses to the model's own
+    expectation by >= 1.5 sigma -- the S21 diagnostic, made mechanical.
+
+    WC, MLB and MLS spreads were each switched off by hand only after this exact
+    shape had cost money (2026-10-26 betting-logic review #6). A series whose
+    floor is already >= 1.0 (switched off) is skipped so the alarm goes quiet
+    once acted on.
+    """
+    from ticker_display import _detect_sport
+
+    if floors is None:
+        from app.config import get_config
+
+        floors = get_config().per_sport.min_edge
+    cutoff = now - timedelta(days=days)
+    groups: dict[str, list[dict]] = {}
+    for s in settlements:
+        try:
+            if _parse_iso(s.get("settled_at") or "") < cutoff:
+                continue
+        except ValueError:
+            continue
+        if s.get("fair_value") is None or float(s.get("contracts") or 0) <= 0:
+            continue
+        groups.setdefault((s.get("ticker") or "").split("-")[0], []).append(s)
+
+    out = []
+    for series, rows in groups.items():
+        n = len(rows)
+        yes = sum(1 for r in rows if r.get("side") == "yes")
+        if n < min_n or max(yes, n - yes) / n < 0.9:
+            continue
+        sport, cat = _detect_sport(rows[0]["ticker"]), rows[0].get("category")
+        if floors.get(f"{sport}_{cat}", floors.get(sport, 0.0)) >= 1.0:
+            continue
+        wins = sum(1 for r in rows if r.get("won"))
+        exp = sum(float(r["fair_value"]) for r in rows)
+        var = sum(float(r["fair_value"]) * (1 - float(r["fair_value"])) for r in rows)
+        z = (wins - exp) / var**0.5 if var else 0.0
+        if z <= -1.5:
+            mkt = sum(float(r.get("market_price_at_entry") or 0) for r in rows)
+            out.append(
+                {
+                    "series": series,
+                    "n": n,
+                    "one_side": max(yes, n - yes),
+                    "wins": wins,
+                    "model": exp,
+                    "market": mkt,
+                    "z": z,
+                }
+            )
+    return sorted(out, key=lambda r: r["z"])
+
+
 def render_report(
     settlements_yesterday: list[dict],
     open_positions: list[dict],
@@ -396,6 +458,7 @@ def render_report(
     hours: int,
     failed_orders: list[dict] | None = None,
     post_kickoff: list[dict] | None = None,
+    one_sided: list[dict] | None = None,
 ) -> str:
     today = _format_today_pst(now)
     overall, by_sport = aggregate_yesterday(settlements_yesterday)
@@ -420,6 +483,18 @@ def render_report(
         )
         for reason, count in sorted(reasons.items(), key=lambda kv: -kv[1]):
             lines.append(f"> - {count}x — {reason}")
+        lines.append("")
+
+    # ── One-sided losing series ───────────────────────────────────────────────
+    # A series the model only ever bets one way, and loses to its own
+    # expectation: a parameter, not a signal. Act before it costs more.
+    for r in one_sided or []:
+        lines.append(
+            f"> 📉 **{r['series']}**: {r['one_side']}/{r['n']} bets one side over 60d, "
+            f"{r['wins']} won vs {r['model']:.1f} model / {r['market']:.1f} market "
+            f"(z {r['z']:+.1f}). Consider a floor or switch-off."
+        )
+    if one_sided:
         lines.append("")
 
     # ── Post-kickoff orders ───────────────────────────────────────────────────
@@ -619,6 +694,7 @@ def build_report(
         hours,
         failed_orders=failed,
         post_kickoff=late,
+        one_sided=load_one_sided_series(all_settlements, now),
     )
 
 
