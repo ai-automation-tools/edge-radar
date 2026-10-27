@@ -63,7 +63,7 @@ filelock>=3.32.7                  # Cross-process lock for trade/settlement log 
 # === Testing ===
 pytest>=7.4.4
 pytest-asyncio>=0.26.0
-pytest-mock>=3.16.0
+pytest-mock>=3.17.0
 
 # === Dev Tools ===
 black>=23.12.1
