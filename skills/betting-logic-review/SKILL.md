@@ -60,7 +60,7 @@ tool; do not commit or push.
 
 ## Verification Battery
 
-**Start with the weekly audit.** `Weekly-Betting-Audit` (Sun 8 PM) already runs the
+**Start with the weekly audit.** `Weekly-Analysis` (Sun 11:45 PM) already runs the
 mechanical half of this battery across every sport. Run it fresh and read its flags
 before anything else:
 
