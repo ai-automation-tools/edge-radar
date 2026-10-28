@@ -38,6 +38,8 @@ From the [2026-10-27 betting-logic review](my-documents/repo-reviews/2026-10-27-
 - **Open** The first audit run flags **NCAAF totals: 93% of 130 pre-gate candidates are Unders**
   (14d). The shadow Brier pair favours the market, 0.1399 vs model 0.1433 (n=860). Same shape as
   soccer totals. Not acted on yet.
+- **Diagram** re-pinned to `4e69e1f`. The `edge_detector.py` ranges moved by +27 to +77 lines, and the
+  "ESPN + league stats" range now covers the per-sport rest/pitcher/sharp caches. No label changes.
 
 ## 2026-10-26 -- Discrete-sport spreads priced only at a quoted line; NHL spreads off; NCAAB spread pilot; pick labels
 
