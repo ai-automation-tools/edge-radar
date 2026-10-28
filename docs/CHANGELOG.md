@@ -27,12 +27,12 @@ From the [2026-10-27 betting-logic review](my-documents/repo-reviews/2026-10-27-
   MLS totals NO: 11 wins vs 15.7 model / 13.7 market (−33%). Every candidate the model scores is
   an Under 4.5/5.5, consistent with the soccer total stdev of 1.5 being too narrow (1.86 measured).
   An approximate backtest on the 50 gated rows was inconclusive, so the stdev is unchanged (S21c).
-- **Automation** New `Weekly-Betting-Audit` task (Sun 8:00 PM, after Calibration/Backtest):
+- **Automation** The `Weekly-Analysis` task (Sun 11:45 PM) now runs a weekly betting audit first:
   `scripts/backtest/betting_audit.py` runs the review battery mechanically across every sport.
   It reports model-vs-market-vs-outcome z per series and side, one-way pre-gate candidate pools,
   rest data on non-NBA/NHL markets, order health, dark sports from the drift probe, and stdevs
   never fitted. When flagged, a `claude -p` pass restricted to `Read,Grep,Glob` appends an
-  analysis. The report is emailed (`render_report_email.py betting-audit`). `/betting-logic-review`
+  analysis. The `weekly-analysis` email opens with its flags, so it is one Sunday email. `/betting-logic-review`
   now starts from it and gained B9 (dead series prefixes), B10 (context scoping) and B11 (one-way
   candidates). `Shadow-Book-NCAAF` time limit raised from 20 to 45 min for the wider collection.
 - **Open** The first audit run flags **NCAAF totals: 93% of 130 pre-gate candidates are Unders**

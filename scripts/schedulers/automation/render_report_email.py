@@ -98,14 +98,6 @@ PRESETS = {
         "email_weekly_analysis.log",
         None,
     ),
-    "betting-audit": (
-        "reports/Maintenance/betting-audit",
-        "betting_audit_*.md",
-        "Edge-Radar | Weekly Betting Audit",
-        "betting-audit",
-        "email_betting_audit.log",
-        None,
-    ),
     "drift-check": (
         "reports/Maintenance/drift",
         "drift_*.md",
@@ -113,6 +105,16 @@ PRESETS = {
         "drift-check",
         "email_drift_check.log",
         None,
+    ),
+}
+
+# Another report whose headline sections open a preset's email, so one Sunday
+# email carries both (2026-10-27). The full lead report stays on disk.
+LEADS = {
+    "weekly-analysis": (
+        "reports/Maintenance/betting-audit",
+        "betting_audit_*.md",
+        ("## Flags", "## Analysis", "## Recommended actions"),
     ),
 }
 
@@ -174,6 +176,18 @@ def log_excerpt(path: Path, lines: int = 40) -> str:
     return "\n".join(kept[-lines:])
 
 
+def lead_sections(text: str, headings: tuple[str, ...]) -> str:
+    """Title, status line, and the named `## ` sections of a markdown report."""
+    lines = text.splitlines()
+    out, keep = lines[:1], False
+    for ln in lines[1:]:
+        if ln.startswith("## "):
+            keep = ln.strip() in headings
+        if keep or ln.startswith("**Status:"):
+            out.append(ln)
+    return "\n".join(out).strip()
+
+
 def build(preset: str, max_age_hours: float) -> tuple[str, str] | None:
     folder, pattern, subject, _tag, _log, scan_log = PRESETS[preset]
     report = find_report(REPO / folder, pattern, max_age_hours)
@@ -181,6 +195,14 @@ def build(preset: str, max_age_hours: float) -> tuple[str, str] | None:
         return None
 
     md_text, parts = "", []
+    if report is not None and preset in LEADS:
+        lead_folder, lead_pattern, headings = LEADS[preset]
+        lead = find_report(REPO / lead_folder, lead_pattern, max_age_hours)
+        if lead is not None:
+            body = lead_sections(lead.read_bytes().decode("utf-8", errors="replace"), headings)
+            body += f"\n\n_Full audit: `{lead.relative_to(REPO).as_posix()}`_\n\n---\n\n"
+            parts.append(md_to_html(body))
+            md_text += body
     if scan_log:
         excerpt = log_excerpt(REPO / scan_log)
         heading = "Execution outcome" if report else "No opportunities surfaced -- scan log"

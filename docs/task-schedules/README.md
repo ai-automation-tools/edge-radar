@@ -37,10 +37,9 @@ Task Scheduler is the only active scheduling mechanism. Every action launches th
 | 9 | `WeeklyOddsKeyProbe` | Sun 6:00 PM | Live-probes every Odds API key, refreshes the quota cache |
 | 10 | `Calibration` | Sun 7:00 PM | Brier refresh + C8 stdev recalibration (`--days 30`) |
 | 11 | `Backtest` | Sun 7:30 PM | Equity curve, drawdown, Sharpe, strategy comparison |
-| 11b | `Weekly-Betting-Audit` | Sun 8:00 PM | The `/betting-logic-review` battery across every sport: model-vs-market z per series, one-way pre-gate candidates, context-data leaks, order health, dark sports, never-fitted stdevs. Read-only Claude analysis when flagged; emails the report |
 | 12 | `All-Sports-NextDay-Execution` ⚠️ | Sun–Thu 8:30 PM | Tomorrow's games — max 5 bets, 12% budget |
 | 13 | `Reconcile` | Daily 11:30 PM | Local trade log vs Kalshi positions; flags drift |
-| 14 | `Weekly-Analysis` | Sun 11:45 PM | 7-day performance report, then emails it |
+| 14 | `Weekly-Analysis` | Sun 11:45 PM | Weekly betting audit (every sport, read-only) + 7-day performance report; one email, audit flags first |
 | 15 | `Hourly-Settle` | Hourly at :35 | `kalshi_settler.py settle` — keeps Gate 1 (daily loss) current intraday |
 | 16 | `CLV-Capture` | Every 5 min | S8: samples the closing book before each open position's event. Read-only at the venue |
 
@@ -58,7 +57,6 @@ Task Scheduler is the only active scheduling mechanism. Every action launches th
  6:00 PM  Sun      WeeklyOddsKeyProbe
  7:00 PM  Sun      Calibration
  7:30 PM  Sun      Backtest
- 8:00 PM  Sun      Weekly-Betting-Audit           [+email]
  8:30 PM  Sun-Thu  All-Sports-NextDay-Execution   [+email]  ⚠️
 11:30 PM  Daily    Reconcile
 11:45 PM  Sun      Weekly-Analysis                [+email]
@@ -92,21 +90,22 @@ Or set `DRY_RUN=true` in `.env` to stop every execute task at once (the CLI re-r
 
 All `.bat` wrappers live under `scripts/schedulers/` (gitignored). Execute wrappers print `kalshi_executor.py status` before and after the scan.
 
-### `Weekly-Betting-Audit` — Sun 8:00 PM PT
+### Weekly betting audit (inside `Weekly-Analysis`, Sun 11:45 PM PT)
+
+`weekly_analysis.bat` runs `scripts/backtest/betting_audit.py --save --analyze auto` **before** the 7-day
+performance report, and the `weekly-analysis` email opens with the audit's status, **Flags** and (when flagged)
+**Analysis** sections, then the full performance report. One Sunday email, not two.
 
 | Property | Value |
 |:--|:--|
-| **Action 1** | `run-hidden.vbs` → `maintenanceetting_audit.bat` → `scripts/backtest/betting_audit.py --save --analyze auto` |
-| **Action 2** | `render_report_email.py betting-audit` → subject `Edge-Radar \| Weekly Betting Audit` |
-| **Report** | `reports/Maintenance/betting-audit/betting_audit_<date>.md` (+ `.json`) |
+| **Report** | `reports/Maintenance/betting-audit/betting_audit_<date>.md` (+ `.json`); log `logs/betting_audit.log` |
 | **Cost** | Deterministic and local (settlement/trade logs, shadow book, detector logs, latest drift JSON). No Kalshi or Odds API calls. Model only when flagged |
 
-Runs after `Calibration` and `Backtest`, so it reads the freshest stdevs. **Flags:** a live series/side whose wins
-trail the model by ≥1.5σ over 60d (n ≥ 8); a series whose pre-gate candidates are ≥90% one direction (n ≥ 20, 14d);
-rest-day data on any non-NBA/NHL market; post-kickoff, fee-less settled, or errored orders; a "dark" sport in the
-latest drift probe. The analysis pass is `claude -p` restricted to `Read,Grep,Glob`. It never edits code or `.env`
-and never places orders. Born from the 2026-10-26/27 manual reviews (*CHANGELOG 2026-10-27*). `/betting-logic-review`
-starts from this report.
+**Flags:** a live series/side whose wins trail the model by ≥1.5σ over 60d (n ≥ 8); a series whose pre-gate
+candidates are ≥90% one direction (n ≥ 20, 14d); rest-day data on any non-NBA/NHL market; post-kickoff, fee-less
+settled, or errored orders; a "dark" sport in the latest drift probe. The analysis pass is `claude -p` restricted to
+`Read,Grep,Glob`. It never edits code or `.env` and never places orders. Born from the 2026-10-26/27 manual reviews
+(*CHANGELOG 2026-10-27*). `/betting-logic-review` starts from this report.
 
 ### 1. `Integration-Drift-Check` — Daily 4:15 AM PT (7:15 AM ET)
 
@@ -309,7 +308,6 @@ cd /d "%~dp0..\..\.."
 | Preset | Task | Subject | Log |
 |:--|:--|:--|:--|
 | `drift-check` | `Integration-Drift-Check` | `Edge-Radar \| Integration Drift Check` | `logs/email_drift_check.log` |
-| `betting-audit` | `Weekly-Betting-Audit` | `Edge-Radar \| Weekly Betting Audit` | `logs/email_betting_audit.log` |
 | `daily-summary` | `Daily-Summary` | `Edge-Radar \| Daily Summary` | `logs/email_daily_summary.log` |
 | `same-day` | `All-Sports-SameDay-Execution` | `Edge-Radar \| Same Day Execution Report` | `logs/email_sameday.log` |
 | `nodatefilter-midday` | `All-Sports-NoDateFilter-Midday-Execution` | `Edge-Radar \| NoDateFilter Midday Execution Report` | `logs/email_nodatefilter_midday.log` |

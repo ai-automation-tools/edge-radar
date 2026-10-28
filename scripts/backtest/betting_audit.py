@@ -348,7 +348,7 @@ def build(now: datetime, days: int = 60, recent: int = 14) -> tuple[str, str, di
 
     status = WARN if flags else OK
     L = [
-        f"# Betting Audit -- {now:%Y-%m-%d}",
+        f"# Betting Audit -- {now.astimezone():%Y-%m-%d}",
         "",
         f"**Status: {status}** · window {days}d (calibration), {recent}d (candidates, orders)",
         "",

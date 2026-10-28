@@ -46,3 +46,17 @@ def test_log_excerpt_keeps_last_run_without_info(tmp_path):
         "=====\nrun one\n=====\n" "x | model_calibration | INFO | noise\nApproved: 0  Rejected: 4\n"
     )
     assert r.log_excerpt(log) == "Approved: 0  Rejected: 4"
+
+
+def test_weekly_analysis_email_opens_with_audit_flags():
+    """2026-10-27: one Sunday email -- the audit's flags lead the analysis."""
+    audit = (
+        "# Betting Audit -- 2026-11-01\n\n**Status: WARN** · window 60d\n\nintro\n\n"
+        "## Flags\n\n- `KXNCAAFTOTAL` 93% under\n\n"
+        "## Model vs market\n\n| a | b |\n|--|--|\n| 1 | 2 |\n\n"
+        "## Analysis\n\nNCAAF total stdev looks narrow.\n"
+    )
+    lead = r.lead_sections(audit, r.LEADS["weekly-analysis"][2])
+    assert lead.startswith("# Betting Audit") and "**Status: WARN**" in lead
+    assert "93% under" in lead and "stdev looks narrow" in lead
+    assert "Model vs market" not in lead and "intro" not in lead
