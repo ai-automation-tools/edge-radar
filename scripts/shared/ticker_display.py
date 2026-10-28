@@ -185,6 +185,13 @@ _SPORT_PREFIXES = {
     "KXNCAAMB": "ncaab",
     "KXNCAAF": "ncaaf",
     "KXSOCCER": "soccer",
+    # European leagues share one floor knob, MIN_EDGE_THRESHOLD_SOCCER.
+    "KXEPL": "soccer",
+    "KXLALIGA": "soccer",
+    "KXUCL": "soccer",
+    "KXSERIEA": "soccer",
+    "KXBUNDESLIGA": "soccer",
+    "KXLIGUE1": "soccer",
     "KXMLS": "mls",
     "KXWCGAME": "worldcup",
     "KXWC": "worldcup",

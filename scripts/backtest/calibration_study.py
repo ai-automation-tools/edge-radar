@@ -46,8 +46,26 @@ from trade_log import load_settlement_log
 # 178 of 390 settled rows predate R5 and carry no `category` field, so derive it
 # from the ticker rather than dropping 45% of the sample.
 
-_SPORTS = ("NFL", "NBA", "NHL", "MLB", "MLS", "WC", "NCAAMB", "NCAAF",
-           "ATP", "WTA", "UFC", "SOCCER", "EPL", "UCL")
+_SPORTS = (
+    "NFL",
+    "NBA",
+    "NHL",
+    "MLB",
+    "MLS",
+    "WC",
+    "NCAAMB",
+    "NCAAF",
+    "ATP",
+    "WTA",
+    "UFC",
+    "SOCCER",
+    "EPL",
+    "UCL",
+    "LALIGA",
+    "SERIEA",
+    "BUNDESLIGA",
+    "LIGUE1",
+)
 _BET_TYPES = ("SPREAD", "TOTAL", "GAME")
 
 
@@ -57,8 +75,7 @@ def parse_ticker(ticker: str) -> tuple[str, str]:
     if not head.startswith("KX"):
         return "other", "other"
     body = head[2:]
-    sport = next((s for s in sorted(_SPORTS, key=len, reverse=True)
-                  if body.startswith(s)), "other")
+    sport = next((s for s in sorted(_SPORTS, key=len, reverse=True) if body.startswith(s)), "other")
     bet = next((b for b in _BET_TYPES if body.endswith(b)), None)
     category = {"GAME": "game", "SPREAD": "spread", "TOTAL": "total"}.get(bet, "other")
     return sport.lower(), category
@@ -80,23 +97,26 @@ def load_rows(settlements: list[dict] | None = None) -> list[dict]:
         if not (0.0 < p_model < 1.0 and 0.0 < p_market < 1.0):
             continue
         sport, cat_from_ticker = parse_ticker(s.get("ticker", ""))
-        out.append({
-            "ticker": s.get("ticker", ""),
-            "sport": sport,
-            # `category` is absent on the pre-R5 cohort; fall back to the ticker.
-            "category": s.get("category") or cat_from_ticker,
-            "side": s.get("side"),
-            "confidence": s.get("confidence"),
-            "p_model": p_model,
-            "p_market": p_market,
-            "edge": p_model - p_market,
-            "y": 1.0 if s.get("won") else 0.0,
-            "settled_at": s.get("settled_at", ""),
-        })
+        out.append(
+            {
+                "ticker": s.get("ticker", ""),
+                "sport": sport,
+                # `category` is absent on the pre-R5 cohort; fall back to the ticker.
+                "category": s.get("category") or cat_from_ticker,
+                "side": s.get("side"),
+                "confidence": s.get("confidence"),
+                "p_model": p_model,
+                "p_market": p_market,
+                "edge": p_model - p_market,
+                "y": 1.0 if s.get("won") else 0.0,
+                "settled_at": s.get("settled_at", ""),
+            }
+        )
     return out
 
 
 # ── Scoring ──────────────────────────────────────────────────────────────────
+
 
 def brier(ps: list[float], ys: list[float]) -> float:
     return sum((p - y) ** 2 for p, y in zip(ps, ys)) / len(ps)
@@ -104,6 +124,7 @@ def brier(ps: list[float], ys: list[float]) -> float:
 
 def log_loss(ps: list[float], ys: list[float], eps: float = 1e-6) -> float:
     import math
+
     total = 0.0
     for p, y in zip(ps, ys):
         p = min(1 - eps, max(eps, p))
@@ -124,7 +145,7 @@ def best_lambda(rows: list[dict], grid: int = 101) -> tuple[float, float]:
     ys = [r["y"] for r in rows]
     best, best_score = 0.0, None
     for i in range(grid):
-        lam = -0.5 + 2.0 * i / (grid - 1)          # scan [-0.5, 1.5]
+        lam = -0.5 + 2.0 * i / (grid - 1)  # scan [-0.5, 1.5]
         ps = [r["p_market"] + lam * r["edge"] for r in rows]
         ps = [min(0.999, max(0.001, p)) for p in ps]
         sc = brier(ps, ys)
@@ -133,8 +154,9 @@ def best_lambda(rows: list[dict], grid: int = 101) -> tuple[float, float]:
     return best, best_score
 
 
-def bootstrap_ci(rows: list[dict], stat, n_boot: int = 2000,
-                 seed: int = 12345) -> tuple[float, float]:
+def bootstrap_ci(
+    rows: list[dict], stat, n_boot: int = 2000, seed: int = 12345
+) -> tuple[float, float]:
     """Percentile bootstrap 95% CI. n is small here -- always report the interval,
     never the point estimate alone."""
     rng = random.Random(seed)
@@ -164,7 +186,7 @@ def information_test(rows: list[dict], n_bands: int = 3) -> list[dict]:
     per = max(1, len(ordered) // n_bands)
     out = []
     for b in range(n_bands):
-        band = ordered[b * per: (b + 1) * per] if b < n_bands - 1 else ordered[b * per:]
+        band = ordered[b * per : (b + 1) * per] if b < n_bands - 1 else ordered[b * per :]
         if len(band) < 8:
             continue
         # Capture the price range BEFORE re-sorting by edge -- otherwise the
@@ -174,14 +196,16 @@ def information_test(rows: list[dict], n_bands: int = 3) -> list[dict]:
         band = sorted(band, key=lambda r: r["edge"])
         half = len(band) // 2
         lo, hi = band[:half], band[half:]
-        out.append({
-            "price_range": price_range,
-            "n": len(band),
-            "lo_edge_mean": statistics.mean(r["edge"] for r in lo),
-            "lo_win": statistics.mean(r["y"] for r in lo),
-            "hi_edge_mean": statistics.mean(r["edge"] for r in hi),
-            "hi_win": statistics.mean(r["y"] for r in hi),
-        })
+        out.append(
+            {
+                "price_range": price_range,
+                "n": len(band),
+                "lo_edge_mean": statistics.mean(r["edge"] for r in lo),
+                "lo_win": statistics.mean(r["y"] for r in lo),
+                "hi_edge_mean": statistics.mean(r["edge"] for r in hi),
+                "hi_win": statistics.mean(r["y"] for r in hi),
+            }
+        )
     return out
 
 
@@ -208,17 +232,22 @@ def summarize(rows: list[dict]) -> dict:
 
 # ── Reporting ────────────────────────────────────────────────────────────────
 
+
 def _fmt_block(label: str, s: dict) -> str:
     verdict = "model better" if s["brier_model"] < s["brier_market"] else "MARKET better"
-    return (f"{label:16s} {s['n']:4d} "
-            f"{s['model_mean']:7.1%} {s['market_mean']:7.1%} {s['realised']:8.1%} "
-            f"{s['model_err']:+8.1%} {s['market_err']:+8.1%} "
-            f"{s['brier_model']:7.4f} {s['brier_market']:7.4f} "
-            f"{s['lambda']:+6.2f}  {verdict}")
+    return (
+        f"{label:16s} {s['n']:4d} "
+        f"{s['model_mean']:7.1%} {s['market_mean']:7.1%} {s['realised']:8.1%} "
+        f"{s['model_err']:+8.1%} {s['market_err']:+8.1%} "
+        f"{s['brier_model']:7.4f} {s['brier_market']:7.4f} "
+        f"{s['lambda']:+6.2f}  {verdict}"
+    )
 
 
-HEADER = (f"{'bucket':16s} {'n':>4} {'model':>7} {'market':>7} {'realised':>8} "
-          f"{'mdlErr':>8} {'mktErr':>8} {'BrierM':>7} {'BrierK':>7} {'lambda':>6}")
+HEADER = (
+    f"{'bucket':16s} {'n':>4} {'model':>7} {'market':>7} {'realised':>8} "
+    f"{'mdlErr':>8} {'mktErr':>8} {'BrierM':>7} {'BrierK':>7} {'lambda':>6}"
+)
 
 
 def render(rows: list[dict], min_n: int = 15) -> str:
@@ -226,8 +255,10 @@ def render(rows: list[dict], min_n: int = 15) -> str:
     add = lines.append
     add("# Edge-Radar Calibration Study")
     add("")
-    add(f"{len(rows)} settled bets with both a model probability and a market price, "
-        f"{rows[0]['settled_at'][:10]} -> {rows[-1]['settled_at'][:10]}.")
+    add(
+        f"{len(rows)} settled bets with both a model probability and a market price, "
+        f"{rows[0]['settled_at'][:10]} -> {rows[-1]['settled_at'][:10]}."
+    )
     add("")
     add("All probabilities are bet-side: `p_model` = the detector's fair value for the")
     add("side actually taken, `p_market` = what Kalshi charged for it, `realised` = how")
@@ -266,13 +297,17 @@ def render(rows: list[dict], min_n: int = 15) -> str:
     add("claimed edge. If the model has information, the high-edge half wins more.")
     add("")
     add("```")
-    add(f"{'price band':>16} {'n':>4} {'lo-edge':>9} {'lo win%':>8} "
-        f"{'hi-edge':>9} {'hi win%':>8} {'lift':>7}")
+    add(
+        f"{'price band':>16} {'n':>4} {'lo-edge':>9} {'lo win%':>8} "
+        f"{'hi-edge':>9} {'hi win%':>8} {'lift':>7}"
+    )
     for b in information_test(rows):
         lift = b["hi_win"] - b["lo_win"]
-        add(f"{b['price_range'][0]:.2f}-{b['price_range'][1]:.2f}".rjust(16)
+        add(
+            f"{b['price_range'][0]:.2f}-{b['price_range'][1]:.2f}".rjust(16)
             + f" {b['n']:4d} {b['lo_edge_mean']:+9.1%} {b['lo_win']:8.1%} "
-              f"{b['hi_edge_mean']:+9.1%} {b['hi_win']:8.1%} {lift:+7.1%}")
+            f"{b['hi_edge_mean']:+9.1%} {b['hi_win']:8.1%} {lift:+7.1%}"
+        )
     add("```")
     add("")
 
@@ -283,8 +318,10 @@ def render(rows: list[dict], min_n: int = 15) -> str:
     add("profitable sport's season ending rather than assuming the model decayed.")
     add("")
     add("```")
-    add(f"{'month':9s} {'n':>4} {'model':>7} {'market':>7} "
-        f"{'realised':>8} {'BrierM':>7} {'BrierK':>7}")
+    add(
+        f"{'month':9s} {'n':>4} {'model':>7} {'market':>7} "
+        f"{'realised':>8} {'BrierM':>7} {'BrierK':>7}"
+    )
     by_month: dict[str, list] = defaultdict(list)
     for r in rows:
         by_month[r["settled_at"][:7]].append(r)
@@ -292,8 +329,10 @@ def render(rows: list[dict], min_n: int = 15) -> str:
         if len(sub) < 5:
             continue
         s = summarize(sub)
-        add(f"{month:9s} {s['n']:4d} {s['model_mean']:7.1%} {s['market_mean']:7.1%} "
-            f"{s['realised']:8.1%} {s['brier_model']:7.4f} {s['brier_market']:7.4f}")
+        add(
+            f"{month:9s} {s['n']:4d} {s['model_mean']:7.1%} {s['market_mean']:7.1%} "
+            f"{s['realised']:8.1%} {s['brier_model']:7.4f} {s['brier_market']:7.4f}"
+        )
     add("```")
     add("")
 
@@ -307,10 +346,12 @@ def render(rows: list[dict], min_n: int = 15) -> str:
     )
     add("## Uncertainty")
     add("")
-    add(f"- Brier(market) - Brier(model), 95% CI: "
+    add(
+        f"- Brier(market) - Brier(model), 95% CI: "
         f"**[{diff_ci[0]:+.4f}, {diff_ci[1]:+.4f}]** "
         f"(positive = the model is better; an interval spanning 0 means "
-        f"the sample cannot tell them apart)")
+        f"the sample cannot tell them apart)"
+    )
     add(f"- Optimal lambda, 95% CI: **[{lam_ci[0]:+.2f}, {lam_ci[1]:+.2f}]**")
     add("")
     add("**Selection caveat:** these are only bets the gates approved, i.e. where the")
@@ -325,10 +366,17 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--category", help="restrict to one category")
     ap.add_argument("--sport", help="restrict to one sport")
-    ap.add_argument("--min-n", type=int, default=15,
-                    help="suppress breakdown rows thinner than this (default 15)")
-    ap.add_argument("--save", action="store_true",
-                    help="write to reports/Performance/calibration_study_<date>.md")
+    ap.add_argument(
+        "--min-n",
+        type=int,
+        default=15,
+        help="suppress breakdown rows thinner than this (default 15)",
+    )
+    ap.add_argument(
+        "--save",
+        action="store_true",
+        help="write to reports/Performance/calibration_study_<date>.md",
+    )
     args = ap.parse_args(argv)
 
     rows = load_rows()
@@ -345,6 +393,7 @@ def main(argv: list[str] | None = None) -> int:
     print(out)
     if args.save:
         from datetime import datetime, timezone
+
         d = Path("reports/Performance")
         d.mkdir(parents=True, exist_ok=True)
         p = d / f"calibration_study_{datetime.now(timezone.utc):%Y-%m-%d}.md"
@@ -358,11 +407,21 @@ def _demo() -> None:
     # A model that is exactly right must beat a market that is not, and must
     # earn lambda = 1.
     truth = [0.2, 0.4, 0.6, 0.8] * 25
-    rows = [{"p_model": p, "p_market": 0.5, "edge": p - 0.5,
-             "y": 1.0 if i % 100 < int(p * 100) else 0.0,
-             "category": "game", "sport": "nfl", "confidence": "medium",
-             "side": "yes", "ticker": "", "settled_at": ""}
-            for i, p in enumerate(truth)]
+    rows = [
+        {
+            "p_model": p,
+            "p_market": 0.5,
+            "edge": p - 0.5,
+            "y": 1.0 if i % 100 < int(p * 100) else 0.0,
+            "category": "game",
+            "sport": "nfl",
+            "confidence": "medium",
+            "side": "yes",
+            "ticker": "",
+            "settled_at": "",
+        }
+        for i, p in enumerate(truth)
+    ]
     s = summarize(rows)
     assert s["brier_model"] < s["brier_market"], s
     assert s["lambda"] > 0.5, s["lambda"]
@@ -381,10 +440,19 @@ def _demo() -> None:
     noise = []
     for _ in range(400):
         mk = 0.5
-        noise.append({"p_model": mk + rng.uniform(-0.2, 0.2), "p_market": mk,
-                      "y": float(rng.random() < mk), "category": "game",
-                      "sport": "nfl", "confidence": "medium", "side": "yes",
-                      "ticker": "", "settled_at": ""})
+        noise.append(
+            {
+                "p_model": mk + rng.uniform(-0.2, 0.2),
+                "p_market": mk,
+                "y": float(rng.random() < mk),
+                "category": "game",
+                "sport": "nfl",
+                "confidence": "medium",
+                "side": "yes",
+                "ticker": "",
+                "settled_at": "",
+            }
+        )
     for r in noise:
         r["edge"] = r["p_model"] - r["p_market"]
     ys = [r["y"] for r in noise]

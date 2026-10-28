@@ -50,11 +50,28 @@ tool; do not commit or push.
    stdev 1.8) were measured and deliberate. Re-litigating them wastes the review.
    If you disagree, cite new evidence.
 4. **Cite `path:line`.** Every finding.
-5. **Do not fix anything.** This is a read-and-report skill. The user decides.
+5. **Do not fix anything unless the user asked you to.** By default this is a
+   read-and-report skill and the user decides. If the request says "resolve" or
+   "fix", fix the verified findings, pin each one with a test that fails on the old
+   code, and mark them `FIXED` in the report.
+6. **Cover every sport, not only the ones with recent bets.** A sport with no bets
+   may be quiet, or it may never have been scored. The 2026-10-27 pass found six
+   European leagues fetched at zero markets all season.
 
 ## Verification Battery
 
-Run these first. They take about two minutes and historically surface more than
+**Start with the weekly audit.** `Weekly-Betting-Audit` (Sun 8 PM) already runs the
+mechanical half of this battery across every sport. Run it fresh and read its flags
+before anything else:
+
+```bash
+python scripts/backtest/betting_audit.py            # add --save to keep it
+```
+
+It covers B9-B11 below plus per-series model-vs-market z-scores, order health and
+never-fitted stdevs. Spend the manual pass on what it flags and on what it can't see.
+
+Then run these. They take about two minutes and historically surface more than
 reading does.
 
 ### B1 — Fee reality check
@@ -188,6 +205,38 @@ Two have historically been documentation-only (`spread > 5%`, fixed in L2 2026-0
 `single position > 10% of bankroll`, still open). Confirm each one actually has a
 branch that can reject, and that the gate's *coverage* matches its description —
 a gate that only fires on one ticker format is not the gate the table describes.
+
+### B9 — Every mapped series actually returns markets
+
+For each prefix in `KALSHI_TO_ODDS_SPORT`, `GET /markets?series_ticker=<prefix>&status=open`.
+An exact series name that returns zero while the sport is in season is a dead prefix:
+the scan reports a quiet slate forever. Compare against Kalshi's real series names
+(`KX<LEAGUE>GAME/SPREAD/TOTAL`). `integration_drift.py` now flags a sport whose every
+series is empty while its odds feed has games ("dark"). Check its latest report, and
+for each new prefix also confirm `_PREFIX_TO_SPORT` (stdevs, the discrete-margin guard)
+and `ticker_display._SPORT_PREFIXES` (per-sport floors). Without them it falls back
+to the 12.0 basketball stdev and the global floor.
+
+### B10 — Context inputs stay in their own sport and date
+
+Every per-team input (rest days, sharp money, pitchers, weather) must be keyed by
+`(sport, date, team)`. Team codes repeat across leagues. Check the logs:
+
+```bash
+grep -ho "Rest day signal for KX[A-Z]*" logs/edge_detector_*.log | sort | uniq -c
+```
+
+Anything other than NBA/NHL is a leak (fixed 2026-10-27). Do the same for any new
+`details[...]` input: look for it on a ticker from the wrong sport in `shadow_book.json`.
+
+### B11 — One-directional candidates, before money is placed
+
+From `data/history/shadow_book.json` (pre-gate), compute per series the share of
+edge >= 0.03 rows pointing one way (Over/Under, cover/no-cover). At >= 90% one way, the
+model is disagreeing with the market on a single parameter (S21), usually a stdev.
+Compare the shadow Brier pair, then fit the parameter on the shadow rows, never on
+filled bets (S21c). Series not in the shadow book can't be checked this way, so add
+them to `shadow_book.bat`.
 
 ## Reading pass
 

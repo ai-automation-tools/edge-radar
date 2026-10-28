@@ -29,7 +29,7 @@ Task Scheduler is the only active scheduling mechanism. Every action launches th
 | 1 | `Integration-Drift-Check` | Daily 4:15 AM | Probes Kalshi/odds integration for silent breakage (schema, rules wording, match rates); Claude analysis on WARN/FAIL or Mondays; on WARN/FAIL, may open a **draft PR** with a verified fix (never merges); emails the report |
 | 2 | `Daily-Summary` | Daily 4:50 AM | Morning P&L digest (yesterday, open exposure, today pending, 7-day context), then emails it |
 | 3 | `All-Sports-SameDay-Execution` ⚠️ | Daily 5:05 AM | Today's games, all sports — max 5 bets, 12% budget |
-| 4 | `Shadow-Book-NCAAF` | Daily 6:00 AM | S21b shadow book: scores NCAAF + MLB spread markets pre-gate. **No orders** |
+| 4 | `Shadow-Book-NCAAF` | Daily 6:00 AM | S21b shadow book: scores markets pre-gate (NCAAF; MLB/NHL/NCAAB spreads; MLS totals; European soccer). **No orders** |
 | 5 | `Weekly-Futures-Execution` ⚠️ | Sat 9:00 AM | Championship/outright futures — max 3 bets, 10% budget |
 | 6 | `WeeklyAccountGraph` | Sun 9:40 AM | Refreshes the private account-growth graph (local only) |
 | 7 | `All-Sports-NoDateFilter-Midday-Execution` ⚠️ | Daily 11:00 AM | Wide net, all dates — max 5 bets, 12% budget |
@@ -37,6 +37,7 @@ Task Scheduler is the only active scheduling mechanism. Every action launches th
 | 9 | `WeeklyOddsKeyProbe` | Sun 6:00 PM | Live-probes every Odds API key, refreshes the quota cache |
 | 10 | `Calibration` | Sun 7:00 PM | Brier refresh + C8 stdev recalibration (`--days 30`) |
 | 11 | `Backtest` | Sun 7:30 PM | Equity curve, drawdown, Sharpe, strategy comparison |
+| 11b | `Weekly-Betting-Audit` | Sun 8:00 PM | The `/betting-logic-review` battery across every sport: model-vs-market z per series, one-way pre-gate candidates, context-data leaks, order health, dark sports, never-fitted stdevs. Read-only Claude analysis when flagged; emails the report |
 | 12 | `All-Sports-NextDay-Execution` ⚠️ | Sun–Thu 8:30 PM | Tomorrow's games — max 5 bets, 12% budget |
 | 13 | `Reconcile` | Daily 11:30 PM | Local trade log vs Kalshi positions; flags drift |
 | 14 | `Weekly-Analysis` | Sun 11:45 PM | 7-day performance report, then emails it |
@@ -57,6 +58,7 @@ Task Scheduler is the only active scheduling mechanism. Every action launches th
  6:00 PM  Sun      WeeklyOddsKeyProbe
  7:00 PM  Sun      Calibration
  7:30 PM  Sun      Backtest
+ 8:00 PM  Sun      Weekly-Betting-Audit           [+email]
  8:30 PM  Sun-Thu  All-Sports-NextDay-Execution   [+email]  ⚠️
 11:30 PM  Daily    Reconcile
 11:45 PM  Sun      Weekly-Analysis                [+email]
@@ -89,6 +91,22 @@ Or set `DRY_RUN=true` in `.env` to stop every execute task at once (the CLI re-r
 ## Task Details
 
 All `.bat` wrappers live under `scripts/schedulers/` (gitignored). Execute wrappers print `kalshi_executor.py status` before and after the scan.
+
+### `Weekly-Betting-Audit` — Sun 8:00 PM PT
+
+| Property | Value |
+|:--|:--|
+| **Action 1** | `run-hidden.vbs` → `maintenanceetting_audit.bat` → `scripts/backtest/betting_audit.py --save --analyze auto` |
+| **Action 2** | `render_report_email.py betting-audit` → subject `Edge-Radar \| Weekly Betting Audit` |
+| **Report** | `reports/Maintenance/betting-audit/betting_audit_<date>.md` (+ `.json`) |
+| **Cost** | Deterministic and local (settlement/trade logs, shadow book, detector logs, latest drift JSON). No Kalshi or Odds API calls. Model only when flagged |
+
+Runs after `Calibration` and `Backtest`, so it reads the freshest stdevs. **Flags:** a live series/side whose wins
+trail the model by ≥1.5σ over 60d (n ≥ 8); a series whose pre-gate candidates are ≥90% one direction (n ≥ 20, 14d);
+rest-day data on any non-NBA/NHL market; post-kickoff, fee-less settled, or errored orders; a "dark" sport in the
+latest drift probe. The analysis pass is `claude -p` restricted to `Read,Grep,Glob`. It never edits code or `.env`
+and never places orders. Born from the 2026-10-26/27 manual reviews (*CHANGELOG 2026-10-27*). `/betting-logic-review`
+starts from this report.
 
 ### 1. `Integration-Drift-Check` — Daily 4:15 AM PT (7:15 AM ET)
 
@@ -291,6 +309,7 @@ cd /d "%~dp0..\..\.."
 | Preset | Task | Subject | Log |
 |:--|:--|:--|:--|
 | `drift-check` | `Integration-Drift-Check` | `Edge-Radar \| Integration Drift Check` | `logs/email_drift_check.log` |
+| `betting-audit` | `Weekly-Betting-Audit` | `Edge-Radar \| Weekly Betting Audit` | `logs/email_betting_audit.log` |
 | `daily-summary` | `Daily-Summary` | `Edge-Radar \| Daily Summary` | `logs/email_daily_summary.log` |
 | `same-day` | `All-Sports-SameDay-Execution` | `Edge-Radar \| Same Day Execution Report` | `logs/email_sameday.log` |
 | `nodatefilter-midday` | `All-Sports-NoDateFilter-Midday-Execution` | `Edge-Radar \| NoDateFilter Midday Execution Report` | `logs/email_nodatefilter_midday.log` |

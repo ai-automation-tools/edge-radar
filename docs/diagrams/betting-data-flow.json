@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "b8a384b6e154846145ad322cceae062af5269a0d"
+      "revision": "4e69e1fb98640b49d6a9de30a142e8c7b81639bb"
     }
   },
   "stages": [
@@ -39,8 +39,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2506,
-          "end_line": 2543
+          "line": 2569,
+          "end_line": 2606
         }
       ]
     },
@@ -54,8 +54,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 221,
-          "end_line": 309
+          "line": 248,
+          "end_line": 336
         }
       ]
     },
@@ -69,8 +69,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2606,
-          "end_line": 2667
+          "line": 2668,
+          "end_line": 2741
         }
       ]
     },
@@ -84,8 +84,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2680,
-          "end_line": 2696
+          "line": 2757,
+          "end_line": 2773
         }
       ]
     },
@@ -99,8 +99,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2549,
-          "end_line": 2581
+          "line": 2612,
+          "end_line": 2644
         }
       ]
     },
@@ -129,13 +129,13 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2112,
-          "end_line": 2170
+          "line": 2143,
+          "end_line": 2201
         },
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 1466,
-          "end_line": 1485
+          "line": 1499,
+          "end_line": 1518
         }
       ]
     },
@@ -149,8 +149,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 794,
-          "end_line": 878
+          "line": 827,
+          "end_line": 911
         }
       ]
     },
@@ -165,8 +165,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 1588,
-          "end_line": 1705
+          "line": 1619,
+          "end_line": 1736
         },
         {
           "path": "scripts/shared/opportunity.py",
@@ -186,13 +186,13 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 545,
-          "end_line": 704
+          "line": 572,
+          "end_line": 731
         },
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 974,
-          "end_line": 1013
+          "line": 1007,
+          "end_line": 1046
         }
       ]
     },

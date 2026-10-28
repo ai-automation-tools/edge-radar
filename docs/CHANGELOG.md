@@ -2,6 +2,45 @@
 
 ---
 
+## 2026-10-27 -- European soccer series fixed; rest/sharp/pitcher data scoped per sport and date
+
+From the [2026-10-27 betting-logic review](my-documents/repo-reviews/2026-10-27-betting-logic-review.md).
+
+- **Scanner** The six European leagues (EPL, La Liga, UCL, Serie A, Bundesliga, Ligue 1) were
+  wired as bare `KX<LEAGUE>` series. Kalshi's are `KX<LEAGUE>GAME/SPREAD/TOTAL`, so every scan
+  fetched **zero** markets for them, all season, and reported a quiet slate. Now wired as 18
+  series (1,003 open markets today, 100% parsed and odds-matched), mapped to `soccer` for
+  stdevs, the discrete-margin spread guard and the floor. New filter `eurosoccer`.
+- **`.env`** `MIN_EDGE_THRESHOLD_SOCCER=0.08` (cold-start pilot, zero history) and
+  `MIN_EDGE_THRESHOLD_SOCCER_SPREAD=1.0` (the alt-spread model already switched off for MLS and WC).
+  At those floors nothing on today's slate clears Gate 3.
+- **Model** `scan_all_markets` keyed NBA/NHL rest data by team abbreviation alone, so it reached
+  every sport sharing one and the last date fetched overwrote the others. MLS totals took the
+  NBA's **+1.5 back-to-back stdev on a 1.5-goal base** (361 log lines in October). NFL, NCAAF
+  and MLB totals were also hit, including the Penguins' rest on MLB KC@PIT (placed 09-19). Rest is
+  now keyed by (sport, date, team). MLB pitchers are keyed by (date, team) for the same reason.
+- **Model** Sharp-money signals were one dict across sports, matched by substring ("ne" in
+  "Tennessee"). They are now per sport and matched exactly. Effect: confidence on totals only.
+- **Drift check** A sport whose every series is empty while its odds feed lists games is now a
+  WARN, not a "No open markets" context line. That line is where the dead European prefixes sat.
+- **Shadow book** (`shadow_book.bat`, local) collects `eurosoccer` and `KXMLSTOTAL` pre-gate.
+  MLS totals NO: 11 wins vs 15.7 model / 13.7 market (−33%). Every candidate the model scores is
+  an Under 4.5/5.5, consistent with the soccer total stdev of 1.5 being too narrow (1.86 measured).
+  An approximate backtest on the 50 gated rows was inconclusive, so the stdev is unchanged (S21c).
+- **Automation** New `Weekly-Betting-Audit` task (Sun 8:00 PM, after Calibration/Backtest):
+  `scripts/backtest/betting_audit.py` runs the review battery mechanically across every sport.
+  It reports model-vs-market-vs-outcome z per series and side, one-way pre-gate candidate pools,
+  rest data on non-NBA/NHL markets, order health, dark sports from the drift probe, and stdevs
+  never fitted. When flagged, a `claude -p` pass restricted to `Read,Grep,Glob` appends an
+  analysis. The report is emailed (`render_report_email.py betting-audit`). `/betting-logic-review`
+  now starts from it and gained B9 (dead series prefixes), B10 (context scoping) and B11 (one-way
+  candidates). `Shadow-Book-NCAAF` time limit raised from 20 to 45 min for the wider collection.
+- **Open** The first audit run flags **NCAAF totals: 93% of 130 pre-gate candidates are Unders**
+  (14d). The shadow Brier pair favours the market, 0.1399 vs model 0.1433 (n=860). Same shape as
+  soccer totals. Not acted on yet.
+- **Diagram** re-pinned to `4e69e1f`. The `edge_detector.py` ranges moved by +27 to +77 lines, and the
+  "ESPN + league stats" range now covers the per-sport rest/pitcher/sharp caches. No label changes.
+
 ## 2026-10-26 -- Discrete-sport spreads priced only at a quoted line; NHL spreads off; NCAAB spread pilot; pick labels
 
 From the [2026-10-26 betting-logic review](my-documents/repo-reviews/2026-10-26-betting-logic-review.md).

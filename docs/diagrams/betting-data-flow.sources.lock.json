@@ -1,7 +1,7 @@
 {
-  "revision": "b8a384b6e154846145ad322cceae062af5269a0d",
+  "revision": "4e69e1fb98640b49d6a9de30a142e8c7b81639bb",
   "files": {
-    "scripts/kalshi/edge_detector.py": "7aad411956a81dd3f204dd039eaaa55fdd6b8523",
+    "scripts/kalshi/edge_detector.py": "74920ebae5b440a1641ea8d2b8286cb0e80bf102",
     "scripts/kalshi/kalshi_client.py": "91721b96e8395cac37996ef766ab640a3b3928fb",
     "scripts/kalshi/kalshi_executor.py": "c00f5f03a81ff38abcb4e0b30179cd83159aa25e",
     "scripts/kalshi/kalshi_settler.py": "5c7dd932c1a41e84ce93a868bc4217b6a3318924",
