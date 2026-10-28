@@ -98,6 +98,14 @@ PRESETS = {
         "email_weekly_analysis.log",
         None,
     ),
+    "betting-audit": (
+        "reports/Maintenance/betting-audit",
+        "betting_audit_*.md",
+        "Edge-Radar | Weekly Betting Audit",
+        "betting-audit",
+        "email_betting_audit.log",
+        None,
+    ),
     "drift-check": (
         "reports/Maintenance/drift",
         "drift_*.md",

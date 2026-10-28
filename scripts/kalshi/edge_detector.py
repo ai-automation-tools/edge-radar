@@ -84,12 +84,15 @@ CATEGORY_MAP = {
     "KXNCAAWBGAME": "game",
     "KXNFLGAME": "game",
     "KXMLSGAME": "game",
-    "KXUCL": "game",
-    "KXEPL": "game",
-    "KXLALIGA": "game",
-    "KXSERIEA": "game",
-    "KXBUNDESLIGA": "game",
-    "KXLIGUE1": "game",
+    # European soccer: the series are KX<LEAGUE>GAME/SPREAD/TOTAL. The bare
+    # KX<LEAGUE> prefixes these replaced match no series, so every scan fetched
+    # zero markets for all six leagues, silently, until 2026-10-27.
+    "KXUCLGAME": "game",
+    "KXEPLGAME": "game",
+    "KXLALIGAGAME": "game",
+    "KXSERIEAGAME": "game",
+    "KXBUNDESLIGAGAME": "game",
+    "KXLIGUE1GAME": "game",
     "KXWCGAME": "game",
     "KXUFCFIGHT": "game",
     "KXBOXING": "game",
@@ -106,6 +109,12 @@ CATEGORY_MAP = {
     "KXNCAAFSPREAD": "spread",
     "KXMLSSPREAD": "spread",
     "KXWCSPREAD": "spread",
+    "KXUCLSPREAD": "spread",
+    "KXEPLSPREAD": "spread",
+    "KXLALIGASPREAD": "spread",
+    "KXSERIEASPREAD": "spread",
+    "KXBUNDESLIGASPREAD": "spread",
+    "KXLIGUE1SPREAD": "spread",
     # --- Total ---
     "KXMLBTOTAL": "total",
     "KXNHLTOTAL": "total",
@@ -115,6 +124,12 @@ CATEGORY_MAP = {
     "KXNCAAFTOTAL": "total",
     "KXMLSTOTAL": "total",
     "KXWCTOTAL": "total",
+    "KXUCLTOTAL": "total",
+    "KXEPLTOTAL": "total",
+    "KXLALIGATOTAL": "total",
+    "KXSERIEATOTAL": "total",
+    "KXBUNDESLIGATOTAL": "total",
+    "KXLIGUE1TOTAL": "total",
     # --- Player props ---
     "KXNHLGOAL": "player_prop",
     "KXNHLPTS": "player_prop",
@@ -171,12 +186,24 @@ KALSHI_TO_ODDS_SPORT = {
     "KXMLSGAME": "soccer_usa_mls",
     "KXMLSSPREAD": "soccer_usa_mls",
     "KXMLSTOTAL": "soccer_usa_mls",
-    "KXUCL": "soccer_uefa_champs_league",
-    "KXEPL": "soccer_epl",
-    "KXLALIGA": "soccer_spain_la_liga",
-    "KXSERIEA": "soccer_italy_serie_a",
-    "KXBUNDESLIGA": "soccer_germany_bundesliga",
-    "KXLIGUE1": "soccer_france_ligue_one",
+    "KXUCLGAME": "soccer_uefa_champs_league",
+    "KXUCLSPREAD": "soccer_uefa_champs_league",
+    "KXUCLTOTAL": "soccer_uefa_champs_league",
+    "KXEPLGAME": "soccer_epl",
+    "KXEPLSPREAD": "soccer_epl",
+    "KXEPLTOTAL": "soccer_epl",
+    "KXLALIGAGAME": "soccer_spain_la_liga",
+    "KXLALIGASPREAD": "soccer_spain_la_liga",
+    "KXLALIGATOTAL": "soccer_spain_la_liga",
+    "KXSERIEAGAME": "soccer_italy_serie_a",
+    "KXSERIEASPREAD": "soccer_italy_serie_a",
+    "KXSERIEATOTAL": "soccer_italy_serie_a",
+    "KXBUNDESLIGAGAME": "soccer_germany_bundesliga",
+    "KXBUNDESLIGASPREAD": "soccer_germany_bundesliga",
+    "KXBUNDESLIGATOTAL": "soccer_germany_bundesliga",
+    "KXLIGUE1GAME": "soccer_france_ligue_one",
+    "KXLIGUE1SPREAD": "soccer_france_ligue_one",
+    "KXLIGUE1TOTAL": "soccer_france_ligue_one",
     "KXWCGAME": "soccer_fifa_world_cup",
     "KXWCSPREAD": "soccer_fifa_world_cup",
     "KXWCTOTAL": "soccer_fifa_world_cup",
@@ -759,6 +786,12 @@ _PREFIX_TO_SPORT = {
     "KXUFC": "mma",
     "KXMLS": "soccer",
     "KXWC": "soccer",
+    "KXUCL": "soccer",
+    "KXEPL": "soccer",
+    "KXLALIGA": "soccer",
+    "KXSERIEA": "soccer",
+    "KXBUNDESLIGA": "soccer",
+    "KXLIGUE1": "soccer",
 }
 
 
@@ -1500,22 +1533,20 @@ def _sharp_money_signal(team_name: str, side: str, ticker: str, sharp_signals: d
 
     # Try to find this team in the sharp signals index
     # Normalize: try the team name and common abbreviations
-    signal = None
-    for key in sharp_signals:
-        if key.lower() in team_name.lower() or team_name.lower() in key.lower():
-            signal = sharp_signals[key]
-            break
+    # Exact matches only. Substring matching ("ne" in "Tennessee", "la" in
+    # "Dallas") attached one game's signal to another. 2026-10-27.
+    signal = sharp_signals.get(team_name) or sharp_signals.get(team_name.upper())
 
-    # Also try matching by ticker prefix abbreviations
+    # Also try matching by ticker abbreviations: the matchup segment is
+    # AWAY+HOME, so a team's key must sit at one end of it.
     if not signal:
         # Extract team abbrev from ticker: KXNBAGAME-26MAR25OKLBOS-OKC -> OKC, BOS
-        import re
-
         match = re.search(r"\d{2}[A-Z]{3}\d{2}(\w+)-", ticker)
         if match:
-            matchup = match.group(1)
+            matchup = match.group(1).upper()
             for key in sharp_signals:
-                if key.upper() in matchup.upper():
+                k = key.upper()
+                if len(k) >= 2 and (matchup.startswith(k) or matchup.endswith(k)):
                     signal = sharp_signals[key]
                     break
 
@@ -2347,24 +2378,56 @@ FILTER_SHORTCUTS = {
     "ncaab": ["KXNCAAMBGAME", "KXNCAAMBSPREAD", "KXNCAAMBTOTAL", "KXNCAAMBMOP", "KXNCAABBGAME"],
     # --- Soccer / Football ---
     "mls": ["KXMLSGAME", "KXMLSSPREAD", "KXMLSTOTAL"],
-    "ucl": ["KXUCL"],
-    "epl": ["KXEPL"],
-    "laliga": ["KXLALIGA"],
-    "seriea": ["KXSERIEA"],
-    "bundesliga": ["KXBUNDESLIGA"],
-    "ligue1": ["KXLIGUE1"],
+    "ucl": ["KXUCLGAME", "KXUCLSPREAD", "KXUCLTOTAL"],
+    "epl": ["KXEPLGAME", "KXEPLSPREAD", "KXEPLTOTAL"],
+    "laliga": ["KXLALIGAGAME", "KXLALIGASPREAD", "KXLALIGATOTAL"],
+    "seriea": ["KXSERIEAGAME", "KXSERIEASPREAD", "KXSERIEATOTAL"],
+    "bundesliga": ["KXBUNDESLIGAGAME", "KXBUNDESLIGASPREAD", "KXBUNDESLIGATOTAL"],
+    "ligue1": ["KXLIGUE1GAME", "KXLIGUE1SPREAD", "KXLIGUE1TOTAL"],
+    "eurosoccer": [
+        "KXUCLGAME",
+        "KXUCLSPREAD",
+        "KXUCLTOTAL",
+        "KXEPLGAME",
+        "KXEPLSPREAD",
+        "KXEPLTOTAL",
+        "KXLALIGAGAME",
+        "KXLALIGASPREAD",
+        "KXLALIGATOTAL",
+        "KXSERIEAGAME",
+        "KXSERIEASPREAD",
+        "KXSERIEATOTAL",
+        "KXBUNDESLIGAGAME",
+        "KXBUNDESLIGASPREAD",
+        "KXBUNDESLIGATOTAL",
+        "KXLIGUE1GAME",
+        "KXLIGUE1SPREAD",
+        "KXLIGUE1TOTAL",
+    ],
     "worldcup": ["KXWCGAME", "KXWCSPREAD", "KXWCTOTAL"],
     "wc": ["KXWCGAME", "KXWCSPREAD", "KXWCTOTAL"],
     "soccer": [
         "KXMLSGAME",
         "KXMLSSPREAD",
         "KXMLSTOTAL",
-        "KXUCL",
-        "KXEPL",
-        "KXLALIGA",
-        "KXSERIEA",
-        "KXBUNDESLIGA",
-        "KXLIGUE1",
+        "KXUCLGAME",
+        "KXUCLSPREAD",
+        "KXUCLTOTAL",
+        "KXEPLGAME",
+        "KXEPLSPREAD",
+        "KXEPLTOTAL",
+        "KXLALIGAGAME",
+        "KXLALIGASPREAD",
+        "KXLALIGATOTAL",
+        "KXSERIEAGAME",
+        "KXSERIEASPREAD",
+        "KXSERIEATOTAL",
+        "KXBUNDESLIGAGAME",
+        "KXBUNDESLIGASPREAD",
+        "KXBUNDESLIGATOTAL",
+        "KXLIGUE1GAME",
+        "KXLIGUE1SPREAD",
+        "KXLIGUE1TOTAL",
         "KXWCGAME",
         "KXWCSPREAD",
         "KXWCTOTAL",
@@ -2603,15 +2666,19 @@ def scan_all_markets(
         rprint("[dim]Edge detection will be limited to market microstructure only[/dim]")
 
     # 3b. Pre-fetch line movement data from ESPN (free)
-    sharp_signals: dict[str, dict] = {}  # team_abbr -> signal dict
+    # Keyed by sport first. Team abbreviations repeat across leagues (DAL, DET,
+    # TB, PIT ...), and one flat dict let an unfiltered scan read an NHL game's
+    # line movement into an NFL total. 2026-10-27.
+    sharp_signals: dict[str, dict[str, dict]] = {}  # sport_key -> team_abbr -> signal
     for sport_key in sports_needed:
         try:
             movements = get_line_movement(sport_key)
             for mv in movements:
                 if mv.get("sharp_signal"):
                     # Index by both home and away team
-                    sharp_signals[mv["home_team"]] = mv
-                    sharp_signals[mv["away_team"]] = mv
+                    sport_signals = sharp_signals.setdefault(sport_key, {})
+                    sport_signals[mv["home_team"]] = mv
+                    sport_signals[mv["away_team"]] = mv
             if movements:
                 sharp_count = sum(1 for m in movements if m.get("sharp_signal"))
                 rprint(f"  Line movement: {len(movements)} games, {sharp_count} sharp signals")
@@ -2619,7 +2686,9 @@ def scan_all_markets(
             log.debug("Line movement fetch failed for %s: %s", sport_key, e)
 
     # 3c. Pre-fetch MLB starting pitcher data (free, MLB Stats API)
-    pitcher_cache: dict[str, dict] = {}  # team_abbr -> pitcher matchup data
+    # Keyed by (date, team): MLB teams play daily, so a flat team key let
+    # tomorrow's starters overwrite today's. 2026-10-27.
+    pitcher_cache: dict[tuple[str, str], dict] = {}  # (game_date, team_abbr) -> matchup
     if "baseball_mlb" in sports_needed:
         # Collect unique game dates from MLB market tickers
         mlb_dates = set()
@@ -2631,7 +2700,7 @@ def scan_all_markets(
         for gd in sorted(mlb_dates):
             try:
                 day_pitchers = prefetch_mlb_pitchers(gd)
-                pitcher_cache.update(day_pitchers)
+                pitcher_cache.update({(gd, k.upper()): v for k, v in day_pitchers.items()})
             except Exception as e:
                 log.debug("Pitcher fetch failed for %s: %s", gd, e)
         if pitcher_cache:
@@ -2642,11 +2711,15 @@ def scan_all_markets(
             rprint(f"  Pitchers: {len(pitcher_cache) // 2} games ({matchup_types})")
 
     # 3d. Pre-fetch rest day / back-to-back data (NBA, NHL — free ESPN API)
-    rest_cache: dict[str, dict] = {}  # team_abbr -> rest info
+    # Keyed by (sport, date, team). A flat team key read NBA/NHL rest into every
+    # other sport sharing an abbreviation -- MLS totals got the NBA's +1.5
+    # back-to-back stdev on a 1.5-goal base (361 log lines in October), MLB
+    # KC@PIT got the Penguins' -- and let one date's rest overwrite another's.
+    # 2026-10-27.
+    rest_cache: dict[tuple[str, str, str], dict] = {}  # (sport, date, team) -> rest
     rest_sports = {"basketball_nba", "icehockey_nhl"} & sports_needed
     for rs in rest_sports:
         # Collect unique game dates from tickers
-        prefix_map = {v: k for k, v in KALSHI_TO_ODDS_SPORT.items()}  # noqa: F841
         game_dates = set()
         for m in all_markets:
             for prefix, sport in KALSHI_TO_ODDS_SPORT.items():
@@ -2657,22 +2730,26 @@ def scan_all_markets(
         for gd in sorted(game_dates):
             try:
                 day_rest = prefetch_rest_data(rs, gd)
-                rest_cache.update(day_rest)
+                rest_cache.update({(rs, gd, k.upper()): v for k, v in day_rest.items()})
             except Exception as e:
                 log.debug("Rest data fetch failed for %s %s: %s", rs, gd, e)
-        if rest_cache:
-            b2b_count = sum(1 for v in rest_cache.values() if v.get("is_b2b"))
+        sport_rest = [v for k, v in rest_cache.items() if k[0] == rs]
+        if sport_rest:
+            b2b_count = sum(1 for v in sport_rest if v.get("is_b2b"))
             rprint(
-                f"  Rest days ({rs.split('_')[-1].upper()}): {len(rest_cache)} teams, {b2b_count} on back-to-back"  # noqa: E501
+                f"  Rest days ({rs.split('_')[-1].upper()}): {len(sport_rest)} team-games, {b2b_count} on back-to-back"  # noqa: E501
             )
 
     # 4. Run edge detection per category
     opportunities: list[Opportunity] = []
 
-    # Helper: look up rest data for a market by home team abbreviation
-    def _rest_for_market(ticker: str) -> dict | None:
+    # Helper: look up rest data for a market by sport, game date and home team
+    def _rest_for_market(ticker: str, sport_key: str) -> dict | None:
         home = _extract_home_team_abbr(ticker)
-        return rest_cache.get(home.upper()) if home else None
+        game_date = _extract_game_date(ticker)
+        if not home or not game_date:
+            return None
+        return rest_cache.get((sport_key, game_date, home.upper()))
 
     # Helper: fetch weather data for outdoor sports (NFL, MLB)
     weather_cache: dict[str, dict | None] = {}
@@ -2708,13 +2785,15 @@ def scan_all_markets(
             if sport_key == "baseball_mlb":
                 home = _extract_home_team_abbr(m["ticker"])
                 if home:
-                    mlb_pitchers = pitcher_cache.get(home.upper())
+                    mlb_pitchers = pitcher_cache.get(
+                        (_extract_game_date(m["ticker"]), home.upper())
+                    )
             opp = detect_edge_game(
                 m,
                 odds_data[sport_key],
-                sharp_signals=sharp_signals,
+                sharp_signals=sharp_signals.get(sport_key, {}),
                 pitcher_data=mlb_pitchers,
-                rest_data=_rest_for_market(m["ticker"]),
+                rest_data=_rest_for_market(m["ticker"], sport_key),
             )
             if opp and opp.edge >= min_edge:
                 opportunities.append(opp)
@@ -2730,8 +2809,8 @@ def scan_all_markets(
             opp = detect_edge_spread(
                 m,
                 odds_data[sport_key],
-                sharp_signals=sharp_signals,
-                rest_data=_rest_for_market(m["ticker"]),
+                sharp_signals=sharp_signals.get(sport_key, {}),
+                rest_data=_rest_for_market(m["ticker"], sport_key),
                 weather_data=_weather_for_market(m["ticker"]),
             )
             if opp and opp.edge >= min_edge:
@@ -2750,13 +2829,15 @@ def scan_all_markets(
             if sport_key == "baseball_mlb":
                 home = _extract_home_team_abbr(m["ticker"])
                 if home:
-                    mlb_pitchers = pitcher_cache.get(home.upper())
+                    mlb_pitchers = pitcher_cache.get(
+                        (_extract_game_date(m["ticker"]), home.upper())
+                    )
             opp = detect_edge_total(
                 m,
                 odds_data[sport_key],
-                sharp_signals=sharp_signals,
+                sharp_signals=sharp_signals.get(sport_key, {}),
                 pitcher_data=mlb_pitchers,
-                rest_data=_rest_for_market(m["ticker"]),
+                rest_data=_rest_for_market(m["ticker"], sport_key),
                 weather_data=_weather_for_market(m["ticker"]),
             )
             if opp and opp.edge >= min_edge:

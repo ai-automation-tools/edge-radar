@@ -238,12 +238,13 @@ def run(
         if ed.categorize_market(prefix + "-") in SCORED_CATEGORIES:
             by_sport[sport].append(prefix)
 
-    results, empty, odds_age, new_wording = [], [], {}, []
+    results, empty, odds_age, new_wording, dark = [], [], {}, [], []
     for sport, prefixes in sorted(by_sport.items()):
         events, age = load_cached_events(sport)
         if age is not None and age > ODDS_MAX_AGE_H:
             events = []
         odds_age[sport] = age
+        sport_empty = []
         for prefix in prefixes:
             # Undated tickers (KXLALIGA-27-VIL) are season-winner futures that
             # share a game prefix; futures_edge.py scores those, not this path.
@@ -252,6 +253,7 @@ def run(
             ]
             if not markets:
                 empty.append(prefix)
+                sport_empty.append(prefix)
                 continue
             r = probe_series(prefix, markets, events)
             r["sport"] = sport
@@ -267,12 +269,26 @@ def run(
                 if not first_run:
                     r.setdefault("accepted", fresh)
             results.append(r)
+        # Every series for a sport empty while the books list games for it: the
+        # prefixes are wrong, not the slate quiet. The six European leagues sat
+        # here as "No open markets" all season on bare KX<LEAGUE> prefixes that
+        # match no series. A sport with ANY open series is just between listings.
+        upcoming = _upcoming_events(events)
+        if sport_empty and len(sport_empty) == len(prefixes) and upcoming:
+            dark.append((sport, sport_empty, upcoming))
 
     BASELINE_PATH.write_text(json.dumps(baseline, indent=1, sort_keys=True), encoding="utf-8")
-    status = _worst(*(r["level"] for r in results))
-    report = render(results, empty, odds_age, new_wording, last_bet_by_sport(), status, first_run)
+    status = _worst(*(r["level"] for r in results), *(WARN for _ in dark))
+    report = render(
+        results, empty, odds_age, new_wording, last_bet_by_sport(), status, first_run, dark
+    )
     print(report)
-    payload = {"status": status, "series": results, "empty": empty}
+    payload = {
+        "status": status,
+        "series": results,
+        "empty": empty,
+        "dark": [{"sport": s, "prefixes": p, "upcoming_events": n} for s, p, n in dark],
+    }
     if json_out:  # drift_autofix reads the probe on the fixed worktree this way
         Path(json_out).write_text(json.dumps(payload, indent=1, default=str), encoding="utf-8")
     if save:
@@ -369,11 +385,33 @@ def _pct(x: float | None) -> str:
     return "-" if x is None else f"{x:.0%}"
 
 
-def render(results, empty, odds_age, new_wording, last_bet, status, first_run) -> str:
+def _upcoming_events(events: list[dict], days: int = 7) -> int:
+    """Count odds-feed events starting within the next `days`."""
+    now = datetime.now(timezone.utc)
+    n = 0
+    for e in events:
+        try:
+            t = datetime.fromisoformat(str(e.get("commence_time", "")).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if now <= t <= now + timedelta(days=days):
+            n += 1
+    return n
+
+
+def render(results, empty, odds_age, new_wording, last_bet, status, first_run, dark=()) -> str:
     now = datetime.now()
     L = [f"# Integration Drift Check -- {now:%Y-%m-%d %H:%M}", "", f"**Status: {status}**", ""]
     if first_run:
         L += ["_First run: wording baseline seeded from today's markets._", ""]
+    if dark:
+        L += ["## Sports with live odds but no open Kalshi series", ""]
+        for sport, prefixes, n in dark:
+            L.append(
+                f"- **{sport}** (WARN): {n} upcoming event(s) in the odds feed, but "
+                f"{', '.join(prefixes)} return no open markets -- check the series tickers"
+            )
+        L.append("")
     flagged = [r for r in results if r["level"] != OK]
     if flagged:
         L += ["## Flagged series", ""]
