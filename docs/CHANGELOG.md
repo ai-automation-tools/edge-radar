@@ -2,6 +2,36 @@
 
 ---
 
+## 2026-11-03 -- NFL spreads priced on key-number margins; NFL spreads switched off; shadow book sees every strike
+
+- **Finding** 25 of 45 live NFL spread bets since August were YES "wins by over 7.5", at 23-32c
+  (1-4pt favourites); NCAAF 10 of 23. Against 3,949 NFL games 2012-2025 (nflverse closing lines),
+  the normal margin model over-prices exactly that bet: a 2.5-3pt favourite covers 7.5 **27-29%**
+  of the time, the model said **36-37%**. Margins pile on 3 (8.2% of games) and 7 (5.5%), where a
+  normal with stdev 13.5 puts ~3% each. The ~8pt error is the whole 7.5-9pt claimed edge on those
+  bets; the market (~27c) was right. NFL 7.5 YES went 8/22 (+$12.90) against ~5.6 expected at
+  market, which is luck, not edge.
+- **`.env`** `MIN_EDGE_THRESHOLD_NFL_SPREAD=1.0` -- NFL spreads OFF, operator decision. Moneyline
+  and totals keep the 0.06 NFL pilot floor. Two 7.5 orders placed today (CLE@NO `NO8`,
+  CIN@ATL `CIN8`) are held, per S2.
+- **Model** `consensus_spread_prob` prices NFL on whole-number margins: normal mass at each margin
+  k times a fitted weight `w[|k|]` (3 -> 2.33, 7 -> 1.58, 0 -> 0.24), stdev 11.5. Each book's
+  mean is inferred by the same model, and a whole-number line's quote is read as conditional on
+  no push. Holdout (fit <=2020, scored 2021+, production functions): 1-4pt favourites over 7.5
+  27.3% actual / 36.2% normal / **30.7% discrete**, and discrete has the lower Brier at every
+  strike for small favourites. On today's slate the median claimed edge at 7.5 fell from ~8pts to
+  0.9pts, and no NFL strike clears the effective floor. Details carry `margin_model`. Other sports
+  are unchanged. Refit with `scripts/backtest/fit_nfl_margin.py` (new, read-only).
+- **Shadow book** `scan_all_markets(max_per_game=None)` skips the 2-per-game cap, and
+  `shadow_book collect` uses it: the cap kept only each game's highest-edge strikes, so the
+  "pre-gate" book was edge-selected and reviews saw mostly the strikes the model over-prices
+  (244 NFL strikes per collect, was 30). `review` sweeps spreads and totals separately with a
+  game-clustered CI (PR #351), and skips `nfl_discrete` rows in the normal-only stdev sweep.
+  `shadow_book.bat` (local) now collects `KXNFLSPREAD` and `KXNFLTOTAL` daily.
+- **Next** NFL spreads stay off until the shadow book shows the discrete model at or ahead of the
+  market on settled rows. NCAAF bunches on 7 less, but its 7.5 rows run ~3pts high in the shadow
+  book (108 won vs ~115 model / ~104 market); not refitted.
+
 ## 2026-10-27 -- European soccer series fixed; rest/sharp/pitcher data scoped per sport and date
 
 From the [2026-10-27 betting-logic review](my-documents/repo-reviews/2026-10-27-betting-logic-review.md).

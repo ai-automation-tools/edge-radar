@@ -22,6 +22,7 @@ import re
 import sys
 import os  # noqa: F401  -- re-exported for modules importing this one
 import json
+import functools
 import math
 import time
 import logging  # noqa: F401  -- re-exported
@@ -30,6 +31,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path  # noqa: F401  -- re-exported
 from dataclasses import asdict  # noqa: F401  -- re-exported
+import numpy as np
 from scipy.stats import norm
 
 # Shared imports
@@ -893,6 +895,68 @@ def load_calibration_stdevs():
 _DISCRETE_MARGIN_SPORTS = frozenset({"icehockey_nhl", "baseball_mlb", "soccer"})
 
 
+# NFL margins pile on 3 and 7, which a normal CDF cannot see. Since 2012 it put
+# "a 1-4pt favourite wins by over 7.5" ~8pts too high -- the whole claimed edge
+# on the 7.5 strike the book kept buying (2026-11-03). NFL spreads are priced
+# instead on whole-number margins: the normal mass at each margin k, times a
+# weight w[|k|] fitted from history (|k| beyond the table weighs 1.0).
+# Fitted by scripts/backtest/fit_nfl_margin.py; refit there, never by hand.
+# Fitted 2026-11-03 on 3,949 games 2012-2025. Holdout (fit <=2020, scored 2021+):
+# "1-4pt fav wins by over 7.5" 27.3% actual, normal 36.2%, this model 30.7%.
+_NFL_DISCRETE_SD = 11.5
+_NFL_KEY_WEIGHTS = (
+    # fmt: off
+    0.243, 0.751, 0.780, 2.333, 0.846, 0.739, 1.218, 1.575, 0.856, 0.386,  # 0-9
+    1.086, 0.555, 0.516, 0.652, 1.403, 0.586, 0.857, 1.260, 0.967, 0.615,  # 10-19
+    1.073, 1.339, 0.813, 1.007, 1.571, 1.103, 1.046, 1.027, 1.755, 1.032,  # 20-29
+    1.070,
+    # 30
+    # fmt: on
+)
+_MARGIN_K = np.arange(-70, 71)  # PMF support
+
+
+@functools.lru_cache(maxsize=32)
+def _weight_vector(weights: tuple) -> np.ndarray:
+    w = np.ones(len(_MARGIN_K))
+    a = np.abs(_MARGIN_K)
+    inside = a < len(weights)
+    w[inside] = np.asarray(weights)[a[inside]]
+    return w
+
+
+def discrete_margin_pmf(mean: float, sd: float, weights=_NFL_KEY_WEIGHTS) -> np.ndarray:
+    """P(final margin == k) for k in _MARGIN_K, key-number weighted."""
+    w = _weight_vector(tuple(weights))
+    edges = norm.cdf((np.append(_MARGIN_K - 0.5, _MARGIN_K[-1] + 0.5) - mean) / sd)
+    raw = w * np.diff(edges)
+    return raw / raw.sum()
+
+
+def discrete_cover_prob(mean: float, sd: float, line: float, weights=_NFL_KEY_WEIGHTS) -> float:
+    """P(margin > line). On a whole-number line a push refunds, so the book's
+    quote is conditional on no push and so is this."""
+    pmf = discrete_margin_pmf(mean, sd, weights)
+    over = float(pmf[_MARGIN_K > line].sum())
+    if float(line).is_integer():
+        push = float(pmf[_MARGIN_K == int(line)].sum())
+        return over / (1.0 - push) if push < 1.0 else 0.5
+    return over
+
+
+@functools.lru_cache(maxsize=4096)  # every strike of a game re-asks the same book quotes
+def discrete_infer_mean(sd: float, line: float, p_cover: float, weights=_NFL_KEY_WEIGHTS) -> float:
+    """Mean margin at which discrete_cover_prob(mean, sd, line) == p_cover."""
+    lo, hi = -50.0, 50.0
+    for _ in range(40):  # cover prob is monotone in the mean
+        mid = (lo + hi) / 2
+        if discrete_cover_prob(mid, sd, line, weights) < p_cover:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
 def _sport_for_ticker(ticker: str) -> str | None:
     for prefix, sport in _PREFIX_TO_SPORT.items():
         if ticker.startswith(prefix):
@@ -1004,7 +1068,11 @@ def consensus_spread_prob(
         )
         return None
 
-    stdev = _get_margin_stdev(ticker) + stdev_adjustment
+    nfl_discrete = _sport_for_ticker(ticker) == "americanfootball_nfl"
+    if nfl_discrete:
+        stdev = _NFL_DISCRETE_SD + stdev_adjustment
+    else:
+        stdev = _get_margin_stdev(ticker) + stdev_adjustment
 
     # Each book says the team covers its `spread` with its devigged `implied`.
     # Book spread is negative for favorites: spread=-5.5 means "favored by 5.5".
@@ -1019,7 +1087,10 @@ def consensus_spread_prob(
     sd_weights = [_book_weight(s["book"]) for s in spread_data]
     for s in spread_data:
         clamped = max(0.01, min(0.99, s["implied"]))  # avoid ppf infinities
-        s["mean"] = round(-s["spread"] - stdev * norm.ppf(1.0 - clamped), 4)
+        if nfl_discrete:
+            s["mean"] = round(discrete_infer_mean(stdev, -s["spread"], clamped), 4)
+        else:
+            s["mean"] = round(-s["spread"] - stdev * norm.ppf(1.0 - clamped), 4)
     mean_margin = weighted_median([s["mean"] for s in spread_data], sd_weights)
     # Kept for display/logging only; no longer feed the model.
     median_spread = weighted_median([s["spread"] for s in spread_data], sd_weights)
@@ -1043,7 +1114,10 @@ def consensus_spread_prob(
         return None
 
     # Now calculate P(margin > strike)
-    adjusted_prob = 1.0 - norm.cdf(strike, loc=mean_margin, scale=stdev)
+    if nfl_discrete:
+        adjusted_prob = discrete_cover_prob(mean_margin, stdev, strike)
+    else:
+        adjusted_prob = 1.0 - norm.cdf(strike, loc=mean_margin, scale=stdev)
     adjusted_prob = max(0.01, min(0.99, adjusted_prob))
 
     # Book disagreement: if spreads vary widely across books, something
@@ -1060,6 +1134,7 @@ def consensus_spread_prob(
         "adjusted_prob": round(adjusted_prob, 4),
         "inferred_mean_margin": round(mean_margin, 2),
         "margin_stdev": stdev,
+        "margin_model": "nfl_discrete" if nfl_discrete else "normal",
         "book_spread_range": round(spread_range, 1),
         "books": spread_data[:5],
     }
@@ -2507,9 +2582,14 @@ def scan_all_markets(
     ticker_filter: str | None = None,
     top_n: int = 20,
     date_filter: str | None = None,
+    max_per_game: int | None = 2,
 ) -> list[Opportunity]:
     """
     Scan all open Kalshi markets and score them for edge.
+
+    max_per_game=None keeps every scored strike. The shadow book needs that: the
+    default cap of 2 keeps only each game's highest-edge strikes, so a review
+    would only ever see the strikes the model over-prices most.
 
     Args:
         ticker_filter: Filter markets by ticker prefix. Can be a shortcut name
@@ -2845,7 +2925,8 @@ def scan_all_markets(
 
     # Sort by edge descending, then cap at 2 per game
     opportunities.sort(key=lambda o: o.edge, reverse=True)
-    opportunities = _cap_per_game(opportunities, max_per_game=2)
+    if max_per_game is not None:
+        opportunities = _cap_per_game(opportunities, max_per_game=max_per_game)
 
     # Re-sort by composite score for final ranking
     opportunities.sort(key=lambda o: o.composite_score, reverse=True)

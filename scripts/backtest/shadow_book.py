@@ -121,6 +121,7 @@ def collect(ticker_filter: str, date_filter: str | None = None, min_edge: float 
         ticker_filter=ticker_filter,
         date_filter=date_filter,
         top_n=10_000,
+        max_per_game=None,  # every strike, not just each game's top-2 by edge
     )
 
     rows = load_shadow()
@@ -220,7 +221,13 @@ def reproject(details: dict, category: str, side: str, stdev: float) -> float | 
     means, so this re-projection around the median line is exact when the
     books share a line (the usual case) and approximate when they split.
     Rows recorded before B1 are exact as before.
+
+    Rows priced by the discrete NFL model (`margin_model: nfl_discrete`) are
+    skipped: this inversion is normal-only and would sweep the wrong curve.
+    Their fit lives in scripts/backtest/fit_nfl_margin.py.
     """
+    if details.get("margin_model", "normal") != "normal":
+        return None
     try:
         old = float(details["margin_stdev"] if category == "spread" else details["total_stdev"])
         strike = float(details["kalshi_strike"])
