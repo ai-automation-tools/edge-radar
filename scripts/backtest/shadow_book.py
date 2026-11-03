@@ -288,6 +288,45 @@ def sweep(rows: list[dict]) -> list[dict]:
     return out
 
 
+def clustered_gain_ci(
+    rows: list[dict], scale: float, n_boot: int = 2000
+) -> tuple[float, float, float]:
+    """Brier at 1.0x minus Brier at `scale`, with a 95% CI resampled by GAME.
+
+    >0 means `scale` fits better. One game lists many strikes whose outcomes
+    move together, so a row-level bootstrap overstates precision; the event
+    ticker (everything before the last '-') is the resampling unit.
+    """
+    import random
+
+    games: dict[str, list[float]] = {}
+    for r in rows:
+        if r.get("won") is None or r.get("category") not in ("spread", "total"):
+            continue
+        own = _own_stdev(r.get("details") or {}, r["category"])
+        if not own:
+            continue
+        a = reproject(r["details"], r["category"], r["side"], own)
+        b = reproject(r["details"], r["category"], r["side"], scale * own)
+        if a is None or b is None:
+            continue
+        y = 1.0 if r["won"] else 0.0
+        games.setdefault(r.get("ticker", "").rsplit("-", 1)[0], []).append(
+            (a - y) ** 2 - (b - y) ** 2
+        )
+    keys = list(games)
+    if not keys:
+        return 0.0, 0.0, 0.0
+
+    def mean(ks):
+        vals = [x for k in ks for x in games[k]]
+        return sum(vals) / len(vals)
+
+    rng = random.Random(0)
+    boots = sorted(mean([rng.choice(keys) for _ in keys]) for _ in range(n_boot))
+    return mean(keys), boots[int(0.025 * n_boot)], boots[int(0.975 * n_boot) - 1]
+
+
 # -- review -------------------------------------------------------------------
 
 
@@ -360,27 +399,55 @@ def review(sport: str | None = None) -> str:
         "",
     ]
 
-    sw = sweep(rows)
-    if not sw:
+    # Spreads and totals are separate parameters (margin_stdev vs total_stdev),
+    # so each gets its own sweep. A pooled sweep can call 1.0x best while the
+    # two halves want opposite moves -- NCAAF 2026-11-03: spreads ~0.8x, totals ~1.2x.
+    any_sweep = False
+    for cat in ("spread", "total"):
+        crows = [r for r in rows if r.get("category") == cat]
+        sw = sweep(crows)
+        if not sw:
+            continue
+        any_sweep = True
+        cy = [1.0 if r["won"] else 0.0 for r in crows]
+        best = min(sw, key=lambda d: d["brier"])
+        out += [
+            f"### {cat.title()}s ({'margin' if cat == 'spread' else 'total'}_stdev)",
+            "",
+            f"{len(crows)} rows. "
+            f"MARKET Brier **{brier([r['market_price'] for r in crows], cy):.4f}**, "
+            f"MODEL Brier **{brier([r['fair_value'] for r in crows], cy):.4f}**.",
+            "",
+            "| x code | ~stdev | model Brier |",
+            "|------:|------:|------------:|",
+        ]
+        for d in sw:
+            mark = "  <- best" if d is best else ("  <- in code" if d["scale"] == 1.0 else "")
+            out.append(f"| {d['scale']:.1f} | {d['stdev']:.2f} | {d['brier']:.4f}{mark} |")
+        out += [
+            "",
+            f"Best fit **{best['scale']:.1f}x** the in-code stdev "
+            f"(~{best['stdev']:.2f}) over {best['n']} rows.",
+        ]
+        if best["scale"] != 1.0:
+            g, glo, ghi = clustered_gain_ci(crows, best["scale"])
+            out.append(
+                f"Gain over 1.0x: {g:+.4f} Brier, 95% game-clustered CI [{glo:+.4f}, {ghi:+.4f}]"
+                + (
+                    " -- straddles zero; keep collecting before changing the stdev."
+                    if glo <= 0 <= ghi
+                    else " -- excludes zero."
+                )
+            )
+        if best["n"] < MIN_SWEEP_ROWS:
+            out.append(
+                f"**Under {MIN_SWEEP_ROWS} rows -- treat this as a shape, not a "
+                f"number.** Keep collecting before changing a stdev on it."
+            )
+        out.append("")
+    if not any_sweep:
         out.append("No rows carry the consensus detail the sweep needs.")
-        return "\n".join(out)
-
-    best = min(sw, key=lambda d: d["brier"])
-    out += ["| x code | ~stdev | model Brier |", "|------:|------:|------------:|"]
-    for d in sw:
-        mark = "  <- best" if d is best else ("  <- in code" if d["scale"] == 1.0 else "")
-        out.append(f"| {d['scale']:.1f} | {d['stdev']:.2f} | {d['brier']:.4f}{mark} |")
-    out += [
-        "",
-        f"Best fit **{best['scale']:.1f}x** the in-code stdev "
-        f"(~{best['stdev']:.2f}) over {best['n']} rows.",
-    ]
-    if best["n"] < MIN_SWEEP_ROWS:
-        out.append(
-            f"**Under {MIN_SWEEP_ROWS} rows -- treat this as a shape, not a "
-            f"number.** Keep collecting before changing a stdev on it."
-        )
-    return "\n".join(out)
+    return "\n".join(out).rstrip()
 
 
 # -- self-check ---------------------------------------------------------------
@@ -434,6 +501,12 @@ def self_check() -> None:
     at1 = next(x for x in sw if x["scale"] == 1.0)
     assert abs(at1["stdev"] - 4.025) < 1e-9
     assert abs(at1["brier"] - (reproject(m, "spread", "yes", 4.025) - 1.0) ** 2) < 1e-9
+
+    # Clustered gain: 1.0x vs itself is exactly zero, and a row whose outcome
+    # sits above the 1.0x probability gains from a scale that raises it.
+    one = [{"won": True, "category": "spread", "side": "yes", "details": d, "ticker": "G1-X"}]
+    assert clustered_gain_ci(one, 1.0) == (0.0, 0.0, 0.0)
+    assert clustered_gain_ci(one, 1.4)[0] > 0  # wider stdev lifts an uncovered strike toward 1
     print("shadow_book self-check: OK")
 
 
