@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-02 -- Automation guide points to Cronsole
+
+- **Docs** `docs/setup/AUTOMATION_GUIDE.md` gains a short "See the tasks in Cronsole" note: the tasks the
+  installer registers show up in Cronsole's dashboard via its Windows agent. Docs only.
+
+---
+
 ## 2026-10-27 -- European soccer series fixed; rest/sharp/pitcher data scoped per sport and date
 
 From the [2026-10-27 betting-logic review](my-documents/repo-reviews/2026-10-27-betting-logic-review.md).
