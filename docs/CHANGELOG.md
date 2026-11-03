@@ -31,6 +31,8 @@
 - **Next** NFL spreads stay off until the shadow book shows the discrete model at or ahead of the
   market on settled rows. NCAAF bunches on 7 less, but its 7.5 rows run ~3pts high in the shadow
   book (108 won vs ~115 model / ~104 market); not refitted.
+- **Diagram** Re-pinned to `cde08ae`: `edge_detector.py` ranges shifted, and "Fair probability"
+  now cites the discrete NFL model.
 
 ## 2026-10-27 -- European soccer series fixed; rest/sharp/pitcher data scoped per sport and date
 
