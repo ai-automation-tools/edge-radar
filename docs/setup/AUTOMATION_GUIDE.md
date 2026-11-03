@@ -215,6 +215,10 @@ python scripts/kalshi/risk_check.py
 
 Reports are saved automatically to `reports/Sports/schedulers/` on each run.
 
+### See the tasks in Cronsole (optional)
+
+[Cronsole](https://github.com/ai-automation-tools/cronsole) is a dashboard for scheduled jobs. Its Windows agent reads Task Scheduler, so the tasks the installer registers show up there with their last result and a run-now button, instead of living only in `taskschd.msc`. Runs started from Cronsole go through the same scripts, so the risk gates still apply. See the [Cronsole site](https://cronsole.ai-automation-tools.dev/) to try it.
+
 ---
 
 ## Troubleshooting
