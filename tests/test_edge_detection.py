@@ -2143,6 +2143,53 @@ class TestDiscreteSportQuotedLineOnly:
         )
 
 
+class TestNflDiscreteMargin:
+    """2026-11-03: NFL spreads are priced on whole-number margins weighted for
+    the 3/7 key numbers. The normal CDF put "a 3pt favourite wins by over 7.5"
+    ~8pts above history -- the entire claimed edge on 25 of 45 live NFL spreads."""
+
+    FUTURE = "2099-08-16T14:00:00Z"
+
+    def test_pmf_sums_to_one_and_piles_on_key_numbers(self):
+        from edge_detector import _MARGIN_K, discrete_margin_pmf
+
+        pmf = discrete_margin_pmf(3.0, 12.0)
+        assert pmf.sum() == pytest.approx(1.0)
+        at = dict(zip(_MARGIN_K.tolist(), pmf))
+        assert at[3] > 1.8 * at[2] and at[3] > 1.8 * at[4]
+        assert at[7] > at[6] and at[7] > at[8]
+
+    def test_inferred_mean_reproduces_the_quote(self):
+        from edge_detector import discrete_cover_prob, discrete_infer_mean
+
+        for line, p in ((2.5, 0.5), (3.0, 0.5), (6.5, 0.54), (-3.5, 0.45)):
+            mu = discrete_infer_mean(12.0, line, p)
+            assert discrete_cover_prob(mu, 12.0, line) == pytest.approx(p, abs=1e-6)
+
+    def test_whole_number_line_excludes_the_push(self):
+        from edge_detector import discrete_cover_prob, discrete_margin_pmf, _MARGIN_K
+
+        pmf = discrete_margin_pmf(3.0, 12.0)
+        over = pmf[_MARGIN_K > 3].sum()
+        push = pmf[_MARGIN_K == 3].sum()
+        assert discrete_cover_prob(3.0, 12.0, 3.0) == pytest.approx(over / (1 - push))
+
+    def test_small_favourite_big_cover_drops_below_normal(self):
+        # Favourite -3 at a fair 50/50 (both 1.90). History since 2012: 28.7%
+        # cover 7.5; the normal model said 36.9%.
+        ev = _spread_event("Brazil", "Japan", -3.0, 1.90, 1.90, self.FUTURE)
+        p, d = consensus_spread_prob([ev], "Brazil", 7.5, ticker="KXNFLSPREAD-26NOV08JPNBRA-BRA8")
+        assert d["margin_model"] == "nfl_discrete"
+        assert 0.27 < p < 0.33
+        normal = 1 - norm.cdf(7.5, loc=3.0, scale=13.5)
+        assert p < normal - 0.04
+
+    def test_other_sports_stay_normal(self):
+        ev = _spread_event("Brazil", "Japan", -3.0, 1.90, 1.90, self.FUTURE)
+        _, d = consensus_spread_prob([ev], "Brazil", 7.5, ticker="KXNCAAFSPREAD-26NOV08JPNBRA-BRA8")
+        assert d["margin_model"] == "normal"
+
+
 class TestWeightedMedianTieBreak:
     """B1 (#6): an exact weight tie at the 50% mark returns the midpoint, not
     always the lower value."""

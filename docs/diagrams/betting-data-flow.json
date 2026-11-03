@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "4e69e1fb98640b49d6a9de30a142e8c7b81639bb"
+      "revision": "cde08aed7566f0ec78a9fb66ae222689f1626967"
     }
   },
   "stages": [
@@ -39,8 +39,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2569,
-          "end_line": 2606
+          "line": 2649,
+          "end_line": 2686
         }
       ]
     },
@@ -54,8 +54,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 248,
-          "end_line": 336
+          "line": 250,
+          "end_line": 338
         }
       ]
     },
@@ -69,8 +69,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2668,
-          "end_line": 2741
+          "line": 2748,
+          "end_line": 2821
         }
       ]
     },
@@ -84,8 +84,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2757,
-          "end_line": 2773
+          "line": 2837,
+          "end_line": 2853
         }
       ]
     },
@@ -99,8 +99,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2612,
-          "end_line": 2644
+          "line": 2692,
+          "end_line": 2724
         }
       ]
     },
@@ -129,13 +129,13 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2143,
-          "end_line": 2201
+          "line": 2218,
+          "end_line": 2276
         },
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 1499,
-          "end_line": 1518
+          "line": 1574,
+          "end_line": 1593
         }
       ]
     },
@@ -149,8 +149,13 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 827,
-          "end_line": 911
+          "line": 829,
+          "end_line": 890
+        },
+        {
+          "path": "scripts/kalshi/edge_detector.py",
+          "line": 967,
+          "end_line": 975
         }
       ]
     },
@@ -165,8 +170,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 1619,
-          "end_line": 1736
+          "line": 1694,
+          "end_line": 1811
         },
         {
           "path": "scripts/shared/opportunity.py",
@@ -179,20 +184,25 @@
       "id": "fair",
       "type": "backend",
       "label": "Fair probability",
-      "sublabel": "de-vig, weighted median",
+      "sublabel": "de-vig, median, NFL 3/7",
       "tag": "sharp books x3",
       "stage": 2,
       "row": 1,
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 572,
-          "end_line": 731
+          "line": 574,
+          "end_line": 733
         },
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 1007,
-          "end_line": 1046
+          "line": 898,
+          "end_line": 957
+        },
+        {
+          "path": "scripts/kalshi/edge_detector.py",
+          "line": 1070,
+          "end_line": 1120
         }
       ]
     },
