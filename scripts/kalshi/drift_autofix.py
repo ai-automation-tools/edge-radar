@@ -32,6 +32,8 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+from agent_cli import run_agent  # scripts/shared
+
 MAIN = Path(__file__).resolve().parents[2]
 PYTHON = MAIN / ".venv" / "Scripts" / "python.exe"
 BASE_BRANCH = "mike_desktop"
@@ -184,26 +186,10 @@ def _score(probe: dict) -> int:
 
 def _claude_fix(tree: Path, md: Path, js: Path, analysis: str, retry: str) -> str:
     prompt = FIX_PROMPT.format(md=md, js=js, analysis=analysis.strip()[:6000], retry=retry)
-    tools = "Read,Grep,Glob,Edit(scripts/**),Edit(tests/**),Write(tests/**)"
+    tools = ["Read", "Grep", "Glob", "Edit(scripts/**)", "Edit(tests/**)", "Write(tests/**)"]
     try:
-        proc = subprocess.run(
-            [
-                "claude",
-                "-p",
-                prompt,
-                "--model",
-                "opus",
-                "--allowedTools",
-                tools,
-                "--max-turns",
-                "60",
-            ],
-            cwd=tree,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=1500,
-            check=False,
+        proc = run_agent(
+            prompt, cwd=tree, timeout=1500, model="opus", allow_tools=tools, max_turns=60
         )
     except (FileNotFoundError, subprocess.TimeoutExpired) as e:
         return f"(fix session did not complete: {type(e).__name__})"
