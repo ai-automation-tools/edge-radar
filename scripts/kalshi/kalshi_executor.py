@@ -3141,6 +3141,11 @@ def main():
     )
 
     args = parser.parse_args()
+    if args.execute:  # B7: sharp `eu` books only where money is placed
+        import odds_cache
+        from app.config import get_config
+
+        odds_cache.set_regions(get_config().odds_cache.regions_execute)
 
     # Client for execution and portfolio queries — routed through the
     # venue-neutral factory (PM2 seam).

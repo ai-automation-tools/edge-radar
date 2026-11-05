@@ -23,14 +23,9 @@ Usage:
         python scripts/kalshi/futures_edge.py scan --filter nba-futures
 """
 
-import os
-import sys
-import re
 import json
-import logging
 from pathlib import Path
 from datetime import datetime, timezone
-from statistics import median
 from dataclasses import asdict
 
 import requests
@@ -45,9 +40,16 @@ from logging_setup import setup_logging
 load_dotenv()
 log = setup_logging("futures_edge")
 
-from odds_api import get_current_key, rotate_key, report_remaining, mark_exhausted, redact_secrets
-import odds_cache
-from app.config import get_config
+from odds_api import (  # noqa: E402  -- after load_dotenv, like edge_detector
+    get_current_key,
+    mark_exhausted,
+    redact_secrets,
+    report_remaining,
+    rotate_key,
+)
+import odds_cache  # noqa: E402
+from app.config import get_config  # noqa: E402
+
 ODDS_API_BASE = "https://api.the-odds-api.com/v4"
 
 # ── Kalshi-to-Odds-API Mapping ───────────────────────────────────────────────
@@ -57,23 +59,26 @@ ODDS_API_BASE = "https://api.the-odds-api.com/v4"
 # The label appears in scan output so the user knows what they're betting on.
 FUTURES_MAP = {
     # NFL
-    "KXSB":            ("americanfootball_nfl_super_bowl_winner", "outrights", "NFL Super Bowl Champion"),
+    "KXSB": ("americanfootball_nfl_super_bowl_winner", "outrights", "NFL Super Bowl Champion"),
     # NBA
-    "KXNBA":           ("basketball_nba_championship_winner", "outrights", "NBA Finals Champion"),
+    "KXNBA": ("basketball_nba_championship_winner", "outrights", "NBA Finals Champion"),
     # NHL
-    "KXNHL":           ("icehockey_nhl_championship_winner", "outrights", "NHL Stanley Cup Champion"),
+    "KXNHL": ("icehockey_nhl_championship_winner", "outrights", "NHL Stanley Cup Champion"),
     # MLB
-    "KXMLB":           ("baseball_mlb_world_series_winner", "outrights", "MLB World Series Champion"),
+    "KXMLB": ("baseball_mlb_world_series_winner", "outrights", "MLB World Series Champion"),
     # NCAAB
-    "KXNCAAMBMOP":     ("basketball_ncaab_championship_winner", "outrights", "NCAAB Most Outstanding Player"),
+    "KXNCAAMBMOP": (
+        "basketball_ncaab_championship_winner",
+        "outrights",
+        "NCAAB Most Outstanding Player",
+    ),
     # Golf — KXPGATOUR spans the ENTIRE PGA Tour calendar (weekly stops +
     # majors), but The Odds API only publishes outright winner fields for the
     # four majors. The sport_key here is only a placeholder so the series
     # passes the `entry is None` filter in scan_futures_markets; the *actual*
     # major is resolved per-market from the title by _golf_major_key(), and
     # non-major stops + qualifiers fall through to None (skipped, no edge).
-    "KXPGATOUR":       ("golf_us_open_winner", "outrights", "PGA Tour Major Winner"),
-
+    "KXPGATOUR": ("golf_us_open_winner", "outrights", "PGA Tour Major Winner"),
     # ── Intentionally NOT mapped (2026-04-24) ────────────────────────────────
     # These markets exist on Kalshi but don't have a sensible free-tier Odds
     # API counterpart, so scanning them with championship-winner odds produces
@@ -89,14 +94,14 @@ FUTURES_MAP = {
 
 # Filter shortcuts for CLI
 FUTURES_FILTER_SHORTCUTS = {
-    "futures":       list(FUTURES_MAP.keys()),
-    "nfl-futures":   ["KXSB"],
-    "nba-futures":   ["KXNBA"],
-    "nhl-futures":   ["KXNHL"],
-    "mlb-futures":   ["KXMLB"],
+    "futures": list(FUTURES_MAP.keys()),
+    "nfl-futures": ["KXSB"],
+    "nba-futures": ["KXNBA"],
+    "nhl-futures": ["KXNHL"],
+    "mlb-futures": ["KXMLB"],
     "ncaab-futures": ["KXNCAAMBMOP"],
-    "golf-futures":  ["KXPGATOUR"],
-    "pga":           ["KXPGATOUR"],  # alias so `scan.py sports --filter pga` resolves here
+    "golf-futures": ["KXPGATOUR"],
+    "pga": ["KXPGATOUR"],  # alias so `scan.py sports --filter pga` resolves here
 }
 
 
@@ -113,10 +118,14 @@ FUTURES_FILTER_SHORTCUTS = {
 # matched case-insensitively against the market title. "the open" / "open
 # championship" (never bare "open") avoids false hits on "RBC Canadian Open".
 _GOLF_MAJORS = [
-    ("golf_masters_tournament_winner",    "Masters Winner",          ("masters",)),
-    ("golf_pga_championship_winner",      "PGA Championship Winner",  ("pga championship",)),
-    ("golf_us_open_winner",               "U.S. Open Winner",         ("u.s. open", "us open")),
-    ("golf_the_open_championship_winner", "The Open Winner",          ("the open", "open championship", "british open")),
+    ("golf_masters_tournament_winner", "Masters Winner", ("masters",)),
+    ("golf_pga_championship_winner", "PGA Championship Winner", ("pga championship",)),
+    ("golf_us_open_winner", "U.S. Open Winner", ("u.s. open", "us open")),
+    (
+        "golf_the_open_championship_winner",
+        "The Open Winner",
+        ("the open", "open championship", "british open"),
+    ),
 ]
 
 
@@ -160,8 +169,12 @@ def fetch_outrights(sport_key: str) -> list:
     if cfg.enabled:
         cached_events, age = odds_cache.load(sport_key, "outrights", cfg.ttl_seconds)
         if cached_events is not None:
-            log.info("Odds API file cache hit for outrights %s (age %ds, %d events)",
-                     sport_key, age, len(cached_events))
+            log.info(
+                "Odds API file cache hit for outrights %s (age %ds, %d events)",
+                sport_key,
+                age,
+                len(cached_events),
+            )
             _outrights_cache[sport_key] = cached_events
             return cached_events
 
@@ -173,8 +186,9 @@ def fetch_outrights(sport_key: str) -> list:
         api_key = get_current_key()
         if not api_key or api_key in tried:
             if tried:
-                log.warning("All %d Odds API keys returned 401/429 for outrights %s",
-                            len(tried), sport_key)
+                log.warning(
+                    "All %d Odds API keys returned 401/429 for outrights %s", len(tried), sport_key
+                )
             return []
         tried.add(api_key)
         try:
@@ -182,7 +196,7 @@ def fetch_outrights(sport_key: str) -> list:
                 f"{ODDS_API_BASE}/sports/{sport_key}/odds",
                 params={
                     "apiKey": api_key,
-                    "regions": "us",
+                    "regions": odds_cache.regions(),
                     "markets": "outrights",
                     "oddsFormat": "decimal",
                 },
@@ -198,8 +212,12 @@ def fetch_outrights(sport_key: str) -> list:
 
             resp.raise_for_status()
             remaining = resp.headers.get("x-requests-remaining", "?")
-            log.info("Odds API outrights %s: %d events, %s requests remaining",
-                     sport_key, len(resp.json()), remaining)
+            log.info(
+                "Odds API outrights %s: %d events, %s requests remaining",
+                sport_key,
+                len(resp.json()),
+                remaining,
+            )
             rprint(f"  Odds API: {sport_key} ({remaining} requests remaining)")
 
             try:
@@ -218,6 +236,7 @@ def fetch_outrights(sport_key: str) -> list:
 
 
 # ── N-Way De-Vigging ─────────────────────────────────────────────────────────
+
 
 def devig_nway(outcomes: list[dict]) -> dict[str, float]:
     """
@@ -292,24 +311,39 @@ def consensus_outright_fair_values(events: list) -> dict[str, dict]:
 # Common aliases for fuzzy matching between Kalshi subtitles and Odds API names
 FUTURES_ALIASES = {
     # NFL
-    "kc": "kansas city chiefs", "chiefs": "kansas city chiefs",
-    "sf": "san francisco 49ers", "49ers": "san francisco 49ers",
-    "gb": "green bay packers", "packers": "green bay packers",
+    "kc": "kansas city chiefs",
+    "chiefs": "kansas city chiefs",
+    "sf": "san francisco 49ers",
+    "49ers": "san francisco 49ers",
+    "gb": "green bay packers",
+    "packers": "green bay packers",
     # NBA
-    "okc": "oklahoma city thunder", "thunder": "oklahoma city thunder",
-    "lal": "los angeles lakers", "lakers": "los angeles lakers",
-    "gsw": "golden state warriors", "warriors": "golden state warriors",
-    "bos": "boston celtics", "celtics": "boston celtics",
+    "okc": "oklahoma city thunder",
+    "thunder": "oklahoma city thunder",
+    "lal": "los angeles lakers",
+    "lakers": "los angeles lakers",
+    "gsw": "golden state warriors",
+    "warriors": "golden state warriors",
+    "bos": "boston celtics",
+    "celtics": "boston celtics",
     # NHL
-    "edm": "edmonton oilers", "oilers": "edmonton oilers",
-    "fla": "florida panthers", "panthers": "florida panthers",
+    "edm": "edmonton oilers",
+    "oilers": "edmonton oilers",
+    "fla": "florida panthers",
+    "panthers": "florida panthers",
     # Soccer
-    "psg": "paris saint-germain", "paris saint germain": "paris saint-germain",
-    "barca": "barcelona", "fc barcelona": "barcelona",
-    "real": "real madrid", "atletico": "atletico madrid",
-    "man city": "manchester city", "man utd": "manchester united",
-    "bayern": "bayern munich", "fc bayern": "bayern munich",
-    "inter": "inter milan", "ac milan": "ac milan",
+    "psg": "paris saint-germain",
+    "paris saint germain": "paris saint-germain",
+    "barca": "barcelona",
+    "fc barcelona": "barcelona",
+    "real": "real madrid",
+    "atletico": "atletico madrid",
+    "man city": "manchester city",
+    "man utd": "manchester united",
+    "bayern": "bayern munich",
+    "fc bayern": "bayern munich",
+    "inter": "inter milan",
+    "ac milan": "ac milan",
 }
 
 
@@ -344,7 +378,10 @@ def _futures_name_match(odds_name: str, kalshi_name: str) -> bool:
 
 # ── Edge Detection ───────────────────────────────────────────────────────────
 
-def detect_edge_futures(market: dict, fair_values: dict[str, dict], label: str = "") -> Opportunity | None:
+
+def detect_edge_futures(
+    market: dict, fair_values: dict[str, dict], label: str = ""
+) -> Opportunity | None:
     """
     Detect edge on a Kalshi futures market by comparing to consensus outright odds.
 
@@ -470,6 +507,7 @@ def detect_edge_futures(market: dict, fair_values: dict[str, dict], label: str =
 
 # ── Scanner ──────────────────────────────────────────────────────────────────
 
+
 def scan_futures_markets(
     client,
     min_edge: float = 0.03,
@@ -506,7 +544,9 @@ def scan_futures_markets(
     for prefix in prefixes:
         cursor = None
         for _ in range(3):
-            resp = client.get_markets(limit=1000, status="open", series_ticker=prefix, cursor=cursor)
+            resp = client.get_markets(
+                limit=1000, status="open", series_ticker=prefix, cursor=cursor
+            )
             batch = resp.get("markets", [])
             all_markets.extend(batch)
             cursor = resp.get("cursor", "")
@@ -524,7 +564,7 @@ def scan_futures_markets(
     # silently skipped — see the FUTURES_MAP "intentionally NOT mapped"
     # block for the rationale.
     sports_needed: dict[str, list] = {}  # odds_sport_key -> [market, ...]
-    market_labels: dict[str, str] = {}   # ticker -> human label
+    market_labels: dict[str, str] = {}  # ticker -> human label
     for m in all_markets:
         ticker = m["ticker"]
         series = ticker.split("-", 1)[0]
@@ -558,7 +598,10 @@ def scan_futures_markets(
             continue
 
         fair_values = consensus_outright_fair_values(events)
-        rprint(f"  {sport_key}: {len(fair_values)} outcomes from {len(events[0].get('bookmakers', []))} books")
+        rprint(
+            f"  {sport_key}: {len(fair_values)} outcomes from "
+            f"{len(events[0].get('bookmakers', []))} books"
+        )
 
         matched = 0
         for m in markets:
@@ -586,49 +629,83 @@ if __name__ == "__main__":
     sub = parser.add_subparsers(dest="command", required=True)
 
     scan_p = sub.add_parser("scan", help="Scan futures markets for edge")
-    scan_p.add_argument("--filter", dest="ticker_filter",
-                        help="Filter: futures, nba-futures, nhl-futures, soccer-futures, etc.")
+    scan_p.add_argument(
+        "--filter",
+        dest="ticker_filter",
+        help="Filter: futures, nba-futures, nhl-futures, soccer-futures, etc.",
+    )
     scan_p.add_argument("--min-edge", type=float, default=0.03)
     scan_p.add_argument("--top", type=int, default=20)
-    scan_p.add_argument("--execute", action="store_true",
-                        help="Execute bets through the pipeline (requires confirmation)")
-    scan_p.add_argument("--unit-size", type=float, default=None,
-                        help="Dollar amount per bet (default: UNIT_SIZE from .env)")
-    scan_p.add_argument("--max-bets", type=int, default=5,
-                        help="Maximum number of bets to place")
-    scan_p.add_argument("--min-bets", type=int, default=None,
-                        help="Minimum approved bets required to proceed. If fewer pass "
-                             "risk checks, abort to avoid over-concentrating budget.")
-    scan_p.add_argument("--pick", type=str, default=None,
-                        help="Comma-separated row numbers to execute (e.g., '1,3,5')")
-    scan_p.add_argument("--ticker", type=str, nargs="+", default=None,
-                        help="Execute only these specific tickers")
-    scan_p.add_argument("--save", action="store_true",
-                        help="Save results to watchlist")
-    scan_p.add_argument("--date", type=str, default=None,
-                        help="Only show markets on this date (today, tomorrow, YYYY-MM-DD, mar31)")
-    scan_p.add_argument("--budget", type=str, default=None,
-                        help="Max total cost for the batch. Percentage of bankroll (e.g. '10%%') "
-                             "or dollar amount (e.g. '15'). Bets scaled down proportionally.")
-    scan_p.add_argument("--exclude-open", action="store_true",
-                        help="Exclude markets where you already have an open position")
-    scan_p.add_argument("--report-dir", type=str, default=None,
-                        help="Override report output directory for --save")
+    scan_p.add_argument(
+        "--execute",
+        action="store_true",
+        help="Execute bets through the pipeline (requires confirmation)",
+    )
+    scan_p.add_argument(
+        "--unit-size",
+        type=float,
+        default=None,
+        help="Dollar amount per bet (default: UNIT_SIZE from .env)",
+    )
+    scan_p.add_argument("--max-bets", type=int, default=5, help="Maximum number of bets to place")
+    scan_p.add_argument(
+        "--min-bets",
+        type=int,
+        default=None,
+        help="Minimum approved bets required to proceed. If fewer pass "
+        "risk checks, abort to avoid over-concentrating budget.",
+    )
+    scan_p.add_argument(
+        "--pick",
+        type=str,
+        default=None,
+        help="Comma-separated row numbers to execute (e.g., '1,3,5')",
+    )
+    scan_p.add_argument(
+        "--ticker", type=str, nargs="+", default=None, help="Execute only these specific tickers"
+    )
+    scan_p.add_argument("--save", action="store_true", help="Save results to watchlist")
+    scan_p.add_argument(
+        "--date",
+        type=str,
+        default=None,
+        help="Only show markets on this date (today, tomorrow, YYYY-MM-DD, mar31)",
+    )
+    scan_p.add_argument(
+        "--budget",
+        type=str,
+        default=None,
+        help="Max total cost for the batch. Percentage of bankroll (e.g. '10%%') "
+        "or dollar amount (e.g. '15'). Bets scaled down proportionally.",
+    )
+    scan_p.add_argument(
+        "--exclude-open",
+        action="store_true",
+        help="Exclude markets where you already have an open position",
+    )
+    scan_p.add_argument(
+        "--report-dir", type=str, default=None, help="Override report output directory for --save"
+    )
 
     args = parser.parse_args()
+    if args.execute:  # B7: sharp `eu` books only where money is placed
+        odds_cache.set_regions(get_config().odds_cache.regions_execute)
 
     client = KalshiClient()
-    opps = scan_futures_markets(client, min_edge=args.min_edge,
-                                 ticker_filter=args.ticker_filter, top_n=args.top)
+    opps = scan_futures_markets(
+        client, min_edge=args.min_edge, ticker_filter=args.ticker_filter, top_n=args.top
+    )
 
     if opps and args.date:
         from ticker_display import filter_by_date, resolve_date_arg
+
         target = resolve_date_arg(args.date)
         before = len(opps)
         opps = filter_by_date(opps, target)
         rprint(f"[dim]Date filter ({target}): {before} -> {len(opps)} opportunities[/dim]")
     if opps and args.exclude_open:
         from ticker_display import filter_exclude_tickers
+
         positions = client.get_positions(limit=200, count_filter="position")
         open_tickers = {p.get("ticker", "") for p in positions.get("market_positions", [])}
         before = len(opps)
@@ -642,6 +719,7 @@ if __name__ == "__main__":
         # If execution flags are set, route through the executor pipeline
         if args.execute or args.unit_size is not None or args.budget is not None:
             from kalshi_executor import execute_pipeline, UNIT_SIZE, parse_budget_arg
+
             sized_orders = execute_pipeline(
                 client=client,
                 opportunities=opps,
@@ -659,7 +737,9 @@ if __name__ == "__main__":
 
             from kalshi_executor import preflight_gate_status
 
-            table = Table(title=f"Futures Opportunities (edge >= {args.min_edge:.0%})", show_lines=True)
+            table = Table(
+                title=f"Futures Opportunities (edge >= {args.min_edge:.0%})", show_lines=True
+            )
             table.add_column("Bet Type", style="bold", max_width=28)
             table.add_column("Candidate", style="cyan", max_width=25)
             table.add_column("Date", style="dim")
@@ -689,7 +769,12 @@ if __name__ == "__main__":
             console.print(table)
 
         if args.save:
-            save_path = Path(__file__).resolve().parent.parent.parent / "data" / "watchlists" / "futures_opportunities.json"
+            save_path = (
+                Path(__file__).resolve().parent.parent.parent
+                / "data"
+                / "watchlists"
+                / "futures_opportunities.json"
+            )
             save_path.parent.mkdir(parents=True, exist_ok=True)
             save_data = {
                 "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -707,19 +792,32 @@ if __name__ == "__main__":
     # run (mirrors the sports-scanner fix 156d5e5 / feedback_sameday_empty_emails).
     if args.save:
         from report_writer import save_execution_report, save_scan_report
+
         if sized_orders is not None:
-            rpt = save_execution_report(sized_orders, report_type="futures",
-                                        filter_label=args.ticker_filter or "", min_edge=args.min_edge,
-                                        output_dir=args.report_dir)
+            rpt = save_execution_report(
+                sized_orders,
+                report_type="futures",
+                filter_label=args.ticker_filter or "",
+                min_edge=args.min_edge,
+                output_dir=args.report_dir,
+            )
         elif opps:
-            rpt = save_scan_report(opps, report_type="futures",
-                                   filter_label=args.ticker_filter or "", min_edge=args.min_edge,
-                                   output_dir=args.report_dir)
+            rpt = save_scan_report(
+                opps,
+                report_type="futures",
+                filter_label=args.ticker_filter or "",
+                min_edge=args.min_edge,
+                output_dir=args.report_dir,
+            )
         else:
             # No opportunities cleared the edge threshold — emit an empty
             # "0 orders" execution report as proof-of-life for the email task.
-            rpt = save_execution_report([], report_type="futures",
-                                        filter_label=args.ticker_filter or "", min_edge=args.min_edge,
-                                        output_dir=args.report_dir)
+            rpt = save_execution_report(
+                [],
+                report_type="futures",
+                filter_label=args.ticker_filter or "",
+                min_edge=args.min_edge,
+                output_dir=args.report_dir,
+            )
         if rpt:
             rprint(f"[dim]Report saved to {rpt}[/dim]")

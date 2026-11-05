@@ -669,6 +669,10 @@ ALLOW_PREDICTION_BETS=false     # Gate 4.7
 ALLOW_LIVE_BETS=false           # Gate 4.8
 ODDS_CACHE_TTL_SECONDS=300      # R24b: file cache for Odds API responses; 0 disables
 ODDS_CACHE_ENABLED=true
+ODDS_API_REGIONS_EXECUTE=us     # B7: Odds API regions for --execute runs only; previews stay "us".
+                                #   "us,eu" brings Pinnacle (the only sharp book that can arrive)
+                                #   into the consensus that places orders, at 2x request cost on
+                                #   those runs. Regions are part of the odds cache key.
 ODDS_LIVE_TTL_SECONDS=45        # L1: shorter TTL when a sport response has an in-play event
 SCAN_CACHE_TTL_SECONDS=600      # R26: replay the last preview's row→ticker map for --pick --execute
 SCAN_CACHE_ENABLED=true

@@ -71,7 +71,7 @@ S8 (CLV capture) shipped 2026-09-10 and S9 (the CLV section of `betting_analysis
 - [ ] **T4** **Newly covered market types flood the book before they can be calibrated.** Options: a higher floor until first calibration, a per-shape batch cap, or a per-(sport, category) share cap. *(effort S-M)*
 - [ ] **GT1** **Three unaligned NO-side knobs** (Gate 4.6, 4.6b and F4 damping). Check whether one edge-vs-price surface can reproduce all three before merging any of them. *(effort M)*
 - [ ] **MLB** Re-check MLB totals after about 20 more settles under Gate 3.55. Align the totals `n_books` floor (3) with moneyline (5). Once rows carry `n_books`, re-run `book_width_check.py` in direct mode. *(effort S)*
-- [!] **B7** **Sharp books never arrive** (`regions=us`, and Pinnacle/Circa are `eu`). **Blocked on an operator quota decision:** add keys, apply `eu` only to the pre-execution scan, or lengthen the cache TTL. Prune `BOOK_WEIGHTS` either way. *(effort S)*
+- [ ] **B7b** Turn on `ODDS_API_REGIONS_EXECUTE=us,eu` in the live `.env` (B7 shipped the knob, default off; it doubles Odds API cost on `--execute` runs only). Once on, log `n_books` and re-check the R29/MLB book-count floors, which were tuned on a 9-book us-only pool. *(effort XS)*
 - [ ] **R23b** On a 429, back off and retry the same key. Only mark a key exhausted on a 401. *(effort S)*
 - [ ] **C9** Soccer total stdev is 1.5, but realized data shows 1.86. Change it only with a backtest, because soccer totals are currently profitable. *(effort S)*
 - [ ] **C4b** Cap the edge for the `high` confidence label. Measure first, since High underperforms even at low edge. *(effort S)*
@@ -91,7 +91,7 @@ S8 (CLV capture) shipped 2026-09-10 and S9 (the CLV section of `betting_analysis
 - [ ] **T1/T2** Mocked integration tests (scan→risk→execute, settle→report→CLV) plus deterministic API fixtures. *(effort M)*
 - [ ] **R24c** Make `install_windows_task.py status` reflect every live task under `\AI-Projects\Edge-Radar-MikesAILab\`. *(effort S)*
 - [ ] **GT2** Add one reference table of the 8 sizing-cap steps near `size_order`. *(effort XS)*
-- [ ] **H7** Move `BOOK_WEIGHTS` into config. Pairs with B7. *(effort S)*
+- [ ] **H7** Move `BOOK_WEIGHTS` into config (pruned to arriving keys in B7). *(effort S)*
 - [ ] **H8** Write a runbook for rotating the Kalshi RSA key. *(effort XS)*
 - [ ] **H2 / H3** Split `requirements.txt` into core, dev and research. Separate runtime state from the source tree. *(effort S)*
 - [ ] **Q6** Package `scripts/` and retire the `sys.path` hacks. *(effort L)*

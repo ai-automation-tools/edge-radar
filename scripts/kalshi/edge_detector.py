@@ -264,7 +264,7 @@ def fetch_odds_api(sport_key: str, markets: str = "h2h") -> list:
     all-sports scan masked the issue because earlier sports burned through
     exhausted keys first.
     """
-    cache_key = f"{sport_key}:{markets}"
+    cache_key = f"{sport_key}:{markets}:{odds_cache.regions()}"
     cfg = get_config().odds_cache
 
     cached = _odds_cache.get(cache_key)
@@ -306,7 +306,7 @@ def fetch_odds_api(sport_key: str, markets: str = "h2h") -> list:
                 f"{ODDS_API_BASE}/sports/{sport_key}/odds",
                 params={
                     "apiKey": api_key,
-                    "regions": "us",
+                    "regions": odds_cache.regions(),
                     "markets": markets,
                     "oddsFormat": "decimal",
                     "dateFormat": "iso",
@@ -345,7 +345,7 @@ def fetch_event_odds_api(
     sport_key: str, event_id: str, markets: str = "h2h,spreads,totals"
 ) -> dict | None:
     """Fetch event-level odds from The Odds API with caching and key rotation (Phase 2)."""
-    cache_key = f"{sport_key}:{event_id}:{markets}"
+    cache_key = f"{sport_key}:{event_id}:{markets}:{odds_cache.regions()}"
     cfg = get_config().odds_cache
 
     cached = _event_odds_cache.get(cache_key)
@@ -382,7 +382,7 @@ def fetch_event_odds_api(
                 f"{ODDS_API_BASE}/sports/{sport_key}/events/{event_id}/odds",
                 params={
                     "apiKey": api_key,
-                    "regions": "us",
+                    "regions": odds_cache.regions(),
                     "markets": markets,
                     "oddsFormat": "decimal",
                     "dateFormat": "iso",
@@ -571,31 +571,25 @@ def devig_two_way(prob_a: float, prob_b: float) -> tuple[float, float]:
 
 # Sharp books have tighter lines and more accurate prices.
 # Recreational books have wider margins influenced by public money.
+# B7 prune (2026-11-05): only keys that actually arrive. `regions=us` delivers
+# exactly the nine US books below (every cached response); Pinnacle arrives only
+# when an --execute run adds `eu` (ODDS_API_REGIONS_EXECUTE). Circa, Bookmaker,
+# Caesars, ESPN Bet, PointsBet, SuperBook, Hard Rock, Bally and Fliff never
+# appeared and were removed. Any other key falls back to DEFAULT_BOOK_WEIGHT.
 BOOK_WEIGHTS = {
-    # Sharp (weight 3x)
+    # Sharp (eu region)
     "pinnacle": 3.0,
-    "pinnaclesports": 3.0,
-    "circa": 3.0,
-    "bookmaker": 2.5,
-    # Mid-tier (weight 1.5x)
+    # Mid-tier
+    "lowvig": 2.0,
     "betonlineag": 1.5,
     "bovada": 1.5,
-    "lowvig": 2.0,
     "betrivers": 1.0,
-    "williamhill_us": 1.0,
-    # Recreational (weight 0.7x)
+    # Recreational
     "draftkings": 0.7,
     "fanduel": 0.7,
     "betmgm": 0.7,
-    "pointsbetus": 0.7,
-    "caesars": 0.7,
-    "espnbet": 0.7,
-    "superbook": 1.0,
     "mybookieag": 0.7,
     "betus": 0.7,
-    "ballybet": 0.7,
-    "hardrockbet": 0.7,
-    "fliff": 0.5,
 }
 
 DEFAULT_BOOK_WEIGHT = 1.0
@@ -3142,6 +3136,8 @@ def main():
     detail_p.add_argument("ticker", help="Market ticker")
 
     args = parser.parse_args()
+    if args.execute:  # B7: sharp `eu` books only where money is placed
+        odds_cache.set_regions(get_config().odds_cache.regions_execute)
 
     client = KalshiClient()
 
