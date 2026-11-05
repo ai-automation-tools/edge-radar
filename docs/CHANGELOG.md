@@ -23,6 +23,8 @@
 - **`BOOK_WEIGHTS`** pruned to keys that actually arrive, plus `pinnacle`. Circa, Bookmaker,
   Caesars, ESPN Bet, PointsBet, SuperBook, Hard Rock, Bally, Fliff and `pinnaclesports` never
   appeared. Anything else, including the other `eu` books, gets `DEFAULT_BOOK_WEIGHT` (1.0).
+- **Diagram** re-pinned to `2b39b0e`: line ranges shifted, `odds_cache` range now covers the
+  regions key, and the Odds API node reads "us; +eu on execute".
 
 ---
 
