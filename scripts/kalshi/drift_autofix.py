@@ -187,7 +187,17 @@ def _claude_fix(tree: Path, md: Path, js: Path, analysis: str, retry: str) -> st
     tools = "Read,Grep,Glob,Edit(scripts/**),Edit(tests/**),Write(tests/**)"
     try:
         proc = subprocess.run(
-            ["claude", "-p", prompt, "--allowedTools", tools, "--max-turns", "60"],
+            [
+                "claude",
+                "-p",
+                prompt,
+                "--model",
+                "opus",
+                "--allowedTools",
+                tools,
+                "--max-turns",
+                "60",
+            ],
             cwd=tree,
             capture_output=True,
             text=True,
