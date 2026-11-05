@@ -25,7 +25,7 @@ quality, then UX, then features.** Hold all sizing (`KELLY_FRACTION` <= 0.5, `UN
 until S15 says otherwise.
 
 Markers: `- [ ]` open, `- [-]` claimed by a run in progress, `- [x]` done, `- [!]` blocked (the
-reason follows on the line). `small` marks an item a check verifies; `🔒 Needs Mike` marks one only
+reason follows on the line). `small` marks an item a check verifies; `🔒 Needs owner` marks one only
 Mike can do. Each item keeps its ID in bold and its effort (XS to L) in italics at the end.
 
 ## 🧭 Phase 0: Build and live trading (done 2026-03-22)
