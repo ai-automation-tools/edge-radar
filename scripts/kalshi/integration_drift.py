@@ -43,6 +43,7 @@ from dotenv import load_dotenv
 load_dotenv(paths.PROJECT_ROOT / ".env")
 
 import edge_detector as ed  # noqa: E402
+from agent_cli import run_agent  # noqa: E402
 from kalshi_client import KalshiClient  # noqa: E402
 from ticker_display import _detect_sport  # noqa: E402
 from trade_log import load_trade_log  # noqa: E402
@@ -350,26 +351,17 @@ def run_analysis(status: str, md_path: Path, json_path: Path, timeout: int = 900
     """Headless Claude pass over the probe output; returns markdown to append.
 
     Tool-restricted (read + web only) instead of --dangerously-skip-permissions,
-    which the 2026-09-23 consolidation removed from every unattended job.
+    which the 2026-09-23 consolidation removed from every unattended job. Since
+    2026-11-05 that allowlist is enforced (agent_cli), not just pre-approved.
     """
     prompt = ANALYSIS_PROMPT.format(status=status, md=md_path, js=json_path)
     try:
-        proc = subprocess.run(
-            [
-                "claude",
-                "-p",
-                prompt,
-                "--allowedTools",
-                "Read,Grep,Glob,WebFetch,WebSearch",
-                "--max-turns",
-                "40",
-            ],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=timeout,
+        proc = run_agent(
+            prompt,
             cwd=paths.PROJECT_ROOT,
-            check=False,
+            timeout=timeout,
+            allow_tools=["Read", "Grep", "Glob", "WebFetch", "WebSearch"],
+            max_turns=40,
         )
     except FileNotFoundError:
         return "## Analysis\n\n_Skipped: `claude` CLI not on PATH._\n"
