@@ -469,6 +469,8 @@ class OddsCacheConfig:
     ttl_seconds: int = 300
     live_ttl_seconds: int = 45
     enabled: bool = True
+    # B7: Odds API regions for --execute runs only (previews stay "us").
+    regions_execute: str = "us"
 
     @classmethod
     def from_env(cls) -> "OddsCacheConfig":
@@ -476,6 +478,7 @@ class OddsCacheConfig:
             ttl_seconds=_int("ODDS_CACHE_TTL_SECONDS", 300),
             live_ttl_seconds=_int("ODDS_LIVE_TTL_SECONDS", 45),
             enabled=_bool("ODDS_CACHE_ENABLED", True),
+            regions_execute=_str("ODDS_API_REGIONS_EXECUTE", "us"),
         )
 
 

@@ -28,8 +28,9 @@ def isolated_cache_dir(monkeypatch, tmp_path):
     yield cache_dir
 
 
-def _write_cache_file(cache_dir: Path, sport_key: str, markets: str,
-                     fetched_at: datetime, events: list) -> Path:
+def _write_cache_file(
+    cache_dir: Path, sport_key: str, markets: str, fetched_at: datetime, events: list
+) -> Path:
     cache_dir.mkdir(parents=True, exist_ok=True)
     safe_markets = markets.replace(",", "_")
     path = cache_dir / f"{sport_key}__{safe_markets}.json"
@@ -47,12 +48,11 @@ class TestLoad:
     def test_hit_within_ttl(self, isolated_cache_dir):
         events = [{"home_team": "Yankees", "away_team": "Red Sox"}]
         fetched_at = datetime.now(timezone.utc) - timedelta(seconds=60)
-        _write_cache_file(isolated_cache_dir, "baseball_mlb",
-                          "h2h,spreads,totals", fetched_at, events)
-
-        result, age = odds_cache.load(
-            "baseball_mlb", "h2h,spreads,totals", ttl_seconds=300
+        _write_cache_file(
+            isolated_cache_dir, "baseball_mlb", "h2h,spreads,totals", fetched_at, events
         )
+
+        result, age = odds_cache.load("baseball_mlb", "h2h,spreads,totals", ttl_seconds=300)
 
         assert result == events
         assert 55 <= age <= 70  # ~60s, allow timing wiggle
@@ -60,12 +60,11 @@ class TestLoad:
     def test_miss_after_ttl(self, isolated_cache_dir):
         events = [{"home_team": "Yankees"}]
         fetched_at = datetime.now(timezone.utc) - timedelta(seconds=600)
-        _write_cache_file(isolated_cache_dir, "baseball_mlb",
-                          "h2h,spreads,totals", fetched_at, events)
-
-        result, age = odds_cache.load(
-            "baseball_mlb", "h2h,spreads,totals", ttl_seconds=300
+        _write_cache_file(
+            isolated_cache_dir, "baseball_mlb", "h2h,spreads,totals", fetched_at, events
         )
+
+        result, age = odds_cache.load("baseball_mlb", "h2h,spreads,totals", ttl_seconds=300)
 
         assert result is None
         assert age is None
@@ -74,8 +73,7 @@ class TestLoad:
         """ttl_seconds <= 0 must short-circuit the load with no I/O."""
         events = [{"home_team": "Yankees"}]
         fetched_at = datetime.now(timezone.utc) - timedelta(seconds=10)
-        _write_cache_file(isolated_cache_dir, "baseball_mlb",
-                          "h2h", fetched_at, events)
+        _write_cache_file(isolated_cache_dir, "baseball_mlb", "h2h", fetched_at, events)
 
         result, age = odds_cache.load("baseball_mlb", "h2h", ttl_seconds=0)
         assert result is None and age is None
@@ -93,9 +91,7 @@ class TestLoad:
         assert result is None and age is None
 
     def test_missing_file_returns_none(self, isolated_cache_dir):
-        result, age = odds_cache.load(
-            "baseball_mlb", "h2h", ttl_seconds=300
-        )
+        result, age = odds_cache.load("baseball_mlb", "h2h", ttl_seconds=300)
         assert result is None and age is None
 
     def test_missing_required_fields_misses(self, isolated_cache_dir):
@@ -128,8 +124,9 @@ class TestLiveAwareTtl:
         assert odds_cache.response_has_live_event(events, now=self.NOW) is False
 
     def test_response_has_live_event_handles_garbage(self):
-        assert odds_cache.response_has_live_event([{"commence_time": "nope"}],
-                                                  now=self.NOW) is False
+        assert (
+            odds_cache.response_has_live_event([{"commence_time": "nope"}], now=self.NOW) is False
+        )
         assert odds_cache.response_has_live_event([{}], now=self.NOW) is False
         assert odds_cache.response_has_live_event("not a list") is False
 
@@ -144,23 +141,17 @@ class TestLiveAwareTtl:
         well within the 300s pre-game TTL."""
         events = [{"commence_time": "2020-01-01T00:00:00Z"}]  # long since started
         fetched_at = datetime.now(timezone.utc) - timedelta(seconds=90)
-        _write_cache_file(isolated_cache_dir, "baseball_mlb", "h2h",
-                          fetched_at, events)
+        _write_cache_file(isolated_cache_dir, "baseball_mlb", "h2h", fetched_at, events)
 
-        result, age = odds_cache.load(
-            "baseball_mlb", "h2h", ttl_seconds=300, live_ttl_seconds=45
-        )
+        result, age = odds_cache.load("baseball_mlb", "h2h", ttl_seconds=300, live_ttl_seconds=45)
         assert result is None and age is None
 
     def test_load_hits_live_response_within_live_ttl(self, isolated_cache_dir):
         events = [{"commence_time": "2020-01-01T00:00:00Z"}]
         fetched_at = datetime.now(timezone.utc) - timedelta(seconds=20)
-        _write_cache_file(isolated_cache_dir, "baseball_mlb", "h2h",
-                          fetched_at, events)
+        _write_cache_file(isolated_cache_dir, "baseball_mlb", "h2h", fetched_at, events)
 
-        result, age = odds_cache.load(
-            "baseball_mlb", "h2h", ttl_seconds=300, live_ttl_seconds=45
-        )
+        result, age = odds_cache.load("baseball_mlb", "h2h", ttl_seconds=300, live_ttl_seconds=45)
         assert result == events
         assert age is not None and 15 <= age <= 30
 
@@ -168,20 +159,16 @@ class TestLiveAwareTtl:
         """An all-upcoming response 90s old still hits — live TTL doesn't apply."""
         events = [{"commence_time": "2099-01-01T00:00:00Z"}]  # far future
         fetched_at = datetime.now(timezone.utc) - timedelta(seconds=90)
-        _write_cache_file(isolated_cache_dir, "baseball_mlb", "h2h",
-                          fetched_at, events)
+        _write_cache_file(isolated_cache_dir, "baseball_mlb", "h2h", fetched_at, events)
 
-        result, age = odds_cache.load(
-            "baseball_mlb", "h2h", ttl_seconds=300, live_ttl_seconds=45
-        )
+        result, age = odds_cache.load("baseball_mlb", "h2h", ttl_seconds=300, live_ttl_seconds=45)
         assert result == events
 
     def test_load_without_live_ttl_is_backward_compatible(self, isolated_cache_dir):
         """Omitting live_ttl_seconds preserves the pre-L1 3-arg behavior."""
         events = [{"commence_time": "2020-01-01T00:00:00Z"}]
         fetched_at = datetime.now(timezone.utc) - timedelta(seconds=90)
-        _write_cache_file(isolated_cache_dir, "baseball_mlb", "h2h",
-                          fetched_at, events)
+        _write_cache_file(isolated_cache_dir, "baseball_mlb", "h2h", fetched_at, events)
 
         result, age = odds_cache.load("baseball_mlb", "h2h", ttl_seconds=300)
         assert result == events  # live not considered → 300s TTL → hit
@@ -197,9 +184,7 @@ class TestStore:
         assert expected_path.exists()
 
         # Round-trips via load()
-        result, age = odds_cache.load(
-            "baseball_mlb", "h2h,spreads,totals", ttl_seconds=300
-        )
+        result, age = odds_cache.load("baseball_mlb", "h2h,spreads,totals", ttl_seconds=300)
         assert result == events
         assert age is not None and age >= 0
 
@@ -217,7 +202,7 @@ class TestClear:
         for sport in ["baseball_mlb", "basketball_nba", "icehockey_nhl"]:
             odds_cache.store(sport, "h2h", [])
             odds_cache.store_event(sport, "ev1", {})
-        
+
         # Check files in main and event directories
         assert len(list(odds_cache._CACHE_DIR.glob("*.json"))) == 3
         assert len(list(odds_cache._EVENT_CACHE_DIR.glob("*.json"))) == 3
@@ -268,3 +253,31 @@ class TestEventCache:
 
         result, age = odds_cache.load_event("basketball_nba", "ev1", live_ttl_seconds=45)
         assert result is None and age is None
+
+
+class TestRegionsKey:
+    """B7: a us-only response cached by a preview must never satisfy an
+    execute run that asked for `us,eu` (and vice versa)."""
+
+    def test_regions_partition_the_cache(self, isolated_cache_dir, monkeypatch):
+        monkeypatch.setattr(odds_cache, "_REGIONS", "us")
+        odds_cache.store("baseball_mlb", "h2h", [{"id": "us-only"}])
+        assert odds_cache.load("baseball_mlb", "h2h", 300)[0] == [{"id": "us-only"}]
+
+        odds_cache.set_regions(" us , eu ")
+        assert odds_cache.regions() == "us,eu"
+        assert odds_cache.load("baseball_mlb", "h2h", 300) == (None, None)
+        odds_cache.store("baseball_mlb", "h2h", [{"id": "with-pinnacle"}])
+        assert odds_cache.load("baseball_mlb", "h2h", 300)[0] == [{"id": "with-pinnacle"}]
+
+        odds_cache.set_regions("us")
+        assert odds_cache.load("baseball_mlb", "h2h", 300)[0] == [{"id": "us-only"}]
+
+    def test_us_keeps_pre_b7_filename(self, monkeypatch):
+        monkeypatch.setattr(odds_cache, "_REGIONS", "us")
+        assert odds_cache._filename("x", "h2h,spreads").name == "x__h2h_spreads.json"
+
+    def test_blank_falls_back_to_us(self, monkeypatch):
+        monkeypatch.setattr(odds_cache, "_REGIONS", "us")
+        odds_cache.set_regions(" , ")
+        assert odds_cache.regions() == "us"

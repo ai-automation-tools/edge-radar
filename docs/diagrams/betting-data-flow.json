@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "cde08aed7566f0ec78a9fb66ae222689f1626967"
+      "revision": "2b39b0eb8e1738cf89609ca5346e5c064c3c07af"
     }
   },
   "stages": [
@@ -39,8 +39,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2649,
-          "end_line": 2686
+          "line": 2643,
+          "end_line": 2680
         }
       ]
     },
@@ -48,7 +48,7 @@
       "id": "odds_api",
       "type": "external",
       "label": "The Odds API",
-      "sublabel": "h2h, spreads, totals",
+      "sublabel": "us; +eu on execute",
       "stage": 0,
       "row": 1,
       "sources": [
@@ -69,8 +69,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2748,
-          "end_line": 2821
+          "line": 2742,
+          "end_line": 2815
         }
       ]
     },
@@ -84,8 +84,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2837,
-          "end_line": 2853
+          "line": 2831,
+          "end_line": 2847
         }
       ]
     },
@@ -99,8 +99,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2692,
-          "end_line": 2724
+          "line": 2686,
+          "end_line": 2718
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "path": "scripts/shared/odds_cache.py",
           "line": 34,
-          "end_line": 93
+          "end_line": 115
         }
       ]
     },
@@ -129,13 +129,13 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 2218,
-          "end_line": 2276
+          "line": 2212,
+          "end_line": 2270
         },
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 1574,
-          "end_line": 1593
+          "line": 1568,
+          "end_line": 1587
         }
       ]
     },
@@ -149,13 +149,13 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 829,
-          "end_line": 890
+          "line": 823,
+          "end_line": 884
         },
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 967,
-          "end_line": 975
+          "line": 961,
+          "end_line": 969
         }
       ]
     },
@@ -170,8 +170,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 1694,
-          "end_line": 1811
+          "line": 1688,
+          "end_line": 1805
         },
         {
           "path": "scripts/shared/opportunity.py",
@@ -191,18 +191,18 @@
       "sources": [
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 574,
-          "end_line": 733
+          "line": 579,
+          "end_line": 727
         },
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 898,
-          "end_line": 957
+          "line": 892,
+          "end_line": 951
         },
         {
           "path": "scripts/kalshi/edge_detector.py",
-          "line": 1070,
-          "end_line": 1120
+          "line": 1064,
+          "end_line": 1114
         }
       ]
     },

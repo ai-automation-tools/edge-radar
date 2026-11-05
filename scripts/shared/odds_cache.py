@@ -35,13 +35,35 @@ _CACHE_DIR = DATA_DIR / "cache" / "odds"
 _EVENT_CACHE_DIR = DATA_DIR / "cache" / "odds" / "events"
 
 
+# B7: Odds API regions for this process. "us" never carries Pinnacle (it is
+# `eu`), and every extra region costs a full extra request, so `eu` is added
+# only when the process will place orders (`set_regions` from an --execute
+# main). Regions are part of every cache key: a us-only response cached by a
+# preview must never be served to an execute run that asked for `eu`.
+_REGIONS = "us"
+
+
+def regions() -> str:
+    return _REGIONS
+
+
+def set_regions(value: str) -> None:
+    global _REGIONS
+    _REGIONS = ",".join(r.strip() for r in value.split(",") if r.strip()) or "us"
+
+
+def _region_suffix() -> str:
+    # "us" keeps the pre-B7 filenames, so existing cache files stay valid.
+    return "" if _REGIONS == "us" else "__" + _REGIONS.replace(",", "_")
+
+
 def _filename(sport_key: str, markets: str) -> Path:
     safe_markets = markets.replace(",", "_")
-    return _CACHE_DIR / f"{sport_key}__{safe_markets}.json"
+    return _CACHE_DIR / f"{sport_key}__{safe_markets}{_region_suffix()}.json"
 
 
 def _event_filename(sport_key: str, event_id: str) -> Path:
-    return _EVENT_CACHE_DIR / f"{sport_key}__{event_id}.json"
+    return _EVENT_CACHE_DIR / f"{sport_key}__{event_id}{_region_suffix()}.json"
 
 
 def _now() -> datetime:

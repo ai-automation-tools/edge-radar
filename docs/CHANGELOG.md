@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-11-05 -- B7: sharp `eu` books on execute runs only; `BOOK_WEIGHTS` pruned
+
+- **Finding** Every Odds API call requested `regions=us`. Pinnacle is served only in `eu`, so the
+  3.0x sharp weight never applied: every cached response holds exactly nine US books
+  (DraftKings, FanDuel, Bovada, BetMGM, MyBookie, BetRivers, BetOnline, BetUS, LowVig). The
+  "sharp-weighted consensus" was a US recreational consensus.
+- **Config** `ODDS_API_REGIONS_EXECUTE` (default `us`, so nothing changes until set). When a
+  scanner or `kalshi_executor.py` runs with `--execute`, its process requests these regions;
+  previews, shadow book, calibration and every other reader stay `us`. That was the quota option
+  chosen: each extra region costs one request per call, and only the runs that place orders pay it.
+- **Cache** Regions are part of both cache keys (in-process and file). Without that, an
+  `--execute` run inside the 300s TTL of a preview would be served the us-only response and `eu`
+  would never be fetched. `us` keeps the pre-B7 filenames.
+- **Caveats** (1) Preview and execute can now disagree: Pinnacle at 3x moves the consensus, so
+  an execute run may place different rows from the preview it follows. An R26 `--pick` replay
+  places the preview's rows unchanged, at us-only prices. (2) The `n_books` floors (R29 NBA=8,
+  MLB 5/3) were tuned on a 9-book pool, and `eu` adds books, so they mean something different
+  once this is on. Re-check them (ROADMAP B7b).
+- **`BOOK_WEIGHTS`** pruned to keys that actually arrive, plus `pinnacle`. Circa, Bookmaker,
+  Caesars, ESPN Bet, PointsBet, SuperBook, Hard Rock, Bally, Fliff and `pinnaclesports` never
+  appeared. Anything else, including the other `eu` books, gets `DEFAULT_BOOK_WEIGHT` (1.0).
+- **Diagram** re-pinned to `2b39b0e`: line ranges shifted, `odds_cache` range now covers the
+  regions key, and the Odds API node reads "us; +eu on execute".
+
+---
+
 ## 2026-11-03 -- NFL spreads priced on key-number margins; NFL spreads switched off; shadow book sees every strike
 
 - **Finding** 25 of 45 live NFL spread bets since August were YES "wins by over 7.5", at 23-32c
