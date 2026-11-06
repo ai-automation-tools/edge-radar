@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-11-06 -- UFC cards scored again; two college names disambiguated
+
+- **Finding** Kalshi dates UFC tickers a day *before* the card (`KXUFCFIGHT-26NOV06...`, fights
+  Sat Nov 7 ET). `find_market_event` required the odds event on the ticker's ET date, so whole
+  cards went unscored on and off since late August (198 refusals in Oct-Nov; 48 of 48 open
+  markets on 11-06). The drift check reported UFC "100% odds-matched" because it matches names,
+  not dates, so nothing flagged it.
+- **Fix** MMA and boxing take the tennis branch: a single both-fighters candidate within 3 days
+  of the ticker date. After the fix every open fight is priced (edges 0-2.3% on 11-06).
+- **Names** `_team_match_strength` drops periods ("South Carolina St." now substring-matches
+  "South Carolina St Bulldogs" instead of tying "South Carolina Upstate" on the city word), and
+  a `florida international -> florida int'l` alias stops a tie with West Florida. Both games
+  had been emitting no edge.
+- **Context** The wager slowdown since mid-October is by design, not a fault: MLB/MLS/NHL/NFL
+  spreads were switched off one by one (NFL spreads, the last big producer, on 11-03), and the
+  remaining pilot floors plus the F1 fee pass ~1 bet/day.
+
+---
+
 ## 2026-11-05 -- B7: sharp `eu` books on execute runs only; `BOOK_WEIGHTS` pruned
 
 - **Finding** Every Odds API call requested `regions=us`. Pinnacle is served only in `eu`, so the
