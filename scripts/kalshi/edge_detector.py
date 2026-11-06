@@ -1283,9 +1283,10 @@ TEAM_ALIASES = {
     "buffalo": ["buffalo sabres"],
     "los angeles": ["los angeles kings", "la kings", "los angeles lakers"],
     "atlanta": ["atlanta hawks", "atlanta braves"],
-    "st. louis": ["st louis blues", "st. louis blues"],
+    "st louis": ["st louis blues"],  # keys/aliases are period-free (matched that way)
     "calgary": ["calgary flames"],
     "navy": ["navy midshipmen"],
+    "florida international": ["florida int'l"],  # else ties West Florida on "florida"
 }
 
 
@@ -1299,8 +1300,11 @@ def _team_match_strength(odds_api_name: str, kalshi_name: str) -> int:
     and "Los Angeles Angels". Because substring (tier 3) outranks the city-word
     fallback, the correct team wins, and _match_team_outcome refuses on a tie.
     """
-    odds_lower = odds_api_name.lower().strip()
-    kalshi_lower = kalshi_name.lower().strip()
+    # Periods dropped: Kalshi writes "South Carolina St." where the feed has
+    # "South Carolina St Bulldogs"; with the period, only the city word matched
+    # and the game tied against "South Carolina Upstate" and went unscored.
+    odds_lower = odds_api_name.lower().replace(".", "").strip()
+    kalshi_lower = kalshi_name.lower().replace(".", "").strip()
 
     # Tier 3 — one name contains the other. Covers truncated nicknames:
     # "los angeles d" is a prefix of "los angeles dodgers".
@@ -2056,17 +2060,23 @@ def _event_has_matchup(event: dict, team_a: str, team_b: str) -> bool:
     )
 
 
-def _is_tennis_market(ticker: str) -> bool:
-    """True for tennis tickers, which need date-tolerant odds matching.
+_LOOSE_DATE_ODDS_PREFIXES = ("tennis_", "mma_", "boxing_")
 
-    Tennis tickers date the market by its *expected expiration* (roughly a day
-    after the match), not by commence time, so exact ET-date equality never
-    lines up with the odds feed (e.g. KXATPMATCH-26JUL01... is the Jun 30 09:00
-    UTC Tsitsipas vs Djokovic match). Derived from KALSHI_TO_ODDS_SPORT so any
-    future tennis tournament prefix mapped to a ``tennis_*`` key inherits this.
+
+def _is_tennis_market(ticker: str) -> bool:
+    """True for individual-matchup tickers (tennis, MMA, boxing), which need
+    date-tolerant odds matching.
+
+    Their ticker dates do not track commence time: tennis dates the market by
+    its *expected expiration* (~a day after the match; KXATPMATCH-26JUL01... is
+    the Jun 30 09:00 UTC Tsitsipas vs Djokovic match), and UFC dates a card a
+    day *before* it (KXUFCFIGHT-26NOV06... fights start Sat Nov 7 ET), so exact
+    ET-date equality never matched and whole cards went unscored. A fighter or
+    player pair meets at most once in a few days, so the single-candidate rule
+    is safe. Derived from KALSHI_TO_ODDS_SPORT so new prefixes inherit it.
     """
     prefix = ticker.split("-", 1)[0]
-    return KALSHI_TO_ODDS_SPORT.get(prefix, "").startswith("tennis_")
+    return KALSHI_TO_ODDS_SPORT.get(prefix, "").startswith(_LOOSE_DATE_ODDS_PREFIXES)
 
 
 def find_market_event(market: dict, events: list) -> dict | None:

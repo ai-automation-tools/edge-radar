@@ -1732,6 +1732,32 @@ class TestTennisMappings:
         ev = _h2h_event("Stefanos Tsitsipas", "Novak Djokovic", 4.5, 1.2, "2026-06-20T09:00:00Z")
         assert find_market_event(market, [ev]) is None
 
+    def test_ufc_ticker_dated_day_before_card_matches(self):
+        # 2026-11-06: KXUFCFIGHT-26NOV06... is dated Friday; the fight starts
+        # Sat Nov 7 ET (Nov 8 03:45 UTC). Exact-date matching dropped the card.
+        market = {
+            "ticker": "KXUFCFIGHT-26NOV06CORWAL-WAL",
+            "yes_sub_title": "Johnny Walker",
+            "rules_primary": "If Johnny Walker wins the Cortes-Acosta vs Walker UFC fight ...",
+        }
+        ev = _h2h_event("Waldo Cortes-Acosta", "Johnny Walker", 1.6, 2.4, "2026-11-08T03:45:00Z")
+        assert find_market_event(market, [ev]) is ev
+
+
+class TestPeriodAndAliasDisambiguation:
+    """2026-11-06: two college names tied on the city word and went unscored."""
+
+    def test_st_abbreviation_with_period(self):
+        outcomes = [
+            {"name": "South Carolina St Bulldogs"},
+            {"name": "South Carolina Upstate Spartans"},
+        ]
+        assert _match_team_outcome(outcomes, "South Carolina St.") == (0, False)
+
+    def test_florida_international_alias(self):
+        outcomes = [{"name": "Florida Int'l Golden Panthers"}, {"name": "West Florida Argonauts"}]
+        assert _match_team_outcome(outcomes, "Florida International") == (0, False)
+
 
 class TestFuturesCompositeCalibration:
     """C10 (2026-07-23): the futures composite scales edge as `edge / 0.01`,
