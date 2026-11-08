@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-11-07 -- NHL totals floor 0.06 -> 0.05 (operator override)
+
+- **Finding** 0 orders on 11-06 and 11-07, ~12 in 12 days. Not a matching fault: the 11-08
+  preview scored the full slate (16 NBA, 27 NFL, ~40 soccer events, NHL) and produced 56 rows
+  at >= 3% gross edge, of which 52 failed Gate 3, 3 sat in disabled spread series and 1 failed
+  another gate. Best row: NHL VGK@BUF Over 5.5 at 60c, +6.8% against a 7.7% effective floor
+  (0.06 + 1.7% fee).
+- **Change** Live `.env` `MIN_EDGE_THRESHOLD_NHL_TOTAL` 0.06 -> 0.05. **Operator override on
+  volume, not evidence** -- the 10-03 reason (overs 16-15 lifetime at -17%, Kalshi o5.5 priced
+  5-9pts under books, settlement rules unverified) still stands, and the admitted row is an over.
+- **Effect** Admitted 1 of 9 NHL rows on 11-08 (`KXNHLTOTAL-26NOV08VGKBUF-6`, YES x3 @ 60c,
+  $1.80). NO-side rows are unaffected: R28's 8% global NO floor binds first. Lowering the global
+  or soccer floor would have admitted ~0, since those rows price at 77-93c, above
+  `MAX_MARKET_PRICE=0.75`.
+- **Recheck** Revert to 0.06 if the next ~15 NHL overs settled under this floor run negative.
+
+---
+
 ## 2026-11-06 -- UFC cards scored again; two college names disambiguated
 
 - **Finding** Kalshi dates UFC tickers a day *before* the card (`KXUFCFIGHT-26NOV06...`, fights
