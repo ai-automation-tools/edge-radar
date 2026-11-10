@@ -7,7 +7,6 @@ exhausted keys every time.
 
 import json
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pytest
 
@@ -80,23 +79,52 @@ class TestQuotaCachePersistence:
         odds_api.report_remaining("keyA", 250)
         assert clean_module.exists()
         saved = json.loads(clean_module.read_text())
-        assert saved["keyA"]["remaining"] == 250
-        assert saved["keyA"]["checked_at"]
+        kid = odds_api._key_id("keyA")
+        assert saved[kid]["remaining"] == 250
+        assert saved[kid]["checked_at"]
 
     def test_mark_exhausted_writes_cache(self, clean_module):
         odds_api._keys[:] = ["keyA"]
         odds_api.mark_exhausted("keyA")
         saved = json.loads(clean_module.read_text())
-        assert saved["keyA"]["remaining"] == 0
-        assert saved["keyA"]["checked_at"], "an unstamped zero would never expire"
+        kid = odds_api._key_id("keyA")
+        assert saved[kid]["remaining"] == 0
+        assert saved[kid]["checked_at"], "an unstamped zero would never expire"
+
+    def test_cache_file_never_holds_a_key(self, clean_module):
+        """2026-11-09: the cache stored raw keys. It now stores hash ids."""
+        secret = "abcdef0123456789secret"  # pragma: allowlist secret
+        odds_api._keys[:] = [secret]
+        odds_api.report_remaining(secret, 42)
+        text = clean_module.read_text()
+        assert secret not in text and secret[-6:] not in text
+        odds_api._remaining.clear()
+        odds_api._load_quota_cache()
+        assert odds_api._remaining[secret] == 42
+
+    def test_legacy_raw_key_entry_migrates(self, clean_module):
+        """A cache written before 2026-11-09 holds raw keys: it still loads,
+        and the next save rewrites it under the id."""
+        clean_module.parent.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(timezone.utc).isoformat()
+        clean_module.write_text(json.dumps({"keyA": {"remaining": 7, "checked_at": stamp}}))
+        odds_api._keys[:] = ["keyA"]
+        odds_api._load_quota_cache()
+        assert odds_api._remaining["keyA"] == 7
+        odds_api._save_quota_cache()
+        assert "keyA" not in clean_module.read_text()
 
     def test_cache_load_populates_remaining(self, clean_module):
         clean_module.parent.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(timezone.utc).isoformat()
-        clean_module.write_text(json.dumps({
-            "keyA": {"remaining": 0, "checked_at": stamp},
-            "keyB": {"remaining": 174, "checked_at": stamp},
-        }))
+        clean_module.write_text(
+            json.dumps(
+                {
+                    "keyA": {"remaining": 0, "checked_at": stamp},
+                    "keyB": {"remaining": 174, "checked_at": stamp},
+                }
+            )
+        )
         odds_api._load_quota_cache()
         assert odds_api._remaining["keyA"] == 0
         assert odds_api._remaining["keyB"] == 174
@@ -144,7 +172,7 @@ class TestRedactSecrets:
     SECRET = "abcd1234deadbeef"
 
     def test_masks_apikey_in_url(self):
-        url = f"https://api.the-odds-api.com/v4/sports/baseball_mlb/odds?apiKey={self.SECRET}&regions=us"
+        url = f"https://api.the-odds-api.com/v4/sports/baseball_mlb/odds?apiKey={self.SECRET}&regions=us"  # noqa: E501
         out = odds_api.redact_secrets(url)
         assert self.SECRET not in out
         assert "apiKey=***" in out

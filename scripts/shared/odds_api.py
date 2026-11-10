@@ -27,6 +27,7 @@ available (9 keys sitting at a full 500). Re-probing an expired zero
 costs one request that either 401s or discovers the reset.
 """
 
+import hashlib
 import json
 import logging
 import re
@@ -37,7 +38,7 @@ from dotenv import load_dotenv
 load_dotenv()
 log = logging.getLogger("odds_api")
 
-from app.config import get_config
+from app.config import get_config  # noqa: E402 -- after load_dotenv()
 
 # Strip the Odds API key out of any string before it reaches a log/stdout.
 # A `requests` HTTPError/ConnectionError/Timeout stringifies the full resolved
@@ -48,6 +49,24 @@ _APIKEY_QUERY_RE = re.compile(r"(apiKey=)[^&\s'\"]+", re.IGNORECASE)
 def redact_secrets(text: object) -> str:
     """Return ``str(text)`` with any ``apiKey=<value>`` query param masked."""
     return _APIKEY_QUERY_RE.sub(r"\1***", str(text))
+
+
+# Keys never reach a log or the cache file, not even a suffix. Logs name a key
+# by its 1-based slot in ODDS_API_KEYS; the cache file by a hash prefix.
+_KEY_ID_PREFIX = "sha256:"
+
+
+def _key_id(key: str) -> str:
+    """Stable on-disk id for a key. An existing id passes through unchanged."""
+    if key.startswith(_KEY_ID_PREFIX):
+        return key
+    return _KEY_ID_PREFIX + hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+
+
+def _key_label(key: str) -> str:
+    """Log-safe name for a key: its slot in ODDS_API_KEYS."""
+    return f"#{_keys.index(key) + 1}" if key in _keys else "#?"
+
 
 # ── Key Management ───────────────────────────────────────────────────────────
 
@@ -64,7 +83,9 @@ _ZERO_TTL_HOURS = 24
 
 # Persist _remaining across processes so we don't re-hit exhausted keys.
 # Gitignored path (data/cache/…) so it stays out of the repo.
-_QUOTA_CACHE_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "cache" / "odds_api_quota.json"
+_QUOTA_CACHE_PATH = (
+    Path(__file__).resolve().parent.parent.parent / "data" / "cache" / "odds_api_quota.json"
+)
 
 
 def _load_quota_cache() -> None:
@@ -83,7 +104,11 @@ def _load_quota_cache() -> None:
         return
     if not isinstance(raw, dict):
         return
-    for key, val in raw.items():
+    # Entries are stored under `_key_id(key)`. A raw key (written before
+    # 2026-11-09) still loads, and the next save rewrites it as an id.
+    by_id = {_key_id(k): k for k in _keys}
+    for stored, val in raw.items():
+        key = by_id.get(stored, stored)
         if isinstance(val, dict):
             rem, stamp = val.get("remaining"), val.get("checked_at")
         elif isinstance(val, (int, float)):
@@ -118,7 +143,7 @@ def _save_quota_cache() -> None:
     try:
         _QUOTA_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         payload = {
-            k: {"remaining": v, "checked_at": _checked_at.get(k)}
+            _key_id(k): {"remaining": v, "checked_at": _checked_at.get(k)}
             for k, v in _remaining.items()
         }
         _QUOTA_CACHE_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -191,8 +216,7 @@ def rotate_key(reason: str = "exhausted") -> str | None:
         return None
 
     new_key = _keys[_current_index]
-    log.info("Rotated Odds API key (%s): ...%s -> ...%s",
-             reason, _keys[old_index][-6:], new_key[-6:])
+    log.info("Rotated Odds API key (%s): #%d -> #%d", reason, old_index + 1, _current_index + 1)
     return new_key
 
 
@@ -206,9 +230,9 @@ def report_remaining(key: str, remaining: int) -> None:
     _checked_at[key] = datetime.now(timezone.utc).isoformat()
     _save_quota_cache()
     if remaining <= 10:
-        log.warning("Odds API key ...%s: only %d requests remaining", key[-6:], remaining)
+        log.warning("Odds API key %s: only %d requests remaining", _key_label(key), remaining)
     if remaining <= 0:
-        log.warning("Odds API key ...%s exhausted, rotating", key[-6:])
+        log.warning("Odds API key %s exhausted, rotating", _key_label(key))
         rotate_key("zero_remaining")
 
 
@@ -229,7 +253,7 @@ def get_status() -> dict:
     return {
         "total_keys": len(_keys),
         "current_index": _current_index,
-        "remaining": {f"...{k[-6:]}": _remaining.get(k, "unknown") for k in _keys},
+        "remaining": {f"#{i + 1}": _remaining.get(k, "unknown") for i, k in enumerate(_keys)},
     }
 
 
