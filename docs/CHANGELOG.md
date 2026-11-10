@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-11-10 -- Scheduled jobs as Cronsole templates
+
+- **Added** `scripts/schedulers/automation/build_cronsole_registry.py` generates a Registry v1
+  catalog into `site/registry/`: six templates (scan, execute, next-day, settle, calibration,
+  odds-keys) and an `edge-radar` pack. Vercel serves it at
+  `edge-radar.ai-automation-tools.dev/registry/`, and the Cronsole gallery lists it, so anyone
+  can schedule these jobs from Cronsole. The templates are now the tracked definition of the
+  jobs; the installer's `.bat` files are gitignored and a clone never had them.
+- **Safety** The two templates that can bet take a Mode parameter defaulting to `preview`.
+  `scan.py` gains `--mode preview|execute`: `execute` adds `--execute`, `preview` adds nothing, and
+  an unknown value or `preview` beside `--execute` exits rather than guessing.
+- **Excluded** `account-graph`: its script is under gitignored `docs/my-documents/`.
+- **Checks** `tests/test_cronsole_registry.py`: catalog current, one template per installer
+  profile (or a stated reason), no template with a literal `--execute`, the live two default to
+  preview, and, where the `.bat` files exist, the same scan flags as each `.bat`. A daily
+  *Registry drift* workflow hashes every served file against `master`.
+- **Docs** `AUTOMATION_GUIDE.md` lists the templates with gallery links; the README links the pack.
+
+---
+
 ## 2026-11-09 -- Odds API keys out of logs and the quota cache
 
 - **Finding** CodeQL `py/clear-text-logging-sensitive-data` (alerts 1 and 2): `odds_api.py`

@@ -86,7 +86,8 @@ class TestFailsClosed:
 class TestOverlaySemantics:
     def test_overlay_wins_over_the_base_env(self, monkeypatch, tmp_path):
         (tmp_path / ".env.longshot").write_text(
-            "KALSHI_SUBACCOUNT=1\nDRY_RUN=true\nMIN_MARKET_PRICE=0.08\n")
+            "KALSHI_SUBACCOUNT=1\nDRY_RUN=true\nMIN_MARKET_PRICE=0.08\n"
+        )
         monkeypatch.setenv("PROJECT_ROOT", str(tmp_path))
         monkeypatch.setenv("EDGE_RADAR_PROFILE", "longshot")
         # base `.env` state: live money on the primary account
@@ -157,8 +158,7 @@ class TestScanDispatcherFlag:
         from pathlib import Path
 
         root = Path(__file__).resolve().parent.parent
-        spec = importlib.util.spec_from_file_location(
-            "_scan_mod", root / "scripts" / "scan.py")
+        spec = importlib.util.spec_from_file_location("_scan_mod", root / "scripts" / "scan.py")
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         return mod._extract_profile(args)
@@ -184,6 +184,38 @@ class TestScanDispatcherFlag:
             self._extract(["--profile", "--save"])
 
 
+class TestScanDispatcherMode:
+    """`--mode preview|execute` is how a Cronsole template switches live orders on."""
+
+    @staticmethod
+    def _apply(args):
+        import importlib.util
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parent.parent
+        spec = importlib.util.spec_from_file_location("_scan_mod", root / "scripts" / "scan.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod._apply_mode(args)
+
+    def test_preview_places_no_orders(self):
+        assert self._apply(["--save", "--mode", "preview"]) == ["--save"]
+
+    def test_execute_adds_the_flag_once(self):
+        assert self._apply(["--mode=execute", "--save"]) == ["--save", "--execute"]
+        assert self._apply(["--execute", "--mode", "execute"]) == ["--execute"]
+
+    def test_absent_is_unchanged(self):
+        assert self._apply(["--filter", "mlb", "--execute"]) == ["--filter", "mlb", "--execute"]
+
+    @pytest.mark.parametrize(
+        "args", [["--mode", "live"], ["--mode"], ["--mode", "preview", "--execute"]]
+    )
+    def test_unclear_mode_exits(self, args):
+        with pytest.raises(SystemExit):
+            self._apply(args)
+
+
 class TestTradeLogScoping:
     """The trade log is shared, so gates that read HISTORY must be scoped.
 
@@ -201,15 +233,18 @@ class TestTradeLogScoping:
 
     def test_splits_by_profile(self):
         from trade_log import for_profile
+
         assert [r["ticker"] for r in for_profile(self.ROWS, "longshot")] == ["B"]
 
     def test_pre_p1_rows_belong_to_main(self):
         """Every row written before P1 came from the one book that existed."""
         from trade_log import for_profile
+
         assert [r["ticker"] for r in for_profile(self.ROWS, "main")] == ["A", "C"]
 
     def test_profiles_do_not_see_each_other(self):
         from trade_log import for_profile
+
         main = {r["ticker"] for r in for_profile(self.ROWS, "main")}
         longshot = {r["ticker"] for r in for_profile(self.ROWS, "longshot")}
         assert main & longshot == set()
@@ -232,6 +267,7 @@ class TestTradeLogScoping:
 
     def test_defaults_to_the_active_profile(self, monkeypatch):
         from trade_log import for_profile
+
         monkeypatch.delenv("EDGE_RADAR_PROFILE", raising=False)
         reset_config()
         assert [r["ticker"] for r in for_profile(self.ROWS)] == ["A", "C"]

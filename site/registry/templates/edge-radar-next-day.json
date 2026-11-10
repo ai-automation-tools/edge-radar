@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0",
+  "id": "edge-radar-next-day",
+  "name": "Edge-Radar: Next-Day Scan + Execute",
+  "description": "Scans tomorrow's games the night before, to catch early lines; not every market is posted yet. Starts in preview: no orders until you set Mode to execute, and even then only when DRY_RUN=false in your .env. In execute mode it places REAL Kalshi orders, Kelly-sized, through every risk gate (daily loss limit, exposure caps, per-event limits). Read docs/setup/AUTOMATION_GUIDE.md first. Default 01:00 UTC (9 PM US Eastern in summer). Needs a clone of ai-automation-tools/edge-radar on the machine the task runs on, with its .venv and a .env holding your Kalshi and Odds API keys (python scripts/doctor.py checks both).",
+  "runtime": "python",
+  "os": "windows",
+  "category": "other",
+  "tags": [
+    "edge-radar",
+    "execute",
+    "kalshi",
+    "live-orders",
+    "sports-betting"
+  ],
+  "trigger": {
+    "kind": "schedule",
+    "cron": "0 1 * * *"
+  },
+  "commandTemplate": "\"{{repoPath}}\\.venv\\Scripts\\python.exe\" \"{{repoPath}}\\scripts\\scan.py\" sports --unit-size 1 --max-bets 5 --min-bets 1 --budget 12% --date tomorrow --exclude-open --save --report-dir \"{{repoPath}}\\reports\\Sports\\schedulers\\next-day-executions\" --mode {{mode}}",
+  "parameters": [
+    {
+      "key": "repoPath",
+      "label": "Edge-Radar clone",
+      "type": "path",
+      "required": true,
+      "help": "Absolute path to your clone, e.g. C:\\Users\\you\\edge-radar. Its .venv and .env are used."
+    },
+    {
+      "key": "mode",
+      "label": "Mode",
+      "type": "select",
+      "default": "preview",
+      "required": true,
+      "options": [
+        "preview",
+        "execute"
+      ],
+      "help": "preview saves the report and places no orders. execute places real Kalshi orders (only when DRY_RUN=false in .env)."
+    }
+  ],
+  "compatibleTargets": [
+    "windows",
+    "cronsole-native"
+  ],
+  "execution": {
+    "timeoutSec": 1800
+  },
+  "author": "ai-automation-tools"
+}

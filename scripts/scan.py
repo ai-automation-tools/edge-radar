@@ -46,6 +46,7 @@ def main():
 
     script = SCANNERS[market_type]
     remaining, profile = _extract_profile(sys.argv[2:])
+    remaining = _apply_mode(remaining)
 
     # Insert 'scan' subcommand if not already provided
     if not remaining or remaining[0].startswith("-"):
@@ -96,6 +97,39 @@ def _extract_profile(args: list[str]) -> tuple[list[str], str | None]:
     return out, profile
 
 
+def _apply_mode(args: list[str]) -> list[str]:
+    """Turn `--mode preview|execute` into the scanners' own flags.
+
+    For the Cronsole templates: a template parameter can fill a value but not add or drop a
+    flag, so the live-order switch has to be a value. `preview` (the template default) forwards
+    nothing, `execute` forwards `--execute`. Anything else, or `preview` beside an explicit
+    `--execute`, exits rather than guessing which was meant, since one of them places real
+    orders. Absent, args pass through as before.
+    """
+    out: list[str] = []
+    mode = None
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--mode":
+            mode = args[i + 1] if i + 1 < len(args) else ""
+            i += 2
+        elif arg.startswith("--mode="):
+            mode = arg.split("=", 1)[1]
+            i += 1
+        else:
+            out.append(arg)
+            i += 1
+    if mode is None:
+        return out
+    if mode not in ("preview", "execute") or (mode == "preview" and "--execute" in out):
+        print(f"--mode must be 'preview' or 'execute' and agree with --execute, got {mode!r}")
+        sys.exit(2)
+    if mode == "execute" and "--execute" not in out:
+        out.append("--execute")
+    return out
+
+
 def print_help():
     print(
         """Edge-Radar Unified Scanner
@@ -116,6 +150,7 @@ Common flags (all scanners):
   --top N          Number of top opportunities (default 20)
   --save           Save markdown report
   --execute        Execute bets (requires confirmation)
+  --mode X         preview (no orders) or execute (same as --execute)
   --unit-size N    Dollar amount per bet
   --max-bets N     Max bets to place (default 5)
   --budget X       Max total cost per batch (e.g. '10%' or '15')
