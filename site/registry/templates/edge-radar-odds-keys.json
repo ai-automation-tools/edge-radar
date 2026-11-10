@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "id": "edge-radar-odds-keys",
+  "name": "Edge-Radar: Weekly Odds API Key Probe",
+  "description": "Probes each Odds API key's remaining quota, so a drained or dead key shows up before a scan needs it. One request per key. Default Sunday 22:00 UTC (6 PM US Eastern in summer). Needs a clone of ai-automation-tools/edge-radar on the machine the task runs on, with its .venv and a .env holding your Kalshi and Odds API keys (python scripts/doctor.py checks both).",
+  "runtime": "python",
+  "os": "windows",
+  "category": "monitoring",
+  "tags": [
+    "edge-radar",
+    "health-check",
+    "odds-api",
+    "quota"
+  ],
+  "trigger": {
+    "kind": "schedule",
+    "cron": "0 22 * * 0"
+  },
+  "commandTemplate": "\"{{repoPath}}\\.venv\\Scripts\\python.exe\" \"{{repoPath}}\\scripts\\shared\\check_odds_keys.py\" --live",
+  "parameters": [
+    {
+      "key": "repoPath",
+      "label": "Edge-Radar clone",
+      "type": "path",
+      "required": true,
+      "help": "Absolute path to your clone, e.g. C:\\Users\\you\\edge-radar. Its .venv and .env are used."
+    }
+  ],
+  "compatibleTargets": [
+    "windows",
+    "cronsole-native"
+  ],
+  "execution": {
+    "timeoutSec": 1800
+  },
+  "author": "ai-automation-tools"
+}

@@ -1,3 +1,6 @@
 # Diagram files are hashed byte-for-byte by their build receipts; never convert line endings.
 docs/diagrams/betting-data-flow.* -text
 site/diagram/* -text
+
+# Cronsole verifies registry files by sha256 over exact bytes.
+site/registry/** text eol=lf

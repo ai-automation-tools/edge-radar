@@ -238,6 +238,8 @@ Routes natural language to the correct scanner, enforces all risk gates, always 
 
 Pre-built scripts scan all sports, rank by composite score, and execute with Kelly sizing. See the **[Automation Guide](docs/setup/AUTOMATION_GUIDE.md)**.
 
+Every scheduled job is also a **[Cronsole template](https://cronsole.ai-automation-tools.dev/#/collection/edge-radar)**: import one and Cronsole schedules it for you. The two that bet start in preview mode.
+
 ```powershell
 # Install all scheduled tasks at once
 python scripts/schedulers/automation/install_windows_task.py install all

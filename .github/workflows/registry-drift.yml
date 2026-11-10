@@ -1,0 +1,27 @@
+# Daily: is the Cronsole catalog Vercel serves (edge-radar.ai-automation-tools.dev/registry/)
+# the one on master? A deploy that failed or never ran leaves site/registry/ correct and the
+# public copy stale, and nothing inside the repo can see that. The Cronsole gallery reads this
+# copy. A failure here means redeploy master on Vercel.
+name: Registry drift
+
+on:
+  schedule:
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Hosted catalog matches site/registry/
+        run: python scripts/schedulers/automation/check_cronsole_registry_published.py

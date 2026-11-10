@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "id": "edge-radar-settle",
+  "name": "Edge-Radar: Hourly Settlement",
+  "description": "Settles finished trades against Kalshi, records realized P&L and closing-line value, and keeps the daily-loss gate's view current. Idempotent, places no orders. Hourly at :35. Needs a clone of ai-automation-tools/edge-radar on the machine the task runs on, with its .venv and a .env holding your Kalshi and Odds API keys (python scripts/doctor.py checks both).",
+  "runtime": "python",
+  "os": "windows",
+  "category": "data-sync",
+  "tags": [
+    "clv",
+    "edge-radar",
+    "kalshi",
+    "pnl",
+    "settlement"
+  ],
+  "trigger": {
+    "kind": "schedule",
+    "cron": "35 * * * *"
+  },
+  "commandTemplate": "\"{{repoPath}}\\.venv\\Scripts\\python.exe\" \"{{repoPath}}\\scripts\\kalshi\\kalshi_settler.py\" settle",
+  "parameters": [
+    {
+      "key": "repoPath",
+      "label": "Edge-Radar clone",
+      "type": "path",
+      "required": true,
+      "help": "Absolute path to your clone, e.g. C:\\Users\\you\\edge-radar. Its .venv and .env are used."
+    }
+  ],
+  "compatibleTargets": [
+    "windows",
+    "cronsole-native"
+  ],
+  "execution": {
+    "timeoutSec": 1800
+  },
+  "author": "ai-automation-tools"
+}

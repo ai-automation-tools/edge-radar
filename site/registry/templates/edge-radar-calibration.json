@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "id": "edge-radar-calibration",
+  "name": "Edge-Radar: Weekly Calibration",
+  "description": "30-day calibration report (Brier score, calibration curve, recommendations) saved to reports/Calibration/. Places no orders. Default Sunday 23:00 UTC (7 PM US Eastern in summer). Needs a clone of ai-automation-tools/edge-radar on the machine the task runs on, with its .venv and a .env holding your Kalshi and Odds API keys (python scripts/doctor.py checks both).",
+  "runtime": "python",
+  "os": "windows",
+  "category": "monitoring",
+  "tags": [
+    "calibration",
+    "edge-radar",
+    "kalshi",
+    "model",
+    "report"
+  ],
+  "trigger": {
+    "kind": "schedule",
+    "cron": "0 23 * * 0"
+  },
+  "commandTemplate": "\"{{repoPath}}\\.venv\\Scripts\\python.exe\" \"{{repoPath}}\\scripts\\kalshi\\model_calibration.py\" --days 30 --save",
+  "parameters": [
+    {
+      "key": "repoPath",
+      "label": "Edge-Radar clone",
+      "type": "path",
+      "required": true,
+      "help": "Absolute path to your clone, e.g. C:\\Users\\you\\edge-radar. Its .venv and .env are used."
+    }
+  ],
+  "compatibleTargets": [
+    "windows",
+    "cronsole-native"
+  ],
+  "execution": {
+    "timeoutSec": 1800
+  },
+  "author": "ai-automation-tools"
+}

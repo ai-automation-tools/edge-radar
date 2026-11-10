@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "id": "edge-radar-scan",
+  "name": "Edge-Radar: Morning Scan (preview)",
+  "description": "Scans today's Kalshi sports markets against 12 sportsbooks and saves a ranked report of edges. Preview only: never places an order. Default 12:00 UTC (8 AM US Eastern in summer). Needs a clone of ai-automation-tools/edge-radar on the machine the task runs on, with its .venv and a .env holding your Kalshi and Odds API keys (python scripts/doctor.py checks both).",
+  "runtime": "python",
+  "os": "windows",
+  "category": "other",
+  "tags": [
+    "edge-radar",
+    "kalshi",
+    "preview",
+    "scan",
+    "sports-betting"
+  ],
+  "trigger": {
+    "kind": "schedule",
+    "cron": "0 12 * * *"
+  },
+  "commandTemplate": "\"{{repoPath}}\\.venv\\Scripts\\python.exe\" \"{{repoPath}}\\scripts\\scan.py\" sports --unit-size 1 --max-bets 7 --min-bets 1 --budget 12% --date today --exclude-open --save --report-dir \"{{repoPath}}\\reports\\Sports\\schedulers\\same-day-executions\"",
+  "parameters": [
+    {
+      "key": "repoPath",
+      "label": "Edge-Radar clone",
+      "type": "path",
+      "required": true,
+      "help": "Absolute path to your clone, e.g. C:\\Users\\you\\edge-radar. Its .venv and .env are used."
+    }
+  ],
+  "compatibleTargets": [
+    "windows",
+    "cronsole-native"
+  ],
+  "execution": {
+    "timeoutSec": 1800
+  },
+  "author": "ai-automation-tools"
+}

@@ -1,0 +1,147 @@
+{
+  "registryVersion": "1.0",
+  "templates": [
+    {
+      "id": "edge-radar-scan",
+      "name": "Edge-Radar: Morning Scan (preview)",
+      "description": "Scans today's Kalshi sports markets against 12 sportsbooks and saves a ranked report of edges. Preview only: never places an order. Default 12:00 UTC (8 AM US Eastern in summer). Needs a clone of ai-automation-tools/edge-radar on the machine the task runs on, with its .venv and a .env holding your Kalshi and Odds API keys (python scripts/doctor.py checks both).",
+      "category": "other",
+      "tags": [
+        "edge-radar",
+        "kalshi",
+        "preview",
+        "scan",
+        "sports-betting"
+      ],
+      "runtime": "python",
+      "os": "windows",
+      "compatibleTargets": [
+        "windows",
+        "cronsole-native"
+      ],
+      "path": "templates/edge-radar-scan.json",
+      "sha256": "57a59e4c56f22390ad230040995363841a38ca3f6adc9b1acacefe6ee866dc12"
+    },
+    {
+      "id": "edge-radar-execute",
+      "name": "Edge-Radar: Morning Scan + Execute",
+      "description": "Scans today's games and sizes up to 5 bets with Kelly, skipping markets you already hold. Starts in preview: no orders until you set Mode to execute, and even then only when DRY_RUN=false in your .env. In execute mode it places REAL Kalshi orders, Kelly-sized, through every risk gate (daily loss limit, exposure caps, per-event limits). Read docs/setup/AUTOMATION_GUIDE.md first. Default 12:00 UTC (8 AM US Eastern in summer). Needs a clone of ai-automation-tools/edge-radar on the machine the task runs on, with its .venv and a .env holding your Kalshi and Odds API keys (python scripts/doctor.py checks both).",
+      "category": "other",
+      "tags": [
+        "edge-radar",
+        "execute",
+        "kalshi",
+        "live-orders",
+        "sports-betting"
+      ],
+      "runtime": "python",
+      "os": "windows",
+      "compatibleTargets": [
+        "windows",
+        "cronsole-native"
+      ],
+      "path": "templates/edge-radar-execute.json",
+      "sha256": "9ae631f2fc865192f8336090651d510afa32c1bf80f22a5572408765b282a40c"
+    },
+    {
+      "id": "edge-radar-next-day",
+      "name": "Edge-Radar: Next-Day Scan + Execute",
+      "description": "Scans tomorrow's games the night before, to catch early lines; not every market is posted yet. Starts in preview: no orders until you set Mode to execute, and even then only when DRY_RUN=false in your .env. In execute mode it places REAL Kalshi orders, Kelly-sized, through every risk gate (daily loss limit, exposure caps, per-event limits). Read docs/setup/AUTOMATION_GUIDE.md first. Default 01:00 UTC (9 PM US Eastern in summer). Needs a clone of ai-automation-tools/edge-radar on the machine the task runs on, with its .venv and a .env holding your Kalshi and Odds API keys (python scripts/doctor.py checks both).",
+      "category": "other",
+      "tags": [
+        "edge-radar",
+        "execute",
+        "kalshi",
+        "live-orders",
+        "sports-betting"
+      ],
+      "runtime": "python",
+      "os": "windows",
+      "compatibleTargets": [
+        "windows",
+        "cronsole-native"
+      ],
+      "path": "templates/edge-radar-next-day.json",
+      "sha256": "63805338d66b1bd8d31123fb987625fe181e05d31ed4e4561f867d5ea9fd5dc9"
+    },
+    {
+      "id": "edge-radar-settle",
+      "name": "Edge-Radar: Hourly Settlement",
+      "description": "Settles finished trades against Kalshi, records realized P&L and closing-line value, and keeps the daily-loss gate's view current. Idempotent, places no orders. Hourly at :35. Needs a clone of ai-automation-tools/edge-radar on the machine the task runs on, with its .venv and a .env holding your Kalshi and Odds API keys (python scripts/doctor.py checks both).",
+      "category": "data-sync",
+      "tags": [
+        "clv",
+        "edge-radar",
+        "kalshi",
+        "pnl",
+        "settlement"
+      ],
+      "runtime": "python",
+      "os": "windows",
+      "compatibleTargets": [
+        "windows",
+        "cronsole-native"
+      ],
+      "path": "templates/edge-radar-settle.json",
+      "sha256": "c8e9da53da074ff76fc948f24208a5905cb51d9eb5a34ef319c9cf9a737d82e4"
+    },
+    {
+      "id": "edge-radar-calibration",
+      "name": "Edge-Radar: Weekly Calibration",
+      "description": "30-day calibration report (Brier score, calibration curve, recommendations) saved to reports/Calibration/. Places no orders. Default Sunday 23:00 UTC (7 PM US Eastern in summer). Needs a clone of ai-automation-tools/edge-radar on the machine the task runs on, with its .venv and a .env holding your Kalshi and Odds API keys (python scripts/doctor.py checks both).",
+      "category": "monitoring",
+      "tags": [
+        "calibration",
+        "edge-radar",
+        "kalshi",
+        "model",
+        "report"
+      ],
+      "runtime": "python",
+      "os": "windows",
+      "compatibleTargets": [
+        "windows",
+        "cronsole-native"
+      ],
+      "path": "templates/edge-radar-calibration.json",
+      "sha256": "d490b0cb83a3fe48977c6f40b23d48aaec511904ed39cbf5e8aa0852adb474c8"
+    },
+    {
+      "id": "edge-radar-odds-keys",
+      "name": "Edge-Radar: Weekly Odds API Key Probe",
+      "description": "Probes each Odds API key's remaining quota, so a drained or dead key shows up before a scan needs it. One request per key. Default Sunday 22:00 UTC (6 PM US Eastern in summer). Needs a clone of ai-automation-tools/edge-radar on the machine the task runs on, with its .venv and a .env holding your Kalshi and Odds API keys (python scripts/doctor.py checks both).",
+      "category": "monitoring",
+      "tags": [
+        "edge-radar",
+        "health-check",
+        "odds-api",
+        "quota"
+      ],
+      "runtime": "python",
+      "os": "windows",
+      "compatibleTargets": [
+        "windows",
+        "cronsole-native"
+      ],
+      "path": "templates/edge-radar-odds-keys.json",
+      "sha256": "3eface16d05be0c25974560b2fe5aed974c83ffb62d71498b774dcceed31d7b1"
+    }
+  ],
+  "packs": [
+    {
+      "id": "edge-radar",
+      "name": "Edge-Radar",
+      "description": "Scheduled scans, settlement and upkeep for Edge-Radar's Kalshi edge-detection system. The two that can place orders start in preview.",
+      "templateIds": [
+        "edge-radar-scan",
+        "edge-radar-execute",
+        "edge-radar-next-day",
+        "edge-radar-settle",
+        "edge-radar-calibration",
+        "edge-radar-odds-keys"
+      ],
+      "path": "packs/edge-radar.json",
+      "sha256": "d859fc47e609ff0dfcf0c858f13608c97516a5678ff7997de15f2fc574fa9dbd"
+    }
+  ]
+}

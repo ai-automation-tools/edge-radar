@@ -35,7 +35,9 @@ repos:
       - id: detect-secrets
         args: [--baseline, .secrets.baseline]
         # Its pinned 40-char commit SHA reads as a hex secret, and --pin-head rewrites it.
-        exclude: ^docs/diagrams/betting-data-flow\.json$
+        # site/registry/ is generated and every file carries sha256 content hashes, which read the
+        # same way; an allowlist comment would change the bytes Cronsole verifies.
+        exclude: ^(docs/diagrams/betting-data-flow\.json|site/registry/.*)$
 
   - repo: local
     hooks:
