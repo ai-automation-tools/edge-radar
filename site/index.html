@@ -314,6 +314,11 @@
     /* Coverage cards */
     .cov { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 26px; }
     @media (min-width: 860px) { .cov { grid-template-columns: repeat(3, 1fr); } }
+    /* Cronsole templates: one card per entry in registry/index.json, read live. */
+    .tpl .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 12px; }
+    .tpl .acts .btn { flex: 1 1 auto; justify-content: center; height: 36px; padding: 0 12px; font-size: 13px; }
+    .tpl-foot { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .sub a, .note a { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
     .card { --mx: 50%; --my: 50%; position: relative; display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; transition: transform .3s var(--ease), border-color .3s, background .3s; }
     .card:hover { transform: translateY(-2px); background: var(--surface-2); border-color: color-mix(in srgb, var(--c) 35%, var(--line)); }
     .card::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none; opacity: 0; transition: opacity .3s; background: radial-gradient(260px circle at var(--mx) var(--my), color-mix(in srgb, var(--c) 70%, transparent), transparent 70%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
@@ -544,6 +549,7 @@
       <a href="#gates" data-spy="gates">Gates</a>
       <a href="#pipeline" data-spy="pipeline">Pipeline</a>
       <a href="#coverage" data-spy="coverage">Coverage</a>
+      <a href="#schedule" data-spy="schedule">Schedule</a>
       <a href="#start" data-spy="start">Quick start</a>
       <span class="ind" id="ind" aria-hidden="true"></span>
     </nav>
@@ -567,7 +573,7 @@
     </div>
   </div>
   <div class="mobile-nav" id="mobileNav">
-    <a href="#how">How it works</a><a href="#gates">Gates</a><a href="#pipeline">Pipeline</a><a href="#coverage">Coverage</a><a href="#start">Quick start</a>
+    <a href="#how">How it works</a><a href="#gates">Gates</a><a href="#pipeline">Pipeline</a><a href="#coverage">Coverage</a><a href="#schedule">Schedule</a><a href="#start">Quick start</a>
     <a href="#" id="palOpenMobile">Jump to…</a>
   </div>
 </header>
@@ -835,6 +841,23 @@
     </div>
   </section>
 
+  <!-- ── Schedule (Cronsole templates) ── -->
+  <section id="schedule">
+    <div class="sec-head">
+      <div>
+        <p class="eyebrow">Schedule it</p>
+        <h2>Every unattended job, as a Cronsole template.</h2>
+        <p class="sub">The scans, settlement and upkeep this repo runs on a timer, published as templates for <a href="https://cronsole.ai-automation-tools.dev/" target="_blank" rel="noopener">Cronsole</a>. Import one, point it at your clone, and it runs on your own schedule. The two that can place orders start in preview.</p>
+      </div>
+    </div>
+    <div class="cov tpl" id="tplGrid"></div>
+    <p class="note" id="tplNote" aria-live="polite">Loading the templates&hellip;</p>
+    <div class="tpl-foot">
+      <a class="btn btn-primary" href="https://cronsole.ai-automation-tools.dev/#/collection/edge-radar" target="_blank" rel="noopener">Browse the pack in Cronsole <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 12L12 4M6 4h6v6"/></svg></a>
+      <a class="btn btn-ghost" href="https://github.com/ai-automation-tools/edge-radar/blob/master/docs/setup/AUTOMATION_GUIDE.md" target="_blank" rel="noopener">Automation guide <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 12L12 4M6 4h6v6"/></svg></a>
+    </div>
+  </section>
+
   <!-- ── Quick start ── -->
   <section id="start">
     <div class="sec-head">
@@ -982,7 +1005,7 @@
     ind.style.left = (r.left - nr.left + 11) + 'px'; ind.style.width = (r.width - 22) + 'px'; ind.style.opacity = 1;
   }
   const spy = new IntersectionObserver(es => { es.forEach(en => { if (en.isIntersecting) setActive(en.target.id); }); }, { rootMargin: '-45% 0px -50% 0px' });
-  ['how', 'gates', 'pipeline', 'coverage', 'start'].forEach(id => spy.observe(document.getElementById(id)));
+  ['how', 'gates', 'pipeline', 'coverage', 'schedule', 'start'].forEach(id => spy.observe(document.getElementById(id)));
   addEventListener('resize', () => { const a = links.find(l => l.classList.contains('active')); if (a) setActive(a.dataset.spy); });
 
   /* ── Spotlight tracking for every card-like surface ── */
@@ -1200,6 +1223,35 @@
   $('#termCopy').addEventListener('click', () => copyText(SCRIPTS[curT][curSh].filter(l => l[0] === 'cmd').map(l => l[1]).join('\n')));
   renderTerm();
 
+  /* ── Cronsole templates ── registry/index.json is published beside this page, so the cards never
+     drift from what Cronsole's gallery serves. */
+  (function () {
+    const GALLERY = 'https://cronsole.ai-automation-tools.dev/';
+    const grid = $('#tplGrid'), note = $('#tplNote');
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const first = s => (String(s).match(/^.*?[.!?](\s|$)/) || [s])[0].trim();
+    const ARROW = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 12L12 4M6 4h6v6"/></svg>';
+    function card(t) {
+      const live = (t.tags || []).includes('live-orders');
+      const kind = live ? 'Can place orders · starts in preview' : 'Places no orders';
+      const name = String(t.name).replace(/^Edge-Radar:\s*/, '');
+      return `<article class="card" style="--c:${live ? C.warn : C.ok}">`
+        + `<div class="card-top"><span class="kind"><i></i>${esc(kind)}</span></div>`
+        + `<h3>${esc(name)}</h3><p>${esc(first(t.description))}</p>`
+        + `<div class="tags">${[t.runtime, t.os].filter(Boolean).map(x => `<span class="tag on">${esc(x)}</span>`).join('')}</div>`
+        + `<div class="acts"><a class="btn btn-primary" href="${GALLERY}#/t/${encodeURIComponent(t.id)}" target="_blank" rel="noopener" aria-label="Get ${esc(name)} for Cronsole">Get it for Cronsole</a>`
+        + `<a class="btn btn-ghost" href="registry/${esc(t.path)}" target="_blank" rel="noopener" aria-label="${esc(name)}: template JSON">Template JSON ${ARROW}</a></div></article>`;
+    }
+    fetch('registry/index.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => {
+      const ts = d.templates || [];
+      if (!ts.length) throw new Error('empty');
+      grid.innerHTML = ts.map(card).join('');
+      note.innerHTML = `${ts.length} templates. Each needs a clone of this repo on the machine the task runs on; <code>python scripts/doctor.py</code> checks its keys.`;
+    }).catch(() => {
+      note.innerHTML = `The templates couldn't be loaded here. Browse them in the <a href="${GALLERY}#/collection/edge-radar" target="_blank" rel="noopener">Cronsole gallery</a>.`;
+    });
+  })();
+
   /* ── Command palette ── */
   const palBg = $('#palBg'), palIn = $('#palIn'), palList = $('#palList');
   function open(u) { const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }
@@ -1210,6 +1262,7 @@
     { g: 'Sections', label: 'Risk gates', hint: '#gates', c: C.bad, go: () => go('#gates') },
     { g: 'Sections', label: 'Pipeline', hint: '#pipeline', c: C.sky, go: () => go('#pipeline') },
     { g: 'Sections', label: 'Coverage', hint: '#coverage', c: C.warn, go: () => go('#coverage') },
+    { g: 'Sections', label: 'Schedule it with Cronsole', hint: '#schedule', c: C.sky, go: () => go('#schedule') },
     { g: 'Sections', label: 'Quick start', hint: '#start', c: C.violet, go: () => go('#start') },
     ...GATES.map(g => ({ g: 'Gates', label: `Gate ${g.id} · ${g.name}`, hint: TYPE[g.type][0], c: TYPE[g.type][1], go: () => jumpGate(g.id) })),
     ...BLIPS.map(b => ({ g: 'Radar samples', label: b.label, hint: `edge ${(b.r.edge >= 0 ? '+' : '') + (b.r.edge * 100).toFixed(0)}%`, c: b.c, go: () => loadLab(b) })),
@@ -1219,6 +1272,7 @@
     { g: 'Documents', label: 'Scripts reference', hint: 'docs/scripts', go: () => open(REPO + '/blob/master/docs/scripts/SCRIPTS_REFERENCE.md') },
     { g: 'Documents', label: 'Changelog', hint: 'docs/CHANGELOG.md', go: () => open(REPO + '/blob/master/docs/CHANGELOG.md') },
     { g: 'Links', label: 'Source on GitHub', hint: 'ai-automation-tools/edge-radar', go: () => open(REPO) },
+    { g: 'Links', label: 'Edge-Radar templates in Cronsole', hint: 'cronsole.ai-automation-tools.dev', go: () => open('https://cronsole.ai-automation-tools.dev/#/collection/edge-radar') },
     { g: 'Links', label: 'ai-automation-tools.dev', hint: 'the org landing page', go: () => open('https://ai-automation-tools.dev') },
   ];
   let sel = 0, shown = [];

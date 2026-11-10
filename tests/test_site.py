@@ -81,6 +81,17 @@ def _gate_rows() -> list[str]:
     return re.findall(r"^\| ([0-9][0-9.b]*) \|", block, re.M)
 
 
+def test_public_page_links_every_template_to_cronsole(public: str) -> None:
+    """The Schedule section renders registry/index.json live and links each card to the gallery."""
+    assert 'id="schedule"' in public and 'href="#schedule"' in public
+    assert "fetch('registry/index.json')" in public
+    assert "${GALLERY}#/t/${encodeURIComponent(t.id)}" in public
+    assert "https://cronsole.ai-automation-tools.dev/#/collection/edge-radar" in public
+    assert (
+        ROOT / "site" / "registry" / "index.json"
+    ).is_file(), "the section reads the published registry"
+
+
 def test_public_gate_grid_matches_claude_md(public: str) -> None:
     expected = _gate_rows()
     assert len(expected) == 21

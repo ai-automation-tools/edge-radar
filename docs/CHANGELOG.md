@@ -19,6 +19,11 @@
   preview, and, where the `.bat` files exist, the same scan flags as each `.bat`. A daily
   *Registry drift* workflow hashes every served file against `master`.
 - **Docs** `AUTOMATION_GUIDE.md` lists the templates with gallery links; the README links the pack.
+- **Site** The public page gains a **Schedule** section (nav, mobile nav and ⌘K palette): one
+  card per template, read live from `registry/index.json` so it cannot drift from the gallery.
+  Each card has *Get it for Cronsole* (the template in the gallery) and *Template JSON*, and
+  says whether it can place orders. The section links the whole pack and the automation guide.
+  `tests/test_site.py` pins the wiring.
 
 ---
 
