@@ -5,13 +5,14 @@ cached at zero, so one key with quota left kept the walk from ever reaching the
 drained ones. 12 of 14 keys read 0 while a live probe found 5154 requests
 actually available. The bug was that a zero was believed forever.
 """
+
 import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts" / "shared"))
-import odds_api
+import odds_api  # noqa: E402 -- after the sys.path insert
 
 
 def _reload_from(tmp_path, payload):
@@ -63,5 +64,6 @@ def test_roundtrip_writes_timestamps(tmp_path):
     _reload_from(tmp_path, {})
     odds_api.report_remaining("k1", 0)
     written = json.loads(odds_api._QUOTA_CACHE_PATH.read_text(encoding="utf-8"))
-    assert written["k1"]["remaining"] == 0
-    assert written["k1"]["checked_at"], "a zero without a stamp can never expire"
+    kid = odds_api._key_id("k1")
+    assert written[kid]["remaining"] == 0
+    assert written[kid]["checked_at"], "a zero without a stamp can never expire"

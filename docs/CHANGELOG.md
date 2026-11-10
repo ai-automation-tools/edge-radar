@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-11-09 -- Odds API keys out of logs and the quota cache
+
+- **Finding** CodeQL `py/clear-text-logging-sensitive-data` (alerts 1 and 2): `odds_api.py`
+  logged the last 6 characters of a key. Worse, `data/cache/odds_api_quota.json` stored every
+  key in full, as the JSON keys.
+- **Change** Logs and `get_status()` name a key by its slot in `ODDS_API_KEYS` (`#3`). The cache
+  stores `sha256:<16 hex>` ids. A cache written before this loads as before; the next save
+  rewrites it without the raw keys. `check_odds_keys.py` still prints a suffix to the console,
+  so a key can be matched to its account by hand.
+
+---
+
 ## 2026-11-07 -- NHL totals floor 0.06 -> 0.05 (operator override)
 
 - **Finding** 0 orders on 11-06 and 11-07, ~12 in 12 days. Not a matching fault: the 11-08
