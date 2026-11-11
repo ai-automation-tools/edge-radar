@@ -63,7 +63,7 @@ S8 (CLV capture) shipped 2026-09-10 and S9 (the CLV section of `betting_analysis
 - [ ] **S16** **Kill switches:** global negative CLV sends everything to dry-run, segment negative CLV sends that segment to dry-run, and fewer than 150 captures in 120 days sends everything to dry-run. Distances are computed mechanically for S12. *(effort S)*
 - [ ] **S13** **Re-run `calibration_study.py` and `correlation_check.py` against CLV** once enough captures exist. Lambda's CI is currently [-0.04, +0.42]. *(effort S)*
 - [ ] **S14** **Maker-fill A/B.** Every fill today is a taker fill, and fees cost 3.14pt of ROI. Assign by deterministic ticker hash, 25% maker / 75% taker, with sizing unchanged. Recompute edge at the limit price, and log scan, limit and fill prices plus fee role. *(effort M)*
-- [ ] **S15** **Day-90 checkpoint, around 2026-12-09.** If coverage is below 60%, fix capture first. If the CI straddles zero, shrink the book or stop. If the lower bound is above 0 with 150 or more captures, raise `UNIT_SIZE` to $1.50, and only that. *(effort S)*
+- [ ] **S15** **Day-90 checkpoint, around 2026-12-09.** If coverage is below 60%, fix capture first. If the CI straddles zero, shrink the book or stop. If the lower bound is above 0 with 150 or more captures, raise `UNIT_SIZE` to $1.50, and only that. *(effort S)* 🔒 Needs owner
 
 ### 🎯 Model and gate follow-ups
 
@@ -71,7 +71,7 @@ S8 (CLV capture) shipped 2026-09-10 and S9 (the CLV section of `betting_analysis
 - [ ] **T4** **Newly covered market types flood the book before they can be calibrated.** Options: a higher floor until first calibration, a per-shape batch cap, or a per-(sport, category) share cap. *(effort S-M)*
 - [ ] **GT1** **Three unaligned NO-side knobs** (Gate 4.6, 4.6b and F4 damping). Check whether one edge-vs-price surface can reproduce all three before merging any of them. *(effort M)*
 - [ ] **MLB** Re-check MLB totals after about 20 more settles under Gate 3.55. Align the totals `n_books` floor (3) with moneyline (5). Once rows carry `n_books`, re-run `book_width_check.py` in direct mode. *(effort S)*
-- [ ] **B7b** Turn on `ODDS_API_REGIONS_EXECUTE=us,eu` in the live `.env` (B7 shipped the knob, default off; it doubles Odds API cost on `--execute` runs only). Once on, log `n_books` and re-check the R29/MLB book-count floors, which were tuned on a 9-book us-only pool. *(effort XS)*
+- [ ] **B7b** Turn on `ODDS_API_REGIONS_EXECUTE=us,eu` in the live `.env` (B7 shipped the knob, default off; it doubles Odds API cost on `--execute` runs only). Once on, log `n_books` and re-check the R29/MLB book-count floors, which were tuned on a 9-book us-only pool. *(effort XS)* 🔒 Needs owner
 - [ ] **R23b** On a 429, back off and retry the same key. Only mark a key exhausted on a 401. *(effort S)*
 - [ ] **C9** Soccer total stdev is 1.5, but realized data shows 1.86. Change it only with a backtest, because soccer totals are currently profitable. *(effort S)*
 - [ ] **C4b** Cap the edge for the `high` confidence label. Measure first, since High underperforms even at low edge. *(effort S)*
@@ -81,21 +81,26 @@ S8 (CLV capture) shipped 2026-09-10 and S9 (the CLV section of `betting_analysis
 - [ ] **NCAA-BB** *(when: ~Nov 2026)* Run a live scan to confirm `KXNCAAMB*`/`KXNCAAWB*` markets resolve end to end. No code change expected.
 - [ ] **R7-exp** *(when: ~30 more settles)* Is the live `MIN_MARKET_PRICE=0.10` longshot lane worth keeping? Judge it on CLV, not ROI.
 - [ ] **GT3** *(when: once the gate has rejected real candidates)* Is `MAX_MARKET_PRICE=0.75` actually binding? It shipped without evidence.
-- [ ] **S26b** *(when: one quota cycle)* Keep the daily `x-requests-used` readings per key to learn the Odds API reset model. Check key `...44681c` (401, likely a typo in `ODDS_API_KEYS`).
+- [ ] **S26b** *(when: one quota cycle)* Keep the daily `x-requests-used` readings per key to learn the Odds API reset model. Check the key that returns 401 (likely a typo in `ODDS_API_KEYS`).
 - [ ] **S24** *(when: next occurrence)* MLS LAG-NE 09-05 produced no edge because `find_market_event` found 0 candidates, likely a team-name mapping miss.
 
 ### 🧹 Hygiene and tooling
 
 - [ ] **S22** Report ROI as `net_pnl / (cost + fees)`. A total loss currently prints -107%. *(effort XS)*
-- [ ] **T3** CI: pytest on PR, import smoke, lint, detect-secrets. Only `deploy.yml` and Dependabot exist. *(effort S)*
+- [ ] **T3** CI: import smoke, lint, detect-secrets. **(2026-11-11)** pytest on PRs and pushes to `master` shipped 2026-11-09 (#358, `.github/workflows/ci.yml`); the rest is still open. *(effort S)*
 - [ ] **T1/T2** Mocked integration tests (scan→risk→execute, settle→report→CLV) plus deterministic API fixtures. *(effort M)*
-- [ ] **R24c** Make `install_windows_task.py status` reflect every live task under `\AI-Projects\Edge-Radar-MikesAILab\`. *(effort S)*
+- [ ] **R24c** Make `install_windows_task.py status` reflect every live task under the owner's `\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\` folder (the installer's own default is `Edge-Radar`, overridable with `--task-folder`), and replace the old `\AI-Projects\Edge-Radar-MikesAILab\` path in `docs/task-schedules/README.md` in the same change. *(effort S)*
+- [ ] **Templates for the rest of the scheduled jobs** *(Automation)* — **What:** installer profiles and Cronsole templates for `daily-summary`, `reconcile`, `clv-capture`, `backtest` and `weekly-analysis` (read-only), and `futures` (Mode defaults to `preview`, like execute). **Done when:** `tests/test_cronsole_registry.py` passes with one template per profile, and the homepage's Schedule section lists them. Open question: which of these jobs may go public. *(effort S)* 🔒 Needs owner
 - [ ] **GT2** Add one reference table of the 8 sizing-cap steps near `size_order`. *(effort XS)*
 - [ ] **H7** Move `BOOK_WEIGHTS` into config (pruned to arriving keys in B7). *(effort S)*
 - [ ] **H8** Write a runbook for rotating the Kalshi RSA key. *(effort XS)*
 - [ ] **H2 / H3** Split `requirements.txt` into core, dev and research. Separate runtime state from the source tree. *(effort S)*
 - [ ] **Q6** Package `scripts/` and retire the `sys.path` hacks. *(effort L)*
 - [ ] **R19** Complete `FUTURES_ALIASES` for NBA/NHL/MLB. See the archive for the rest of the scope. *(effort M)*
+- [ ] `small` **One risk-gate count everywhere (21)** *(Docs)* — `docs/setup/ARCHITECTURE.md` says 18 (badge and pipeline table) and `skills/edge-radar/SKILL.md` says fifteen, while the README says 21. **Done when:** every count matches the gates the risk check actually runs. *(effort XS)*
+- [ ] `small` **Link ROADMAP from the homepage's resources** *(Site)* — `site/index.html` links the CHANGELOG, README and three docs, not `docs/ROADMAP.md`. **Done when:** `tests/test_site.py` pins the link. *(effort XS)*
+- [ ] `small` **Security headers on the public page** *(Site)* — the Vercel page sends HSTS only. A `vercel.json` for the site sends `nosniff`, a CSP that allows the registry fetch and the diagram iframe, and `frame-ancestors 'self'`. **Done when:** `curl -sI https://edge-radar.ai-automation-tools.dev/` shows all three and the Schedule section still loads. *(effort XS)*
+- [ ] **About text: Kalshi only** *(Metadata)* — the GitHub About still names Polymarket, removed 2026-09-29. 🔒 Needs owner
 
 ### 💤 Dormant until prediction markets are re-enabled
 

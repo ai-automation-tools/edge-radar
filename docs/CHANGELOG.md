@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-11-11 -- Roadmap rechecked against the org's 2026-11 requirements
+
+- **Docs** `docs/ROADMAP.md` rechecked against the org's 2026-11 requirements. B7b and S15 change
+  the live money config, so they are marked 🔒 Needs owner. S26b no longer prints a key suffix. T3
+  is narrowed to what's left now that pytest runs in CI. R24c names the current Task Scheduler folder
+  and the doc it has to fix. New items: templates for the rest of the scheduled jobs (🔒 Needs owner
+  until it's decided which may go public), one risk-gate count everywhere, a ROADMAP link on the
+  public page, security headers on the public page, and the About text (🔒).
+
+---
+
 ## 2026-11-10 -- Scheduled jobs as Cronsole templates
 
 - **Added** `scripts/schedulers/automation/build_cronsole_registry.py` generates a Registry v1
@@ -24,6 +35,15 @@
   Each card has *Get it for Cronsole* (the template in the gallery) and *Template JSON*, and
   says whether it can place orders. The section links the whole pack and the automation guide.
   `tests/test_site.py` pins the wiring.
+
+---
+
+## 2026-11-09 -- CI runs the tests; security policy; MIT licence
+
+- **CI** `.github/workflows/ci.yml` runs `pytest tests/` on Python 3.12 on every pull request and
+  every push to `master` (#358). Import smoke, lint and detect-secrets are still open (T3).
+- **Docs** `SECURITY.md` says how to report a vulnerability (#359).
+- **Docs** `LICENSE`: MIT, the owner's choice on 2026-11-09 (#360).
 
 ---
 
