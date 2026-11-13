@@ -100,7 +100,7 @@ S8 (CLV capture) shipped 2026-09-10 and S9 (the CLV section of `betting_analysis
 - [ ] `small` **One risk-gate count everywhere (21)** *(Docs)* — `docs/setup/ARCHITECTURE.md` says 18 (badge and pipeline table) and `skills/edge-radar/SKILL.md` says fifteen, while the README says 21. **Done when:** every count matches the gates the risk check actually runs. *(effort XS)*
 - [ ] `small` **Link ROADMAP from the homepage's resources** *(Site)* — `site/index.html` links the CHANGELOG, README and three docs, not `docs/ROADMAP.md`. **Done when:** `tests/test_site.py` pins the link. *(effort XS)*
 - [ ] `small` **Security headers on the public page** *(Site)* — the Vercel page sends HSTS only. A `vercel.json` for the site sends `nosniff`, a CSP that allows the registry fetch and the diagram iframe, and `frame-ancestors 'self'`. **Done when:** `curl -sI https://edge-radar.ai-automation-tools.dev/` shows all three and the Schedule section still loads. *(effort XS)*
-- [ ] **About text: Kalshi only** *(Metadata)* — the GitHub About still names Polymarket, removed 2026-09-29. 🔒 Needs owner
+- [x] **About text: Kalshi only** *(Metadata)* — the GitHub About no longer names Polymarket, removed 2026-09-29. Done 2026-11-13 by the owner.
 
 ### 💤 Dormant until prediction markets are re-enabled
 

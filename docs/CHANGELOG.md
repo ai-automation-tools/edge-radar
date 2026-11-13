@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-13 -- About text names Kalshi only
+
+- **Metadata** The GitHub About text no longer names Polymarket US, removed 2026-09-29. The
+  roadmap item is checked off.
+
+---
+
 ## 2026-11-11 -- Roadmap rechecked against the org's 2026-11 requirements
 
 - **Docs** `docs/ROADMAP.md` rechecked against the org's 2026-11 requirements. B7b and S15 change
