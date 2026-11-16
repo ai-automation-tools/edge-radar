@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-11-16 -- Upstream check
+
+- **Docs** All 13 `UPSTREAMS.md` rows checked. Queued K2: Kalshi renamed the order-error status
+  `market_closed` to `market_inactive` (2026-11-05), so `venue_eligibility` should list it as
+  transient; money path, no code change here. The Odds API now calls the bookmaker-level
+  `last_update` on `/odds` deprecated, so the Odds API row notes `_bookmaker_last_update()` must
+  keep its market-timestamp fallback (it does). The live ESPN, MLB, NHL and Yahoo responses still
+  carry the keys the parsers read. CoinGecko's 2026-11-25 ticker-ID change and `/derivatives`
+  pagination touch endpoints the code does not call.
+
+---
+
 ## 2026-11-11 -- Roadmap rechecked against the org's 2026-11 requirements
 
 - **Docs** `docs/ROADMAP.md` rechecked against the org's 2026-11 requirements. B7b and S15 change
