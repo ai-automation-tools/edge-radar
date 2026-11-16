@@ -55,7 +55,7 @@ pandas>=2.3.3                     # Dataframes for backtesting & report generati
 
 # === Utilities ===
 rich>=13.9.4                      # Terminal tables & formatted output
-markdown-it-py>=3.0               # render_report_email.py: report markdown -> email HTML
+markdown-it-py>=4.3.0               # render_report_email.py: report markdown -> email HTML
 filelock>=3.32.7                  # Cross-process lock for trade/settlement log writes (M2)
 # loguru==0.7.2                   # planned — structured logging
 # tqdm==4.66.1                    # planned — progress bars for backtests
