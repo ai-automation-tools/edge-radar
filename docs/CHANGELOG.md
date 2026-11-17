@@ -2,6 +2,41 @@
 
 ---
 
+## 2026-11-17 -- Live orders need approval; client-level cap and kill switch (ER-01)
+
+- **Fix** `KalshiClient.create_order` now refuses an order whose notional (contracts x the price of
+  the side bought) exceeds `MAX_BET_SIZE` by more than 1c per contract, the executor's limit-price
+  rounding. It's the one call every order passes through, so the cap holds even for a caller that
+  skips `size_order`. Over the 284 live orders in the ledger it would have refused none.
+- **Fix** Kill switch: while `data/KILL` exists, `create_order` and `intra_exchange_transfer` refuse.
+  `DRY_RUN=true` still short-circuits first, so previews are unchanged. Refusals raise
+  `OrderRefusedError`, which the executor records per order and never treats as a venue block.
+- **Security** New tracked `.claude/settings.json`: Claude Code asks before any Bash or PowerShell
+  command containing `--execute`, `--go`, `--send-it`, `--mode execute`, `--verify-eligibility`,
+  `create_order` or `intra_exchange_transfer`, and denies edits to `.env`, `.env.longshot` and `keys/`.
+  The `edge-radar` skill is now user-invoked only (`disable-model-invocation`), and `KALSHI_BETTOR`
+  no longer follows a user who "insists" on overriding a risk limit.
+- **Docs** Betting diagram re-pinned: the "Place order" node cites the new guard and reads
+  "DRY_RUN, cap, KILL block"; the knobs card lists `data/KILL`.
+
+---
+
+## 2026-11-17 -- Audit follow-ups; halt docs name the real task folder (ER-11, R24c)
+
+- **Docs** `docs/ROADMAP.md` gains "Audit follow-ups, 2026-11-16": the P0 and P1 items from the
+  2026-11-16 audit (ER-01 to ER-12), in work order. ER-02 will close X2.
+- **Fix** ER-11: the ops deck, `docs/task-schedules/README.md` and the `edge-radar` skill pointed the
+  halt and manual-run commands at a Task Scheduler folder that no longer exists. They now name
+  `\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\`, and the halt boxes put
+  `DRY_RUN=true` first. `docs/scripts/SCRIPTS_REFERENCE.md` examples use `<repo>` instead of a
+  machine path.
+- **Fix** R24c: `install_windows_task.py status` also lists every task in the folder it didn't
+  install (the owner's folder shows all 16), pinned by `tests/test_install_windows_task.py`.
+- **Fix** ER-01 (help text only): `scan.py --help` no longer says `--execute` asks for confirmation.
+  It doesn't; the rest of ER-01 is open.
+
+---
+
 ## 2026-11-16 -- Upstream check
 
 - **Docs** All 13 `UPSTREAMS.md` rows checked. Queued K2: Kalshi renamed the order-error status

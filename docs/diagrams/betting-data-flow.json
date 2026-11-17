@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "de8bcb14fa54d3ad2d2b459e0fcc0d62467e6200"
+      "revision": "b7a7f2077f141d24be79349585039bccf5ce12f0"
     }
   },
   "stages": [
@@ -276,7 +276,7 @@
       "id": "executor",
       "type": "backend",
       "label": "Place order",
-      "sublabel": "GTC limit; DRY_RUN blocks",
+      "sublabel": "GTC limit; DRY_RUN, cap, KILL block",
       "tag": "venue check",
       "stage": 4,
       "row": 1,
@@ -288,8 +288,8 @@
         },
         {
           "path": "scripts/kalshi/kalshi_client.py",
-          "line": 389,
-          "end_line": 391
+          "line": 398,
+          "end_line": 430
         }
       ]
     },
@@ -504,6 +504,7 @@
       "dot": "cyan",
       "items": [
         "DRY_RUN: real order vs dry_run_blocked row",
+        "data/KILL: client refuses every order and transfer",
         "MIN_EDGE_THRESHOLD (+ per-sport overrides)",
         "KELLY_FRACTION, KELLY_EDGE_CAP",
         "KALSHI_FEE_RATE, MAX_BET_SIZE, MAX_DAILY_LOSS"

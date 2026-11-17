@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "ask": [
+      "Bash(*--execute*)",
+      "Bash(*--go)",
+      "Bash(*--go *)",
+      "Bash(*--send-it*)",
+      "Bash(*--mode execute*)",
+      "Bash(*--mode=execute*)",
+      "Bash(*--verify-eligibility*)",
+      "Bash(*create_order*)",
+      "Bash(*intra_exchange_transfer*)",
+      "PowerShell(*--execute*)",
+      "PowerShell(*--go)",
+      "PowerShell(*--go *)",
+      "PowerShell(*--send-it*)",
+      "PowerShell(*--mode execute*)",
+      "PowerShell(*--mode=execute*)",
+      "PowerShell(*--verify-eligibility*)",
+      "PowerShell(*create_order*)",
+      "PowerShell(*intra_exchange_transfer*)"
+    ],
+    "deny": [
+      "Edit(./.env)",
+      "Write(./.env)",
+      "Edit(./.env.longshot)",
+      "Write(./.env.longshot)",
+      "Read(./keys/**)",
+      "Edit(./keys/**)",
+      "Write(./keys/**)"
+    ]
+  }
+}

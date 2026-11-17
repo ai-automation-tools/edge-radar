@@ -149,7 +149,7 @@ Common flags (all scanners):
   --min-edge N     Minimum edge threshold (default 0.03)
   --top N          Number of top opportunities (default 20)
   --save           Save markdown report
-  --execute        Execute bets (requires confirmation)
+  --execute        Place REAL orders when DRY_RUN=false (no confirmation prompt)
   --mode X         preview (no orders) or execute (same as --execute)
   --unit-size N    Dollar amount per bet
   --max-bets N     Max bets to place (default 5)

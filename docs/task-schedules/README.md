@@ -14,9 +14,9 @@
 > [!NOTE]
 > **This is the schedule the repo owner actually runs, published as a reference, not a turnkey installer.** The owner's `.bat` files are gitignored (they hardcode a machine path and a private inbox), so this doc carries **sanitized templates** — see [Reproducing this on your own machine](#reproducing-this-on-your-own-machine). For just the minimal "execute + settle + calibration" core, start with [`AUTOMATION_GUIDE.md`](../setup/AUTOMATION_GUIDE.md) and its one-command installer.
 
-**Task Scheduler folder:** `\AI-Projects\Edge-Radar-MikesAILab\` &nbsp;·&nbsp; **Times:** PT (ET in parentheses) &nbsp;·&nbsp; **History:** every add, change and retirement is in [`docs/CHANGELOG.md`](../CHANGELOG.md).
+**Task Scheduler folder:** `\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\` &nbsp;·&nbsp; **Times:** PT (ET in parentheses) &nbsp;·&nbsp; **History:** every add, change and retirement is in [`docs/CHANGELOG.md`](../CHANGELOG.md).
 
-Task Scheduler is the only active scheduling mechanism. Every action launches through `scripts/schedulers/run-hidden.vbs` (no console flash; exit code passed through; a scheduler stop kills the whole process tree via `run-hidden-guard.ps1`). A separate `\AI-Projects\Edge-Radar-AltAgents\` folder holds 4 tasks for the Edge-Radar-Agy fork — a different repo, not covered here.
+Task Scheduler is the only active scheduling mechanism. Every action launches through `scripts/schedulers/run-hidden.vbs` (no console flash; exit code passed through; a scheduler stop kills the whole process tree via `run-hidden-guard.ps1`). `install_windows_task.py status --task-folder '<folder>'` lists every task in a folder, including ones it didn't install.
 
 ---
 
@@ -78,11 +78,13 @@ The practical count is far lower: `--exclude-open`, Gate 7 series dedup, Gate 2b
 
 ### Halting live orders
 
-```powershell
-Disable-ScheduledTask -TaskPath '\AI-Projects\Edge-Radar-MikesAILab\' -TaskName '<task>'
-```
+**First, stop everything:** set `DRY_RUN=true` in `.env`. The CLI re-reads `.env` per run, so the next fire of every execute task is already dry.
 
-Or set `DRY_RUN=true` in `.env` to stop every execute task at once (the CLI re-reads `.env` per run).
+To stop a single task instead, disable it. The folder below is a copy as of 2026-11-17; if it has moved, `Get-ScheduledTask | Where-Object TaskPath -match 'Edge-Radar'` finds it.
+
+```powershell
+Disable-ScheduledTask -TaskPath '\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\' -TaskName '<task>'
+```
 
 ---
 
@@ -213,7 +215,7 @@ Late-breaking news on tonight's slate: scratches, goalie confirmations, afternoo
 | **Flags** | `--unit-size 1 --max-bets 5 --min-bets 1 --budget 12% --date tomorrow --exclude-open --save --execute` |
 | **Email** | `render_report_email.py next-day` → `Edge-Radar \| Next Day Edge Report` |
 
-8:30 PM PT gives books time to post next-day lines (it was empty 43% of the time at 6 PM). Fri/Sat are skipped; the Sunday 5:05 AM run covers Sunday NFL with fresher data. To run it ad hoc on a skipped night: `Start-ScheduledTask -TaskPath '\AI-Projects\Edge-Radar-MikesAILab\' -TaskName 'All-Sports-NextDay-Execution'`.
+8:30 PM PT gives books time to post next-day lines (it was empty 43% of the time at 6 PM). Fri/Sat are skipped; the Sunday 5:05 AM run covers Sunday NFL with fresher data. To run it ad hoc on a skipped night: `Start-ScheduledTask -TaskPath '\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\' -TaskName 'All-Sports-NextDay-Execution'`.
 
 ### 13. `Reconcile` — Daily 11:30 PM PT
 
@@ -358,7 +360,7 @@ Set-ScheduledTask -TaskPath "<FOLDER>" -TaskName "All-Sports-SameDay-Execution" 
 ## Management Commands
 
 ```powershell
-$F = '\AI-Projects\Edge-Radar-MikesAILab\'
+$F = '\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\'
 
 # Status: next run + last result (0 = success)
 Get-ScheduledTask -TaskPath $F | ForEach-Object {
@@ -377,7 +379,7 @@ Unregister-ScheduledTask -TaskPath $F -TaskName '<task>' -Confirm:$false
 From Git Bash, prefix `schtasks` with `MSYS_NO_PATHCONV=1` or the `/TN` path is mangled into a filesystem path:
 
 ```bash
-MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Projects\Edge-Radar-MikesAILab\Daily-Summary"
+MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\Daily-Summary"
 ```
 
 ---

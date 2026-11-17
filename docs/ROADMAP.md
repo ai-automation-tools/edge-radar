@@ -43,6 +43,25 @@ Collapsed: the build, from the first scanners to live trading on 2026-03-22, is 
 
 Nothing below blocks go-live.
 
+### 🔎 Audit follow-ups, 2026-11-16
+
+A full audit at `610b403` raised 53 items (`ER-01` to `ER-53`); the P0 and P1 ones are below, in work
+order. Security and privacy detail stays in the owner's private audit report, not in public issues.
+One item per PR, titled `fix(ER-xx): …`.
+
+- [x] **ER-01** (P0) **Enforce human approval and a client-level hard cap before any live order.** Committed `.claude/settings.json` ask/deny rules for order-placing commands, `disable-model-invocation` on the `edge-radar` skill, a `MAX_BET_SIZE` notional cap and a `data/KILL` kill switch inside `KalshiClient.create_order` (the switch also stops shard transfers), and the `scan.py --execute` help text no longer promises a confirmation. Done 2026-11-17; pinned by `tests/test_client_guards.py`.
+- [ ] **ER-02** (P0) **The ledger misses real fills.** Late fills settle at $0, the janitor closes partial fills at $0, and an accepted order whose log write fails is recorded as an error. Pre-settle fill refresh (closes **X2**), zero-fill check before a janitor cancel, narrowed `try` with a log retry and a JSONL fallback, a one-off reconcile of open rows. **Done when:** three regression tests pass and it has run a week before **S15**. *(effort M)*
+- [ ] **ER-03** (P1) **Scan-cache replay (`--pick` / `--ticker --execute`) skips Gate 2, Gate 4.8 and the `MAX_BET_SIZE` re-clamp.** **Done when:** a cached row whose game started, or that would exceed `MAX_OPEN_POSITIONS`, is rejected in a test. *(effort S)*
+- [ ] **ER-07** (P1) **Failed live-execute runs are silent.** Execute wrappers exit with the scan's code; a run with no fresh report sends a `[FAILED]` email. **Done when:** a forced failure under `DRY_RUN=true` leaves a non-zero Last Result and an email. *(effort S–M)*
+- [ ] **ER-08** (P1) **Back up the trade ledger and settlements.** Nightly versioned zip with 30-day retention as a second action on Reconcile; restore steps in `data/history/README.md`. *(effort S)*
+- [ ] **ER-09** (P1) **Tool-restrict unattended agent sessions.** `betting_audit` goes through `agent_cli`; `agent_command` requires an allowlist. **Done when:** only `agent_cli.py` shells `claude -p`. *(effort S)*
+- [ ] **ER-04** (P1) **Contain the daily drift auto-fix** (what it may edit, which environment it runs in). Depends on ER-09. *(effort S–M)*
+- [ ] **ER-10** (P1) **Risk, eligibility and responsible-gambling notice** on the README and site, ROI lines tagged as a sample, pinned by `tests/test_site.py`. *(effort S)*
+- [x] **ER-11** (P1) **Halt and manual-run commands pointed at a Task Scheduler folder that no longer exists.** Every doc and the ops deck now name the current folder and put `DRY_RUN=true` first; closes **R24c**. Done 2026-11-17.
+- [ ] **ER-12** (P1) **Say LIVE or DRY RUN everywhere, and report what was placed, not what was requested.** One `mode_banner()` for console titles, report headers and email subjects; per-order placed / failed / blocked. *(effort S–M)*
+- [ ] **ER-05** (P1) Kalshi key rotation, with the **H8** runbook and the **M3** key-type choice. *(effort S)* 🔒 Needs owner
+- [ ] **ER-06** (P1) Public-repo data hygiene: stale branches and a history decision. *(effort S / L)* 🔒 Needs owner
+
 ### 🩹 Money-path defects: fix next
 
 - [ ] **B2** **Unmapped sports fall back to a 12.0 stdev** (`edge_detector.py:861, 1028`). This is latent while those sports only trade moneylines. Fail closed (`None`, no edge) and add the soccer-league and WNCAAB entries. *(effort S)*
@@ -90,7 +109,7 @@ S8 (CLV capture) shipped 2026-09-10 and S9 (the CLV section of `betting_analysis
 - [ ] **S22** Report ROI as `net_pnl / (cost + fees)`. A total loss currently prints -107%. *(effort XS)*
 - [ ] **T3** CI: import smoke, lint, detect-secrets. **(2026-11-11)** pytest on PRs and pushes to `master` shipped 2026-11-09 (#358, `.github/workflows/ci.yml`); the rest is still open. *(effort S)*
 - [ ] **T1/T2** Mocked integration tests (scan→risk→execute, settle→report→CLV) plus deterministic API fixtures. *(effort M)*
-- [ ] **R24c** Make `install_windows_task.py status` reflect every live task under the owner's `\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\` folder (the installer's own default is `Edge-Radar`, overridable with `--task-folder`), and replace the old `\AI-Projects\Edge-Radar-MikesAILab\` path in `docs/task-schedules/README.md` in the same change. *(effort S)*
+- [x] **R24c** Make `install_windows_task.py status` reflect every live task under the owner's `\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\` folder (the installer's own default is `Edge-Radar`, overridable with `--task-folder`), and replace the old folder path in `docs/task-schedules/README.md` in the same change. Done 2026-11-17 with ER-11: `status` also lists tasks it didn't install.
 - [ ] **Templates for the rest of the scheduled jobs** *(Automation)* — **What:** installer profiles and Cronsole templates for `daily-summary`, `reconcile`, `clv-capture`, `backtest` and `weekly-analysis` (read-only), and `futures` (Mode defaults to `preview`, like execute). **Done when:** `tests/test_cronsole_registry.py` passes with one template per profile, and the homepage's Schedule section lists them. Open question: which of these jobs may go public. *(effort S)* 🔒 Needs owner
 - [ ] **GT2** Add one reference table of the 8 sizing-cap steps near `size_order`. *(effort XS)*
 - [ ] **H7** Move `BOOK_WEIGHTS` into config (pruned to arriving keys in B7). *(effort S)*

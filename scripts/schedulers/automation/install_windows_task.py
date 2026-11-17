@@ -280,23 +280,43 @@ def remove(profile_name: str):
         print(f"  [--] Not found: {tn}")
 
 
+def _print_task_state(tn: str, label: str) -> bool:
+    """Print a task's status lines under `label`; False if it isn't registered."""
+    result = _run_schtasks(["/Query", "/TN", tn, "/V", "/FO", "LIST"], check=False)
+    if result.returncode != 0:
+        return False
+    print(f"\n  {label}")
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if any(k in line for k in ["Status", "Next Run", "Last Run", "Last Result"]):
+            print(f"    {line}")
+    return True
+
+
 def status():
-    """Check all Edge-Radar tasks."""
+    """Check the profile tasks, then every other task in the same folder.
+
+    A folder is often managed by hand (the owner's live tasks were not built by
+    this script), so the profile list alone under-reports what will fire.
+    """
     print(f"Task folder: \\{TASK_FOLDER}\\  (override with --task-folder)")
     found = False
     for name, profile in TASK_PROFILES.items():
-        tn = task_name(name)
-        result = _run_schtasks(["/Query", "/TN", tn, "/V", "/FO", "LIST"], check=False)
-
-        if result.returncode == 0:
+        if _print_task_state(task_name(name), f"{name} ({profile['description']})"):
             found = True
-            print(f"\n  {name} ({profile['description']})")
-            for line in result.stdout.splitlines():
-                line = line.strip()
-                if any(k in line for k in ["Status", "Next Run", "Last Run", "Last Result"]):
-                    print(f"    {line}")
         else:
             print(f"\n  {name}: NOT installed")
+
+    prefix = f"\\{TASK_FOLDER}\\".lower()
+    mine = {f"\\{task_name(n)}".lower() for n in TASK_PROFILES}
+    others = sorted(
+        {p for p in _all_task_paths() if p.lower().startswith(prefix) and p.lower() not in mine}
+    )
+    if others:
+        found = True
+        print(f"\n  Other tasks in \\{TASK_FOLDER}\\ (not managed by this script): {len(others)}")
+        for path in others:
+            _print_task_state(path, path.rsplit("\\", 1)[-1])
 
     if not found:
         print("\nNo Edge-Radar tasks installed.")
