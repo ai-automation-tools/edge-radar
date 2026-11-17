@@ -16,6 +16,8 @@
   `create_order` or `intra_exchange_transfer`, and denies edits to `.env`, `.env.longshot` and `keys/`.
   The `edge-radar` skill is now user-invoked only (`disable-model-invocation`), and `KALSHI_BETTOR`
   no longer follows a user who "insists" on overriding a risk limit.
+- **Docs** Betting diagram re-pinned: the "Place order" node cites the new guard and reads
+  "DRY_RUN, cap, KILL block"; the knobs card lists `data/KILL`.
 
 ---
 
