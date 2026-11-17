@@ -3,6 +3,7 @@ name: edge-radar
 description: Unified Edge-Radar skill for scanning markets, placing wagers, managing portfolio, settling bets, and researching edge across Kalshi sports, futures, and prediction markets. Covers all scripts, filters, risk gates, and workflows.
 argument-hint: <action> [market/filter] [flags] — e.g., "scan nba", "bet mlb --unit-size 2", "status", "settle", "detail TICKER"
 user-invocable: true
+disable-model-invocation: true
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
@@ -431,7 +432,7 @@ After execution, summarize:
 | `/edge-radar reconcile` | `kalshi_settler.py reconcile` |
 | `/edge-radar risk` | `risk_check.py` |
 | `/edge-radar detail KXNBAGAME-26MAR25LALBOS-LAL` | `edge_detector.py detail KXNBAGAME-26MAR25LALBOS-LAL` |
-| `/edge-radar bet nba --go --unit-size 1 --max-bets 3` | `scan.py sports --filter nba --execute --unit-size 1 --max-bets 3` (no confirmation needed) |
+| `/edge-radar bet nba --go --unit-size 1 --max-bets 3` | `scan.py sports --filter nba --execute --unit-size 1 --max-bets 3` (skips the preview step; Claude Code still asks before running it, per `.claude/settings.json`) |
 | `/edge-radar scan all` | `scan.py sports` (no filter = all sports) |
 | `/edge-radar scan all --date today` | `scan.py sports --date today` (all sports, today only) |
 | `/edge-radar bet all --unit-size 1 --max-bets 10` | `scan.py sports --unit-size 1 --max-bets 10` then confirm then `--execute` |

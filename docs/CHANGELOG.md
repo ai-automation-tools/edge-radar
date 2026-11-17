@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-11-17 -- Live orders need approval; client-level cap and kill switch (ER-01)
+
+- **Fix** `KalshiClient.create_order` now refuses an order whose notional (contracts x the price of
+  the side bought) exceeds `MAX_BET_SIZE` by more than 1c per contract, the executor's limit-price
+  rounding. It's the one call every order passes through, so the cap holds even for a caller that
+  skips `size_order`. Over the 284 live orders in the ledger it would have refused none.
+- **Fix** Kill switch: while `data/KILL` exists, `create_order` and `intra_exchange_transfer` refuse.
+  `DRY_RUN=true` still short-circuits first, so previews are unchanged. Refusals raise
+  `OrderRefusedError`, which the executor records per order and never treats as a venue block.
+- **Security** New tracked `.claude/settings.json`: Claude Code asks before any Bash or PowerShell
+  command containing `--execute`, `--go`, `--send-it`, `--mode execute`, `--verify-eligibility`,
+  `create_order` or `intra_exchange_transfer`, and denies edits to `.env`, `.env.longshot` and `keys/`.
+  The `edge-radar` skill is now user-invoked only (`disable-model-invocation`), and `KALSHI_BETTOR`
+  no longer follows a user who "insists" on overriding a risk limit.
+
+---
+
 ## 2026-11-17 -- Audit follow-ups; halt docs name the real task folder (ER-11, R24c)
 
 - **Docs** `docs/ROADMAP.md` gains "Audit follow-ups, 2026-11-16": the P0 and P1 items from the

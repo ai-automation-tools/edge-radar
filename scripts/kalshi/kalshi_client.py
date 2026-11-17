@@ -37,6 +37,15 @@ log = logging.getLogger("kalshi_client")
 V2_ORDERS_PATH = "/portfolio/events/orders"
 V2_XFER_PATH = "/portfolio/intra_exchange_instance_transfer"
 
+# ER-01: client-level kill switch. While this file exists, every real order and
+# transfer is refused, whatever called the client (executor, doctor, a one-liner).
+KILL_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "KILL"
+
+
+def _refuse_if_killed(what: str) -> None:
+    if KILL_FILE.exists():
+        raise OrderRefusedError(f"{what} refused: kill switch {KILL_FILE} is present")
+
 
 class KalshiClient:
     """Authenticated Kalshi API client with full trading capabilities."""
@@ -404,6 +413,20 @@ class KalshiClient:
             expiration_ts=expiration_ts,
             subaccount=self.subaccount,
         )
+        # ER-01: the one choke point every caller passes through. The risk gates
+        # live upstream in the executor; this backstops a caller that skips them.
+        _refuse_if_killed("order")
+        # Cost per contract of the side actually bought: a bid buys YES at
+        # `price`, an ask buys NO at 1 - price. Slack of 1c per contract: the
+        # executor sizes on the sub-cent market price and rounds the limit up.
+        yes_cents = round(float(body["price"]) * 100)
+        cost_cents = yes_cents if body["side"] == "bid" else 100 - yes_cents
+        cap_cents = round(get_config().risk.max_bet_size * 100)
+        if count * cost_cents > cap_cents + count:
+            raise OrderRefusedError(
+                f"order refused: {count} x {cost_cents}c = ${count * cost_cents / 100:.2f} "
+                f"exceeds MAX_BET_SIZE ${cap_cents / 100:.2f}"
+            )
         log.info(
             "Placing order: %s %s %s -> v2 side=%s @ $%s — count %s",
             action,
@@ -531,6 +554,7 @@ class KalshiClient:
                 "destination_exchange_shard": destination_shard,
             }
 
+        _refuse_if_killed("transfer")
         body = {
             "source": source,
             "destination": destination,
@@ -691,6 +715,15 @@ class KalshiAPIError(Exception):
         self.status_code = status_code
         self.message = message
         super().__init__(f"Kalshi API {status_code}: {message}")
+
+
+class OrderRefusedError(RuntimeError):
+    """The client refused to send an order or transfer (ER-01 kill switch or cap).
+
+    Deliberately not a ``KalshiAPIError``: the venue never saw it, so it must not
+    count toward venue-eligibility or network-failure handling. The message
+    avoids the words ``venue_eligibility`` reads as a structural block.
+    """
 
 
 class KalshiRateLimitError(KalshiAPIError):

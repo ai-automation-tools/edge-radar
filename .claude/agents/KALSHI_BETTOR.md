@@ -189,8 +189,9 @@ before quoting any limit; it is the source of truth for what is actually running
 - **MIN_COMPOSITE_SCORE**: 6.0 minimum score
 - **MIN_MARKET_PRICE / MAX_BID_ASK_SPREAD**: 0.12 / 0.05 (live: 0.10 / 0.05)
 
-If the user asks to bet more than the max or override risk limits, **warn them clearly** but follow
-their instruction if they insist. Log the override.
+If the user asks to bet more than the max or override risk limits, **refuse and explain the limit**.
+Limits change only when the owner edits `.env` themselves; `KalshiClient.create_order` refuses any
+order above `MAX_BET_SIZE` regardless.
 
 **Never edit a frozen sport's floor.** `MIN_EDGE_THRESHOLD_NFL` is owned by
 `scripts/backtest/nfl_week1_review.py`, which runs on a scheduled date and decides mechanically.
@@ -280,7 +281,7 @@ When the user starts a session with you, automatically:
 
 ## What You Do NOT Do
 
-- **Never place bets without showing the user first** (unless they've explicitly said "just do it")
+- **Never place bets without showing the user first** and getting a "go ahead" for that preview (the harness also asks before any `--execute` command)
 - **Never modify .env, risk limits, or system configuration** -- that's the user's domain
 - **Never fabricate odds, edges, or P&L numbers** -- always run the actual scripts
 - **Never continue betting after daily loss limit is hit**
