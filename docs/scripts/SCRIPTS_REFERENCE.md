@@ -437,16 +437,16 @@ python scripts/kalshi/kalshi_settler.py report --detail --save
 
 ```bash
 # Same-day execution at 8 AM daily (all sports, top 10)
-schtasks /Create /TN "Edge-Radar\Same-Day-Execute" /TR "D:\AI_Agents\Specialized_Agents\Edge_Radar\scripts\schedulers\same_day_executions\same_day_execute.bat" /SC DAILY /ST 08:00
+schtasks /Create /TN "Edge-Radar\Same-Day-Execute" /TR "<repo>\scripts\schedulers\same_day_executions\same_day_execute.bat" /SC DAILY /ST 08:00
 
 # Settle results at 11 PM daily
 schtasks /Create /TN "Edge-Radar\Settle" /TR "\".venv\Scripts\python.exe\" \"scripts\kalshi\kalshi_settler.py\" settle" /SC DAILY /ST 23:00
 
 # Weekly account report every Monday at 9 AM
-schtasks /Create /TN "Edge-Radar\Weekly-Report" /TR "D:\AI_Agents\Specialized_Agents\Edge_Radar\scripts\schedulers\account_reports\weekly\weekly_account_report.bat" /SC WEEKLY /D MON /ST 09:00
+schtasks /Create /TN "Edge-Radar\Weekly-Report" /TR "<repo>\scripts\schedulers\account_reports\weekly\weekly_account_report.bat" /SC WEEKLY /D MON /ST 09:00
 
 # Monthly account report on the 1st at 9 AM
-schtasks /Create /TN "Edge-Radar\Monthly-Report" /TR "D:\AI_Agents\Specialized_Agents\Edge_Radar\scripts\schedulers\account_reports\monthly\monthly_account_report.bat" /SC MONTHLY /D 1 /ST 09:00
+schtasks /Create /TN "Edge-Radar\Monthly-Report" /TR "<repo>\scripts\schedulers\account_reports\monthly\monthly_account_report.bat" /SC MONTHLY /D 1 /ST 09:00
 ```
 
 </details>

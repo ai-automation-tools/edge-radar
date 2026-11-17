@@ -202,7 +202,7 @@ Morning P&L digest. Joins yesterday's settlements (rolling 24h window) with curr
 
 Sections: **Yesterday** (W-L, P&L, ROI, per-sport table, top-win/top-loss), **Open Exposure** ($ at risk + per-sport split), **Pending Today** (open positions whose game datetime lands today PST), **Context** (live Kalshi balance + 7-day rolling line: WR, P&L, Brier).
 
-**Automated cadence (U2, 2026-04-30):** `\Edge-Radar\Daily-Summary` runs daily at 4:50 AM PT and emails it as the same task's second action (`render_report_email.py daily-summary`; the separate `Email-Daily-Summary` task was merged in 2026-09-23). The digest lands before the 5:05 AM same-day execute so "Open Exposure" reflects overnight carry rather than today's new fills.
+**Automated cadence (U2, 2026-04-30):** `\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\Daily-Summary` runs daily at 4:50 AM PT and emails it as the same task's second action (`render_report_email.py daily-summary`; the separate `Email-Daily-Summary` task was merged in 2026-09-23). The digest lands before the 5:05 AM same-day execute so "Open Exposure" reflects overnight carry rather than today's new fills.
 
 ---
 

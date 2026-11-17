@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-11-17 -- Audit follow-ups; halt docs name the real task folder (ER-11, R24c)
+
+- **Docs** `docs/ROADMAP.md` gains "Audit follow-ups, 2026-11-16": the P0 and P1 items from the
+  2026-11-16 audit (ER-01 to ER-12), in work order. ER-02 will close X2.
+- **Fix** ER-11: the ops deck, `docs/task-schedules/README.md` and the `edge-radar` skill pointed the
+  halt and manual-run commands at a Task Scheduler folder that no longer exists. They now name
+  `\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\`, and the halt boxes put
+  `DRY_RUN=true` first. `docs/scripts/SCRIPTS_REFERENCE.md` examples use `<repo>` instead of a
+  machine path.
+- **Fix** R24c: `install_windows_task.py status` also lists every task in the folder it didn't
+  install (the owner's folder shows all 16), pinned by `tests/test_install_windows_task.py`.
+- **Fix** ER-01 (help text only): `scan.py --help` no longer says `--execute` asks for confirmation.
+  It doesn't; the rest of ER-01 is open.
+
+---
+
 ## 2026-11-16 -- Upstream check
 
 - **Docs** All 13 `UPSTREAMS.md` rows checked. Queued K2: Kalshi renamed the order-error status
