@@ -33,7 +33,14 @@ from dataclasses import dataclass, asdict  # noqa: F401
 # Shared imports
 import paths  # noqa: F401 -- path constants -- configures sys.path
 from opportunity import Opportunity
-from trade_log import load_trade_log, append_trades, get_today_pnl, for_profile, mark_cancelled
+from trade_log import (
+    load_trade_log,
+    append_trades,
+    get_today_pnl,
+    for_profile,
+    mark_cancelled,
+    persist_trade,
+)
 
 from dotenv import load_dotenv
 from rich.console import Console
@@ -1094,6 +1101,9 @@ def cancel_live_resting_orders(
                 "order_id": order_id,
                 "ticker": o.get("ticker", "?"),
                 "remaining": remaining,
+                # BUG-02: the venue's fill at cancel time, so a partly filled
+                # order is not written back to the log as a $0 cancel.
+                "filled": _order_count(o, "fill_count", "fill_count_fp"),
                 "minutes_late": minutes_late,
             }
         )
@@ -1893,7 +1903,7 @@ def log_trade(order_response: dict, sized: SizedOrder, trade_log: list) -> dict:
     # (settler / another execute run) can't clobber this new position; mirror
     # into the caller's in-memory snapshot for the rest of the batch.
     trade_log.append(trade_record)
-    append_trades([trade_record])
+    persist_trade(trade_record)  # retries, then journals (BUG-03)
     return trade_record
 
 
@@ -1937,6 +1947,46 @@ def _handle_structural(opp, raw_error: str, venue: str, remaining: int) -> bool:
     )
     log.error("Structural venue rejection (%s/%s): %s", venue, product, raw_error)
     return True
+
+
+def _book_accepted(order_resp: dict, s: SizedOrder, trade_log: list, venue: str) -> dict:
+    """Book an order the venue accepted: ledger row first, then eligibility, then the line.
+
+    The ledger write comes first so nothing that follows can stop a real position
+    reaching the log (BUG-03). The eligibility stamp is best-effort for the same
+    reason: it writes its own file, which can be locked too.
+    """
+    opp = s.opportunity
+    order = order_resp.get("order", order_resp)
+    status = order.get("status", "unknown")
+    record = log_trade(order_resp, s, trade_log)
+
+    # S3: the venue accepted an order for this product, which is the only
+    # self-clearing proof of eligibility -- it just did the thing it was refusing
+    # to do. A dry run returns `dry_run_blocked` and deliberately does NOT count:
+    # it never reached the venue.
+    if status != "dry_run_blocked":
+        try:
+            vel.record_success(
+                venue, vel.product_for(opp.category), evidence=f"order accepted ({opp.ticker})"
+            )
+        except Exception as e:  # noqa: BLE001
+            log.warning("Could not stamp venue eligibility after %s: %s", opp.ticker, e)
+
+    fill = _order_count(order, "fill_count", "fill_count_fp")
+    fees = order.get("taker_fees_dollars", "0")
+    fill_tag = ""
+    if fill == 0:
+        fill_tag = " [yellow](RESTING — no fills yet)[/yellow]"
+    elif fill < s.contracts:
+        fill_tag = f" [yellow](PARTIAL — {fill:g}/{s.contracts} filled)[/yellow]"
+    rprint(
+        f"  [green]OK[/green] {opp.ticker} "
+        f"{opp.side.upper()} x{s.contracts} @ ${s.price_cents/100:.2f} "
+        f"-- status={status} filled={fill:g}/{s.contracts} fees=${fees}"
+        f"{fill_tag}"
+    )
+    return record
 
 
 def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) -> list:
@@ -2029,37 +2079,20 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
                 kwargs["no_price_cents"] = s.price_cents
 
             order_resp = client.create_order(**kwargs)
-            order = order_resp.get("order", order_resp)
-            status = order.get("status", "unknown")
-
-            # S3: the venue accepted an order for this product, which is the
-            # only self-clearing proof of eligibility -- it just did the thing
-            # it was refusing to do. A dry run returns `dry_run_blocked` and
-            # deliberately does NOT count: it never reached the venue.
-            if status != "dry_run_blocked":
-                vel.record_success(
-                    opp_venue,
-                    vel.product_for(opp.category),
-                    evidence=f"order accepted ({opp.ticker})",
-                )
-
-            record = log_trade(order_resp, s, trade_log)
-            results.append(record)
             consecutive_conn_errors = 0  # a response arrived — transport is healthy
-
-            fill = _order_count(order, "fill_count", "fill_count_fp")
-            fees = order.get("taker_fees_dollars", "0")
-            fill_tag = ""
-            if fill == 0:
-                fill_tag = " [yellow](RESTING — no fills yet)[/yellow]"
-            elif fill < s.contracts:
-                fill_tag = f" [yellow](PARTIAL — {fill:g}/{s.contracts} filled)[/yellow]"
-            rprint(
-                f"  [green]OK[/green] {opp.ticker} "
-                f"{opp.side.upper()} x{s.contracts} @ ${s.price_cents/100:.2f} "
-                f"-- status={status} filled={fill:g}/{s.contracts} fees=${fees}"
-                f"{fill_tag}"
-            )
+            try:
+                results.append(_book_accepted(order_resp, s, trade_log, opp_venue))
+            except Exception as e:  # noqa: BLE001
+                # BUG-03: the venue ACCEPTED this order. Nothing after that point
+                # may fall through to the handlers below, which would write it to
+                # the ledger as a failed order and hide a real position from the
+                # settler and Gate 1. `log_trade` already retries and journals a
+                # failed write, so this only catches the unexpected.
+                log.exception("Order for %s accepted but not booked", opp.ticker)
+                rprint(
+                    f"  [red bold]ACCEPTED, NOT BOOKED[/red bold] {opp.ticker}: {e} "
+                    f"-- check the trade journal and run kalshi_settler.py reconcile"
+                )
 
         except KalshiConnectionError as e:
             # No HTTP response — the order may or may not have reached Kalshi.
@@ -2384,7 +2417,7 @@ def execute_pipeline(
     dry_run_for_janitor = get_config().system.dry_run
     if venue == "kalshi" and execute and not dry_run_for_janitor and RESTING_ORDER_MAX_HOURS > 0:
         cancelled = cancel_stale_resting_orders(client)
-        mark_cancelled({c["order_id"] for c in cancelled})
+        mark_cancelled({c["order_id"]: 0.0 for c in cancelled})  # R4 cancels zero-fill only
         if cancelled:
             rprint(
                 f"\n[bold yellow]Janitor: cancelled {len(cancelled)} stale resting "
@@ -2400,7 +2433,7 @@ def execute_pipeline(
     # this is a legality question (ALLOW_LIVE_BETS), not housekeeping.
     if venue == "kalshi" and execute and not dry_run_for_janitor and not ALLOW_LIVE_BETS:
         live_cancelled = cancel_live_resting_orders(client, load_trade_log())
-        mark_cancelled({c["order_id"] for c in live_cancelled})
+        mark_cancelled({c["order_id"]: c["filled"] for c in live_cancelled})
         if live_cancelled:
             rprint("")
             rprint(

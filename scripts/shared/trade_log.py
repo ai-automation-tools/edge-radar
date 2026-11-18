@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -153,29 +154,140 @@ def append_trades(records: list[dict]) -> list[dict]:
         return trades
 
 
-def mark_cancelled(order_ids: set[str], now: datetime | None = None) -> int:
-    """Close zero-fill rows whose venue order was cancelled; return how many.
+def persist_trade(record: dict, attempts: int = 8, delay: float = 0.1) -> bool:
+    """Append one accepted order to the log, retrying, then journaling (BUG-03).
 
-    The janitors cancel at the venue but never wrote back, so a cancelled order
-    sat in the log as ``fill_status: "resting"`` forever (2026-10-12: 6 rows back
-    to 09-22). A row with any fill is left alone -- the filled part is real
-    exposure the settler reconciles; only its unfilled remainder was cancelled.
+    On Windows `os.replace` onto a file another process holds open raises
+    `PermissionError`, and CLV-Capture reads the log every 5 minutes. A venue-
+    accepted order must never be lost to that, so retry with backoff (~3 s in
+    all), then append it to the JSONL journal, which `recover_journal` merges
+    back on the next settle. Returns False when it had to journal.
     """
-    if not order_ids:
+    for attempt in range(1, attempts + 1):
+        try:
+            append_trades([record])
+            return True
+        except OSError as e:
+            last = e
+            time.sleep(delay * attempt)
+    log.error(
+        "Trade log write failed %d times (%s); journaling accepted order %s to %s",
+        attempts,
+        last,
+        record.get("order_id"),
+        journal_path(),
+    )
+    journal_trade(record)
+    return False
+
+
+def journal_path() -> Path:
+    return TRADE_LOG_PATH.parent / "trade_journal.jsonl"
+
+
+def journal_trade(record: dict) -> None:
+    """Last-resort append-only record of an accepted order the log couldn't take."""
+    path = journal_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, default=str) + "\n")
+
+
+def recover_journal() -> int:
+    """Merge journaled trades into the log (by `trade_id`); return how many were added.
+
+    The journal is removed only after the log is saved. A line that doesn't parse
+    (a crash mid-write) is kept in the journal for a human to look at.
+    """
+    path = journal_path()
+    if not path.exists():
         return 0
+    with trade_log_lock():
+        records, bad = [], []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                records.append(json.loads(line))
+            except ValueError:
+                bad.append(line)
+        trades = load_trade_log()
+        have = {t.get("trade_id") for t in trades}
+        new = [r for r in records if r.get("trade_id") not in have]
+        if new:
+            trades.extend(new)
+            save_trade_log(trades)
+        if bad:
+            path.write_text("\n".join(bad) + "\n", encoding="utf-8")
+            log.error("trade journal: %d unparseable line(s) left in %s", len(bad), path)
+        else:
+            path.unlink()
+    if new:
+        log.warning("Recovered %d journaled trade(s) into the trade log", len(new))
+    return len(new)
+
+
+def set_row_fills(trade: dict, fill: float, remaining: float) -> bool:
+    """Bring a row's fill fields up to the venue's count; True if anything changed.
+
+    One rule for the settler's pre-settle refresh (BUG-01) and the janitors'
+    cancel write-back (BUG-02). Never lowers a recorded fill. Cost uses
+    `market_price_at_entry`, the same convention as `log_trade`.
+    """
+    fill = max(float(fill), get_filled_contracts(trade))
+    remaining = max(float(remaining), 0.0)
+    requested = float(trade.get("requested_contracts") or 0)
+    if fill > 0:
+        status = "partial" if remaining > 0 or (requested and fill < requested) else "filled"
+    else:
+        status = trade.get("fill_status") or "resting"
+    cost = round(fill * float(trade.get("market_price_at_entry") or 0), 4)
+    new = {
+        "filled_contracts": fill,
+        "contracts": fill,
+        "fill_count": fill,
+        "filled_cost": cost,
+        "cost_dollars": cost,
+        "remaining_count": remaining,
+        "fill_status": status,
+    }
+    changed = any(trade.get(k) != v for k, v in new.items())
+    trade.update(new)
+    return changed
+
+
+def mark_cancelled(venue_fills: dict[str, float] | set[str], now: datetime | None = None) -> int:
+    """Write venue cancels back to the log; return how many rows were closed.
+
+    ``venue_fills`` maps order_id -> contracts the venue had filled when the
+    order was cancelled (a bare set means 0 for each). A zero-fill row is closed
+    as cancelled at $0. A row with any fill stays open with the venue's count
+    (BUG-02): the filled part is real exposure the settler settles; only the
+    unfilled remainder was cancelled. Deciding from the log's own count was the
+    bug, because the log isn't updated after a late fill.
+    """
+    if not venue_fills:
+        return 0
+    if not isinstance(venue_fills, dict):
+        venue_fills = {oid: 0.0 for oid in venue_fills}
     stamp = (now or datetime.now(timezone.utc)).isoformat()
     n = 0
+    changed = False
     with trade_log_lock():
         trades = load_trade_log()
         for t in trades:
-            if (
-                t.get("order_id") in order_ids
-                and not t.get("closed_at")
-                and not (t.get("filled_contracts") or t.get("fill_count"))
-            ):
-                t.update(fill_status="cancelled", closed_at=stamp, net_pnl=0)
-                n += 1
-        if n:
+            oid = t.get("order_id")
+            if oid not in venue_fills or t.get("closed_at"):
+                continue
+            if venue_fills[oid] > 0 or t.get("filled_contracts") or t.get("fill_count"):
+                changed |= set_row_fills(t, venue_fills[oid], 0)
+                if t["fill_status"] != "partial":  # a remainder was cancelled: never fully filled
+                    t["fill_status"] = "partial"
+                    changed = True
+                continue
+            t.update(fill_status="cancelled", closed_at=stamp, net_pnl=0, remaining_count=0)
+            n += 1
+        if n or changed:
             save_trade_log(trades)
     return n
 
