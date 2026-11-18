@@ -1,0 +1,8 @@
+# The money path: code that sizes, gates, places or settles real orders,
+# and the config and schedules that drive it unattended. See CONTRIBUTING.md.
+/scripts/kalshi/  @michaelschecht
+/scripts/shared/  @michaelschecht
+/scripts/schedulers/  @michaelschecht
+/app/  @michaelschecht
+/.env.example  @michaelschecht
+/.github/  @michaelschecht

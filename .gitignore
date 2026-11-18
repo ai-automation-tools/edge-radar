@@ -64,7 +64,6 @@ notebooks/analysis/*.html
 
 
 # === Project-specific ===
-.claude/images/screenshots/
 .claude/memory/
 # Per-machine Claude Code permission settings — local only.
 .claude/settings.local.json
