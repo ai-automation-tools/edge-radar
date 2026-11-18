@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-11-17 -- Dependabot no longer bumps the Python locks (ER-20 follow-up)
+
+- **Fix** ER-20 moved Python updates to Dependabot's `uv` ecosystem. Its first PR (#389) re-locked
+  without `--universal` and the runtime constraint: it dropped the Windows-only `tzdata` and
+  `colorama` and pinned numpy/scipy to their 3.11 releases on every Python. The Python block is
+  gone; bump with `make lock`. Actions updates and security alerts are unchanged.
+
+---
+
 ## 2026-11-17 -- Void settlements in the risk and calibration reports (ER-15 follow-up)
 
 - **Fix** ER-15 marked scalar and voided settlements `won=None`, but two reports still counted them

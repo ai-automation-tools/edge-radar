@@ -71,8 +71,8 @@ install:
 	pip install --require-hashes -r requirements-dev.txt
 	pip install -e .
 
-# Re-lock after editing requirements*.in (needs uv: https://docs.astral.sh/uv/). Dependabot
-# re-runs the command recorded in each lock's header, so keep these flags in the header.
+# Re-lock after editing requirements*.in (needs uv: https://docs.astral.sh/uv/).
+# --universal keeps the Windows-only and per-Python-version pins in one file.
 LOCK = uv pip compile --universal --python-version 3.11 --generate-hashes --annotation-style line
 lock:
 	$(LOCK) requirements.in -o requirements.txt

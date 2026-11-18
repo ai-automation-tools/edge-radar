@@ -6,18 +6,11 @@
 # Live-money repo: these PRs are not auto-merged by any routine. Review before merging.
 version: 2
 updates:
-  # requirements*.txt are `uv pip compile` hashed locks; the uv ecosystem re-locks them
-  # (re-running the header command) instead of editing pins by hand.
-  - package-ecosystem: uv
-    directory: "/"
-    schedule: { interval: weekly, day: monday }
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-    open-pull-requests-limit: 5
-    groups:
-      minor-and-patch:
-        update-types: [minor, patch]
+  # No Python block (2026-11-17). requirements*.txt are universal hashed locks
+  # (`make lock`). Dependabot's uv re-lock dropped --universal and the -c
+  # constraint (#389): it removed the Windows-only tzdata and colorama and pinned
+  # numpy/scipy to their 3.11 releases everywhere. Bump Python deps by hand with
+  # `make lock`; security alerts still fire without a version-update block.
   - package-ecosystem: github-actions
     directory: "/"
     schedule: { interval: weekly, day: monday }
