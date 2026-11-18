@@ -42,6 +42,9 @@ import re
 import sys
 from pathlib import Path
 
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
 import paths  # noqa: F401  -- adds scripts/shared to sys.path
 
 from trade_log import load_settlement_log  # noqa: E402

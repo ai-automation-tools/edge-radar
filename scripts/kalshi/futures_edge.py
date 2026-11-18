@@ -24,6 +24,7 @@ Usage:
 """
 
 import json
+import sys
 from pathlib import Path
 from datetime import datetime, timezone
 from dataclasses import asdict
@@ -31,6 +32,11 @@ from dataclasses import asdict
 import requests
 from dotenv import load_dotenv
 from rich import print as rprint
+
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
+import paths  # noqa: F401,E402
 
 # Shared imports
 from opportunity import Opportunity

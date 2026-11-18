@@ -34,6 +34,9 @@ from pathlib import Path  # noqa: F401
 from dataclasses import dataclass, asdict, replace  # noqa: F401
 
 # Shared imports
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
 import paths  # noqa: F401 -- path constants -- configures sys.path
 from opportunity import Opportunity
 import trade_log as _trade_log_mod

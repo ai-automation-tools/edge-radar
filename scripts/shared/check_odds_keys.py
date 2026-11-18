@@ -30,6 +30,8 @@ _SHARED = Path(__file__).resolve().parent
 if str(_SHARED) not in sys.path:
     sys.path.insert(0, str(_SHARED))
 
+import paths  # noqa: F401,E402  -- adds the project root for `app.config`
+
 load_dotenv()
 from odds_api import (  # noqa: E402
     _keys,

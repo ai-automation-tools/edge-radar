@@ -22,6 +22,9 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 
 # Path setup
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
 import paths  # noqa: F401
 from trade_log import load_settlement_log
 from ticker_display import sport_from_ticker

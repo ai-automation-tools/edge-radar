@@ -18,6 +18,7 @@ Usage:
 import datetime
 import base64
 import logging
+import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -27,6 +28,10 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import padding
 
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
+import paths  # noqa: F401,E402
 from app.config import get_config
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
