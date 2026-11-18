@@ -255,10 +255,10 @@ class TestTradeLogScoping:
         from trade_log import for_profile, get_today_pnl
         import datetime as _dt
 
-        today = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+        now = _dt.datetime.now(_dt.timezone.utc).isoformat()
         rows = [
-            {"profile": "main", "net_pnl": -40, "closed_at": f"{today}T12:00:00Z"},
-            {"profile": "longshot", "net_pnl": -1, "closed_at": f"{today}T12:00:00Z"},
+            {"profile": "main", "net_pnl": -40, "closed_at": now},
+            {"profile": "longshot", "net_pnl": -1, "closed_at": now},
         ]
         assert get_today_pnl(for_profile(rows, "longshot")) == -1
         assert get_today_pnl(for_profile(rows, "main")) == -40
