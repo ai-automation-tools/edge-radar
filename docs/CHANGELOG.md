@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-11-17 -- LIVE / DRY RUN labels and placed-not-requested reports (ER-12)
+
+- **Fix** Execution reports and emails listed every order the run *meant* to place, even when the
+  eligibility preflight blocked all of them or the venue rejected some. Each `SizedOrder` now
+  carries an `outcome` (placed, failed, blocked, not attempted, dry run, preview), set where it
+  happens; the report gets a Status column and a placed-cost line, and the console summary counts
+  outcomes instead of "Orders placed: N".
+- **UX** `mode_banner()` gives one label for the run: `LIVE · REAL MONEY · PROD`, `DRY RUN · nothing
+  sent`, `DEMO · paper orders`, or `PREVIEW · …`. The preview used to say "DRY RUN" even with live
+  trading on, and a live run said only "EXECUTING". It titles the console table, opens the
+  execution report (`**LIVE · REAL MONEY · PROD** · 0 placed · 3 blocked`), and
+  `render_report_email.py` appends that line to the subject.
+- **UX** The scan report's in-play marker says `in play` instead of `LIVE`.
+
+---
+
 ## 2026-11-17 -- Telegram bot removed (ER-17)
 
 - **Security** `scripts/schedulers/automation/telegram_bot.py` could flip `DRY_RUN` in `.env` from

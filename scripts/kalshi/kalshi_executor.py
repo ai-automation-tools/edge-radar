@@ -54,6 +54,7 @@ from ticker_display import _detect_sport, days_to_event, is_game_started
 import venue_eligibility as vel
 import shard_funding
 from fees import fee_per_contract
+from report_writer import outcome_summary
 from app.config import get_config, reset_config
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
@@ -1311,6 +1312,22 @@ class SizedOrder:
     cost_dollars: float
     bankroll_pct: float
     risk_approval: str  # approved / rejected + reason
+    # ER-12: what happened to it -- preview, dry_run, placed, failed, blocked,
+    # not attempted. Reports count these instead of assuming every row placed.
+    outcome: str = ""
+
+
+def mode_banner(execute: bool, client=None) -> str:
+    """ER-12: one mode label for console titles, report headers and email subjects.
+
+    Mirrors `KalshiClient.create_order`: DRY_RUN blocks orders on PROD only; a
+    demo client places paper orders either way.
+    """
+    if getattr(client, "is_demo", False):
+        return "DEMO · paper orders" if execute else "PREVIEW · DEMO"
+    if get_config().system.dry_run:
+        return "DRY RUN · nothing sent" if execute else "PREVIEW · DRY_RUN on"
+    return "LIVE · REAL MONEY · PROD" if execute else "PREVIEW · --execute places REAL orders"
 
 
 def unit_size_contracts(market_price: float, unit: float | None = None) -> int:
@@ -2056,6 +2073,7 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
     for s in to_execute:
         opp = s.opportunity
         opp_venue = (opp.details or {}).get("venue", "kalshi")
+        s.outcome = "failed"  # ER-12: until the venue accepts it
         try:
             # Sharding (2026-08-24): sizing is whole-account, but an order can
             # only spend its own shard's cash. Move the shortfall across first,
@@ -2093,6 +2111,8 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
 
             order_resp = client.create_order(**kwargs)
             consecutive_conn_errors = 0  # a response arrived — transport is healthy
+            blocked = (order_resp.get("order", order_resp) or {}).get("status") == "dry_run_blocked"
+            s.outcome = "dry_run" if blocked else "placed"
             try:
                 results.append(_book_accepted(order_resp, s, trade_log, opp_venue))
             except Exception as e:  # noqa: BLE001
@@ -2156,6 +2176,8 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
             if _handle_structural(opp, str(e), opp_venue, len(to_execute) - len(results)):
                 break
 
+    for s in to_execute:
+        s.outcome = s.outcome or "not attempted"
     return results
 
 
@@ -2840,13 +2862,8 @@ def execute_pipeline(
     )
 
     dry_run = get_config().system.dry_run
-    if execute and dry_run:
-        table_title = f"DRY RUN -- {len(to_execute)} orders (DRY_RUN=true, no real orders placed)"
-    elif execute:
-        table_title = f"EXECUTING -- {len(to_execute)} orders"
-    else:
-        table_title = f"PREVIEW -- {len(to_execute)} orders"
-    table = Table(title=table_title, show_lines=True)
+    banner = mode_banner(execute, client)
+    table = Table(title=f"{banner} -- {len(to_execute)} orders", show_lines=True)
     cat_labels = {
         "game": "ML",
         "spread": "Spread",
@@ -2899,7 +2916,9 @@ def execute_pipeline(
 
     if not execute:
         rprint("[dim]  Tip: use --pick '1,3' --execute to bet on specific rows[/dim]")
-        rprint("\n[yellow]DRY RUN -- pass --execute to place these orders[/yellow]")
+        rprint(f"\n[yellow]{banner} -- nothing sent[/yellow]")
+        for s in to_execute:
+            s.outcome = "preview"
         return to_execute  # Return sized orders for reporting
 
     # Snapshot the pre-filter menu so the post-pick summary can compare
@@ -2958,6 +2977,8 @@ def execute_pipeline(
             "orders in a barred product.[/dim]"
         )
         rprint("[dim]Verify with: python scripts/doctor.py --verify-eligibility[/dim]")
+        for s in to_execute:
+            s.outcome = "blocked"
         return to_execute
 
     # ── Execute
@@ -2973,13 +2994,13 @@ def execute_pipeline(
             f"\n[bold]Placing {len(to_execute)} orders, total cost: "
             f"[green]${placing_cost:.2f}[/green][/bold]"
         )
-    results = _place_order_batch(client, to_execute, trade_log)
+    _place_order_batch(client, to_execute, trade_log)  # sets each order's outcome
 
     # ── Post-execution summary
     rprint(f"\n[bold]Execution complete[/bold]")  # noqa: F541
     new_bal = client.get_balance_dollars()
     rprint(f"  Balance: ${bankroll:.2f} -> ${new_bal['balance']:.2f}")
-    rprint(f"  Orders placed: {len(results)}")
+    rprint(f"  [bold]{banner}[/bold] -- {outcome_summary(to_execute, banner)}")
     rprint(f"  Trade log: {TRADE_LOG_PATH}")
 
     return to_execute  # Return SizedOrder objects for report writer

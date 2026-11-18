@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import re
 import subprocess
 import sys
 import time
@@ -264,6 +265,18 @@ def lead_sections(text: str, headings: tuple[str, ...]) -> str:
     return "\n".join(out).strip()
 
 
+_MODE_LINE = re.compile(r"^\*\*((?:LIVE|DRY RUN|DEMO|PREVIEW)[^*\n]*)\*\*(.*)$", re.M)
+
+
+def with_mode(subject: str, text: str) -> str:
+    """ER-12: put the execution report's mode line in the subject.
+
+    "Edge-Radar | Same Day Execution Report | LIVE · REAL MONEY · PROD · 0 placed · 3 blocked"
+    """
+    m = _MODE_LINE.search(text)
+    return f"{subject} | {m[1]}{m[2]}".strip() if m else subject
+
+
 def build(preset: str, max_age_hours: float) -> tuple[str, str] | None:
     folder, pattern, subject, _tag, _log, scan_log = PRESETS[preset]
     report = find_report(REPO / folder, pattern, max_age_hours)
@@ -333,6 +346,7 @@ def main() -> int:
             note(f"no report newer than {args.max_age_hours}h -- not sending")
             return 2
         page, text = built
+        subject = with_mode(subject, text)
 
     if args.dry_run:
         Path(args.dry_run).write_text(page, encoding="utf-8")

@@ -3270,12 +3270,15 @@ def main():
             from report_writer import save_execution_report, save_scan_report
 
             if sized_orders is not None:
+                from kalshi_executor import mode_banner
+
                 rpt = save_execution_report(
                     sized_orders,
                     report_type="sports",
                     filter_label=args.ticker_filter or "",
                     min_edge=args.min_edge,
                     output_dir=args.report_dir,
+                    mode=mode_banner(args.execute, client),
                 )
             elif opportunities:
                 rpt = save_scan_report(

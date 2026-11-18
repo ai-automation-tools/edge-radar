@@ -19,6 +19,7 @@ from opportunity import Opportunity
 
 # ── Layer 1: client translates transport errors ───────────────────────────────
 
+
 def _bare_client(monkeypatch):
     """A KalshiClient without RSA/auth setup — enough to exercise `_request`."""
     c = KalshiClient.__new__(KalshiClient)
@@ -32,7 +33,8 @@ class TestRequestTransportTranslation:
     def test_connection_error_becomes_kalshi_connection_error(self, monkeypatch):
         c = _bare_client(monkeypatch)
         monkeypatch.setattr(
-            kalshi_client.requests, "request",
+            kalshi_client.requests,
+            "request",
             lambda *a, **k: (_ for _ in ()).throw(requests.exceptions.ConnectionError("refused")),
         )
         with pytest.raises(KalshiConnectionError) as ei:
@@ -43,7 +45,8 @@ class TestRequestTransportTranslation:
     def test_timeout_becomes_kalshi_connection_error(self, monkeypatch):
         c = _bare_client(monkeypatch)
         monkeypatch.setattr(
-            kalshi_client.requests, "request",
+            kalshi_client.requests,
+            "request",
             lambda *a, **k: (_ for _ in ()).throw(requests.exceptions.Timeout("t")),
         )
         with pytest.raises(KalshiConnectionError):
@@ -55,6 +58,7 @@ class TestRequestTransportTranslation:
 
 
 # ── Layer 2: batch resilience ─────────────────────────────────────────────────
+
 
 def _sized(i):
     opp = Opportunity(
@@ -72,8 +76,12 @@ def _sized(i):
         details={},
     )
     return SizedOrder(
-        opportunity=opp, contracts=10, price_cents=50,
-        cost_dollars=5.0, bankroll_pct=0.05, risk_approval="APPROVED",
+        opportunity=opp,
+        contracts=10,
+        price_cents=50,
+        cost_dollars=5.0,
+        bankroll_pct=0.05,
+        risk_approval="APPROVED",
     )
 
 
@@ -82,7 +90,10 @@ def _sized_list(n):
 
 
 def _ok(fill=10, remaining=0):
-    return ("ok", {"order_id": "ord", "fill_count": f"{fill}.00", "remaining_count": f"{remaining}.00"})
+    return (
+        "ok",
+        {"order_id": "ord", "fill_count": f"{fill}.00", "remaining_count": f"{remaining}.00"},
+    )
 
 
 class _ScriptedClient:
@@ -106,8 +117,8 @@ class TestBatchResilience:
         client = _ScriptedClient(behaviors)
         tl = []
         results = _place_order_batch(client, _sized_list(3), tl)
-        assert client.calls == 3            # every order attempted — no mid-batch abort
-        assert len(results) == 2            # two placed
+        assert client.calls == 3  # every order attempted — no mid-batch abort
+        assert len(results) == 2  # two placed
         errs = [t for t in tl if t.get("status") == "error"]
         assert len(errs) == 1
 
@@ -133,8 +144,10 @@ class TestBatchResilience:
     def test_success_resets_consecutive_counter(self):
         # conn, ok, conn, ok, conn — never 3 in a row, so the batch runs to the end
         behaviors = [
-            ("raise", KalshiConnectionError("a")), _ok(),
-            ("raise", KalshiConnectionError("b")), _ok(),
+            ("raise", KalshiConnectionError("a")),
+            _ok(),
+            ("raise", KalshiConnectionError("b")),
+            _ok(),
             ("raise", KalshiConnectionError("c")),
         ]
         client = _ScriptedClient(behaviors)
@@ -147,10 +160,42 @@ class TestBatchResilience:
         behaviors = [
             ("raise", KalshiConnectionError("a")),
             ("raise", KalshiConnectionError("b")),
-            ("raise", KalshiAPIError(500, "server")),   # resets the counter
+            ("raise", KalshiAPIError(500, "server")),  # resets the counter
             ("raise", KalshiConnectionError("c")),
             ("raise", KalshiConnectionError("d")),
         ]
         client = _ScriptedClient(behaviors)
         _place_order_batch(client, _sized_list(5), [])
-        assert client.calls == 5   # never 3 consecutive transport failures
+        assert client.calls == 5  # never 3 consecutive transport failures
+
+
+# ── ER-12: each order says what happened to it ────────────────────────────────
+
+
+def test_outcomes_record_what_happened_not_what_was_requested():
+    blocked = ("ok", {"order": {"status": "dry_run_blocked"}})
+    behaviors = [_ok(), blocked, ("raise", KalshiAPIError(400, "bad"))]
+    behaviors += [("raise", KalshiConnectionError("down"))] * MAX_CONSECUTIVE_CONN_ERRORS
+    orders = _sized_list(len(behaviors) + 1)
+    _place_order_batch(_ScriptedClient(behaviors), orders, [])
+    want = ["placed", "dry_run", "failed"] + ["failed"] * MAX_CONSECUTIVE_CONN_ERRORS
+    assert [s.outcome for s in orders] == want + ["not attempted"]
+
+
+def test_mode_banner(monkeypatch):
+    from types import SimpleNamespace
+
+    import kalshi_executor as ke
+
+    def cfg(dry):
+        monkeypatch.setattr(
+            ke, "get_config", lambda: SimpleNamespace(system=SimpleNamespace(dry_run=dry))
+        )
+
+    cfg(False)
+    assert ke.mode_banner(True).startswith("LIVE")
+    assert "REAL" in ke.mode_banner(False) and ke.mode_banner(False).startswith("PREVIEW")
+    assert ke.mode_banner(True, SimpleNamespace(is_demo=True)).startswith("DEMO")
+    cfg(True)
+    assert ke.mode_banner(True).startswith("DRY RUN")
+    assert "LIVE" not in ke.mode_banner(False)
