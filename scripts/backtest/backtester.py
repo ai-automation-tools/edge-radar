@@ -14,7 +14,6 @@ Usage:
 """
 
 import sys
-import json
 import math
 import argparse
 from datetime import datetime
@@ -23,9 +22,12 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 
 # Path setup
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
 import paths  # noqa: F401
 from trade_log import load_settlement_log
-from ticker_display import sport_from_ticker, bet_type_from_ticker
+from ticker_display import sport_from_ticker
 from logging_setup import setup_logging
 from app.config import get_config
 
@@ -38,6 +40,7 @@ console = Console()
 
 
 # ── Data Loading ───────────────────────────────────────────────────────────
+
 
 def load_trades() -> list[dict]:
     """Load and enrich settlement log with derived fields."""
@@ -105,9 +108,11 @@ def filter_trades(
 
 # ── Core Analytics ─────────────────────────────────────────────────────────
 
+
 @dataclass
 class BacktestResult:
     """Complete backtest analysis output."""
+
     trades: list[dict]
     label: str = "All Trades"
 
@@ -194,12 +199,14 @@ def _equity_curve(trades: list[dict]) -> list[dict]:
     curve = []
     for t in trades:
         cumulative += t["net_pnl"]
-        curve.append({
-            "date": t["settled_at"][:10],
-            "ticker": t["ticker"],
-            "pnl": t["net_pnl"],
-            "cumulative": round(cumulative, 2),
-        })
+        curve.append(
+            {
+                "date": t["settled_at"][:10],
+                "ticker": t["ticker"],
+                "pnl": t["net_pnl"],
+                "cumulative": round(cumulative, 2),
+            }
+        )
     return curve
 
 
@@ -326,17 +333,20 @@ def _calibration_curve(trades: list[dict]) -> list[dict]:
             continue
         avg_predicted = sum(t["fair_value"] for t in group) / len(group)
         actual_win_rate = sum(1 for t in group if t["won"]) / len(group)
-        result.append({
-            "bucket": label,
-            "count": len(group),
-            "avg_predicted": round(avg_predicted, 3),
-            "actual_win_rate": round(actual_win_rate, 3),
-            "gap": round(actual_win_rate - avg_predicted, 3),
-        })
+        result.append(
+            {
+                "bucket": label,
+                "count": len(group),
+                "avg_predicted": round(avg_predicted, 3),
+                "actual_win_rate": round(actual_win_rate, 3),
+                "gap": round(actual_win_rate - avg_predicted, 3),
+            }
+        )
     return result
 
 
 # ── Strategy Simulation ────────────────────────────────────────────────────
+
 
 def simulate_strategies(trades: list[dict]) -> list[BacktestResult]:
     """Run what-if comparisons across different filter strategies."""
@@ -349,69 +359,90 @@ def simulate_strategies(trades: list[dict]) -> list[BacktestResult]:
     for edge in [0.05, 0.08, 0.10, 0.15]:
         filtered = filter_trades(trades, min_edge=edge)
         if len(filtered) >= 5:
-            strategies.append(BacktestResult(
-                trades=filtered,
-                label=f"Edge >= {edge:.0%}",
-            ).analyze())
+            strategies.append(
+                BacktestResult(
+                    trades=filtered,
+                    label=f"Edge >= {edge:.0%}",
+                ).analyze()
+            )
 
     # By confidence
     for conf in ["medium", "high"]:
         filtered = filter_trades(trades, confidence=conf)
         if len(filtered) >= 5:
-            strategies.append(BacktestResult(
-                trades=filtered,
-                label=f"Confidence: {conf}",
-            ).analyze())
+            strategies.append(
+                BacktestResult(
+                    trades=filtered,
+                    label=f"Confidence: {conf}",
+                ).analyze()
+            )
 
     # High confidence + high edge
     filtered = filter_trades(trades, confidence="high", min_edge=0.10)
     if len(filtered) >= 5:
-        strategies.append(BacktestResult(
-            trades=filtered,
-            label="High conf + edge >= 10%",
-        ).analyze())
+        strategies.append(
+            BacktestResult(
+                trades=filtered,
+                label="High conf + edge >= 10%",
+            ).analyze()
+        )
 
     # By category
     for cat in ["game", "spread", "total"]:
         filtered = filter_trades(trades, category=cat)
         if len(filtered) >= 5:
-            strategies.append(BacktestResult(
-                trades=filtered,
-                label=f"Category: {cat}",
-            ).analyze())
+            strategies.append(
+                BacktestResult(
+                    trades=filtered,
+                    label=f"Category: {cat}",
+                ).analyze()
+            )
 
     # By sport (only if enough trades)
     for sport in set(t["sport"] for t in trades):
         filtered = filter_trades(trades, sport=sport)
         if len(filtered) >= 5:
-            strategies.append(BacktestResult(
-                trades=filtered,
-                label=f"Sport: {sport}",
-            ).analyze())
+            strategies.append(
+                BacktestResult(
+                    trades=filtered,
+                    label=f"Sport: {sport}",
+                ).analyze()
+            )
 
     return strategies
 
 
 # ── Display ────────────────────────────────────────────────────────────────
 
+
 def print_summary(result: BacktestResult):
     """Print a rich terminal summary."""
     rprint(f"\n[bold cyan]=== {result.label} ===[/bold cyan]")
-    rprint(f"  Trades: {result.total_trades}  |  "
-           f"Record: [green]{result.wins}W[/green]-[red]{result.losses}L[/red]  |  "
-           f"Win rate: {result.win_rate:.1%}")
+    rprint(
+        f"  Trades: {result.total_trades}  |  "
+        f"Record: [green]{result.wins}W[/green]-[red]{result.losses}L[/red]  |  "
+        f"Win rate: {result.win_rate:.1%}"
+    )
 
     pnl_color = "green" if result.net_pnl >= 0 else "red"
-    rprint(f"  P&L: [{pnl_color}]${result.net_pnl:+.2f}[/{pnl_color}]  |  "
-           f"Wagered: ${result.total_wagered:.2f}  |  "
-           f"ROI: [{pnl_color}]{result.roi:+.1%}[/{pnl_color}]")
+    rprint(
+        f"  P&L: [{pnl_color}]${result.net_pnl:+.2f}[/{pnl_color}]  |  "
+        f"Wagered: ${result.total_wagered:.2f}  |  "
+        f"ROI: [{pnl_color}]{result.roi:+.1%}[/{pnl_color}]"
+    )
 
-    rprint(f"  Profit factor: {result.profit_factor:.2f}  |  "
-           f"Avg win: ${result.avg_win:+.2f}  |  Avg loss: ${result.avg_loss:+.2f}")
-    rprint(f"  Best: ${result.best_trade:+.2f}  |  Worst: ${result.worst_trade:+.2f}  |  "
-           f"Streaks: {result.longest_win_streak}W / {result.longest_lose_streak}L")
-    rprint(f"  Max drawdown: ${result.max_drawdown:.2f} ({result.max_drawdown_pct:.1%})  |  "
-           f"Sharpe: {result.sharpe_ratio:.2f}")
+    rprint(
+        f"  Profit factor: {result.profit_factor:.2f}  |  "
+        f"Avg win: ${result.avg_win:+.2f}  |  Avg loss: ${result.avg_loss:+.2f}"
+    )
+    rprint(
+        f"  Best: ${result.best_trade:+.2f}  |  Worst: ${result.worst_trade:+.2f}  |  "
+        f"Streaks: {result.longest_win_streak}W / {result.longest_lose_streak}L"
+    )
+    rprint(
+        f"  Max drawdown: ${result.max_drawdown:.2f} ({result.max_drawdown_pct:.1%})  |  "
+        f"Sharpe: {result.sharpe_ratio:.2f}"
+    )
 
 
 def print_breakdown(result: BacktestResult):
@@ -452,8 +483,11 @@ def print_calibration(result: BacktestResult):
     """Print calibration curve."""
     if not result.calibration:
         return
-    table = Table(title="Calibration Curve (Predicted Prob vs Actual Win Rate)",
-                  show_header=True, header_style="bold")
+    table = Table(
+        title="Calibration Curve (Predicted Prob vs Actual Win Rate)",
+        show_header=True,
+        header_style="bold",
+    )
     table.add_column("Bucket", style="cyan")
     table.add_column("Count", justify="right")
     table.add_column("Predicted", justify="right")
@@ -540,24 +574,28 @@ def print_simulation(strategies: list[BacktestResult]):
     # Find best strategy by ROI
     best = max(strategies, key=lambda s: s.roi)
     if best.label != "Baseline (all trades)":
-        rprint(f"\n  [green]Best strategy: {best.label}[/green] "
-               f"(ROI: {best.roi:+.1%}, Sharpe: {best.sharpe_ratio:.2f})")
+        rprint(
+            f"\n  [green]Best strategy: {best.label}[/green] "
+            f"(ROI: {best.roi:+.1%}, Sharpe: {best.sharpe_ratio:.2f})"
+        )
 
 
 # ── Markdown Report ────────────────────────────────────────────────────────
 
-def generate_markdown(result: BacktestResult,
-                      strategies: list[BacktestResult] | None = None) -> str:
+
+def generate_markdown(
+    result: BacktestResult, strategies: list[BacktestResult] | None = None
+) -> str:
     """Generate a comprehensive markdown report."""
     lines = []
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    lines.append(f"# Edge-Radar Backtest Report")
+    lines.append("# Edge-Radar Backtest Report")
     lines.append(f"*Generated: {now}*\n")
 
     # Summary
     lines.append("## Summary\n")
-    lines.append(f"| Metric | Value |")
-    lines.append(f"|--------|-------|")
+    lines.append("| Metric | Value |")
+    lines.append("|--------|-------|")
     lines.append(f"| Trades | {result.total_trades} |")
     lines.append(f"| Record | {result.wins}W-{result.losses}L ({result.win_rate:.1%}) |")
     lines.append(f"| Net P&L | ${result.net_pnl:+.2f} |")
@@ -566,7 +604,9 @@ def generate_markdown(result: BacktestResult,
     lines.append(f"| Profit Factor | {result.profit_factor:.2f} |")
     lines.append(f"| Avg Win / Loss | ${result.avg_win:+.2f} / ${result.avg_loss:+.2f} |")
     lines.append(f"| Best / Worst | ${result.best_trade:+.2f} / ${result.worst_trade:+.2f} |")
-    lines.append(f"| Win/Lose Streaks | {result.longest_win_streak}W / {result.longest_lose_streak}L |")
+    lines.append(
+        f"| Win/Lose Streaks | {result.longest_win_streak}W / {result.longest_lose_streak}L |"
+    )
     lines.append(f"| Max Drawdown | ${result.max_drawdown:.2f} ({result.max_drawdown_pct:.1%}) |")
     lines.append(f"| Sharpe Ratio | {result.sharpe_ratio:.2f} |")
     lines.append("")
@@ -637,6 +677,7 @@ def generate_markdown(result: BacktestResult,
 
 # ── CLI ────────────────────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(description="Edge-Radar Backtester")
     parser.add_argument("--sport", help="Filter by sport (e.g., mlb, nba)")
@@ -705,7 +746,9 @@ def main():
 
     # Save report
     if args.save:
-        report_dir = Path(get_config().system.project_root or paths.PROJECT_ROOT) / "reports" / "backtest"
+        report_dir = (
+            Path(get_config().system.project_root or paths.PROJECT_ROOT) / "reports" / "backtest"
+        )
         report_dir.mkdir(parents=True, exist_ok=True)
         filename = f"backtest_{datetime.now().strftime('%Y-%m-%d_%H%M')}.md"
         report_path = report_dir / filename

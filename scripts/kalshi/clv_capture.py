@@ -55,8 +55,12 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from pathlib import Path
 
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
 import paths  # noqa: F401  -- adds scripts/shared to sys.path
 
 from dotenv import load_dotenv
@@ -105,8 +109,7 @@ def is_open(trade: dict) -> bool:
     if trade.get("dry_run"):
         return False
     try:
-        return float(trade.get("filled_contracts")
-                     or trade.get("fill_count") or 0) > 0
+        return float(trade.get("filled_contracts") or trade.get("fill_count") or 0) > 0
     except (TypeError, ValueError):
         return False
 
@@ -121,8 +124,9 @@ def needs_capture(trade: dict) -> bool:
     return not trade.get("close_capture_reason")
 
 
-def capture_due(trade: dict, now: datetime, window_minutes: int,
-                grace_minutes: int = FALLBACK_GRACE_MINUTES) -> str | None:
+def capture_due(
+    trade: dict, now: datetime, window_minutes: int, grace_minutes: int = FALLBACK_GRACE_MINUTES
+) -> str | None:
     """Which capture reason applies right now, or None if not due yet.
 
     Returns `t_minus_5` inside the pre-start window, `t_zero_fallback` in the
@@ -175,8 +179,10 @@ def closing_book(market: dict, side: str) -> dict:
     mid = round((bid + ask) / 2.0, 4) if bid is not None and ask is not None else None
 
     return {
-        "close_yes_bid": yes_bid, "close_yes_ask": yes_ask,
-        "close_no_bid": no_bid, "close_no_ask": no_ask,
+        "close_yes_bid": yes_bid,
+        "close_yes_ask": yes_ask,
+        "close_no_bid": no_bid,
+        "close_no_ask": no_ask,
         "close_mid_bet_side": mid,
     }
 
@@ -197,9 +203,13 @@ def compute_clv(entry_price_bet_side, close_mid_bet_side) -> float | None:
         return None
 
 
-def run(client=None, *, now: datetime | None = None,
-        window_minutes: int = DEFAULT_WINDOW_MINUTES,
-        dry_run: bool = False) -> dict:
+def run(
+    client=None,
+    *,
+    now: datetime | None = None,
+    window_minutes: int = DEFAULT_WINDOW_MINUTES,
+    dry_run: bool = False,
+) -> dict:
     """One capture pass. Returns a summary dict."""
     now = now or datetime.now(timezone.utc)
     trades = load_trade_log()
@@ -212,35 +222,49 @@ def run(client=None, *, now: datetime | None = None,
         if reason:
             due.append((t, reason))
 
-    summary = {"scanned": len(trades), "due": len(due),
-               "captured": 0, "missed": 0, "errors": 0}
+    summary = {"scanned": len(trades), "due": len(due), "captured": 0, "missed": 0, "errors": 0}
     if not due:
         log.info("CLV capture: nothing due (%d trades scanned)", len(trades))
         return summary
 
     if client is None:
         from kalshi_client import KalshiClient
+
         client = KalshiClient()
 
     for trade, reason in due:
         ticker = trade.get("ticker", "")
         if reason == REASON_MISSED:
-            book = {k: None for k in
-                    ("close_yes_bid", "close_yes_ask", "close_no_bid",
-                     "close_no_ask", "close_mid_bet_side")}
+            book = {
+                k: None
+                for k in (
+                    "close_yes_bid",
+                    "close_yes_ask",
+                    "close_no_bid",
+                    "close_no_ask",
+                    "close_mid_bet_side",
+                )
+            }
             summary["missed"] += 1
         else:
             try:
                 market = (client.get_market(ticker) or {}).get("market", {})
                 book = closing_book(market, trade.get("side", "yes"))
-            except Exception as e:                            # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
                 # A venue error is a miss, not a crash: one unreachable ticker
                 # must not abandon the rest of the window, which will not come
                 # round again.
                 log.warning("CLV capture failed for %s: %s", ticker, e)
-                book = {k: None for k in
-                        ("close_yes_bid", "close_yes_ask", "close_no_bid",
-                         "close_no_ask", "close_mid_bet_side")}
+                book = {
+                    k: None
+                    for k in (
+                        "close_yes_bid",
+                        "close_yes_ask",
+                        "close_no_bid",
+                        "close_no_ask",
+                        "close_mid_bet_side",
+                    )
+                }
                 reason = REASON_MISSED
                 summary["errors"] += 1
             else:
@@ -255,10 +279,16 @@ def run(client=None, *, now: datetime | None = None,
         trade["close_capture_at"] = now.isoformat()
         trade["clv"] = compute_clv(
             trade.get("entry_price_bet_side", trade.get("market_price_at_entry")),
-            book["close_mid_bet_side"])
-        log.info("CLV %s %s: close=%s entry=%s clv=%s", reason, ticker,
-                 book["close_mid_bet_side"],
-                 trade.get("entry_price_bet_side"), trade.get("clv"))
+            book["close_mid_bet_side"],
+        )
+        log.info(
+            "CLV %s %s: close=%s entry=%s clv=%s",
+            reason,
+            ticker,
+            book["close_mid_bet_side"],
+            trade.get("entry_price_bet_side"),
+            trade.get("clv"),
+        )
 
     if dry_run:
         log.info("CLV capture: --dry-run, %d rows NOT written", len(due))
@@ -275,9 +305,16 @@ def run(client=None, *, now: datetime | None = None,
     # cross-process lock across N network calls would block execution writes for
     # as long as Kalshi takes to answer.
     captured_by_id = {t.get("trade_id"): t for t, _ in due if t.get("trade_id")}
-    fields = ("close_yes_bid", "close_yes_ask", "close_no_bid", "close_no_ask",
-              "close_mid_bet_side", "close_capture_at", "close_capture_reason",
-              "clv")
+    fields = (
+        "close_yes_bid",
+        "close_yes_ask",
+        "close_no_bid",
+        "close_no_ask",
+        "close_mid_bet_side",
+        "close_capture_at",
+        "close_capture_reason",
+        "clv",
+    )
     with trade_log_lock():
         fresh = load_trade_log()
         applied = 0
@@ -290,9 +327,12 @@ def run(client=None, *, now: datetime | None = None,
             applied += 1
         save_trade_log(fresh)
     if applied != len(captured_by_id):
-        log.warning("CLV capture: %d/%d captured rows found on re-read; the "
-                    "rest were removed or rewritten concurrently",
-                    applied, len(captured_by_id))
+        log.warning(
+            "CLV capture: %d/%d captured rows found on re-read; the "
+            "rest were removed or rewritten concurrently",
+            applied,
+            len(captured_by_id),
+        )
     summary["written"] = applied
     return summary
 
@@ -308,28 +348,38 @@ def report() -> dict:
         reasons[r] = reasons.get(r, 0) + 1
 
     n_s, n_c = len(settled), len(captured)
-    print(f"CLV coverage: {n_c}/{n_s} settled rows carry a CLV "
-          f"({(n_c / n_s * 100) if n_s else 0:.0f}%)")
+    print(
+        f"CLV coverage: {n_c}/{n_s} settled rows carry a CLV "
+        f"({(n_c / n_s * 100) if n_s else 0:.0f}%)"
+    )
     for r, n in sorted(reasons.items()):
         print(f"  {r:16} {n}")
     if captured:
         vals = sorted(t["clv"] for t in captured)
         mean = sum(vals) / len(vals)
         print(f"  mean CLV {mean:+.4f}   median {vals[len(vals) // 2]:+.4f}")
-        print("  (coverage below ~90% biases this optimistic — misses "
-              "concentrate in thin markets, which is where the bad bets live)")
+        print(
+            "  (coverage below ~90% biases this optimistic — misses "
+            "concentrate in thin markets, which is where the bad bets live)"
+        )
     else:
-        print("  no CLV yet — capture accrues from the day it ships; "
-              "there is nothing to backfill.")
+        print(
+            "  no CLV yet — capture accrues from the day it ships; " "there is nothing to backfill."
+        )
     return {"settled": n_s, "captured": n_c, "reasons": reasons}
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="S8 CLV closing-book capture.")
-    ap.add_argument("--window", type=int, default=DEFAULT_WINDOW_MINUTES,
-                    help=f"Minutes before start to capture (default {DEFAULT_WINDOW_MINUTES}).")
-    ap.add_argument("--dry-run", action="store_true",
-                    help="Show what would be captured; write nothing.")
+    ap.add_argument(
+        "--window",
+        type=int,
+        default=DEFAULT_WINDOW_MINUTES,
+        help=f"Minutes before start to capture (default {DEFAULT_WINDOW_MINUTES}).",
+    )
+    ap.add_argument(
+        "--dry-run", action="store_true", help="Show what would be captured; write nothing."
+    )
     ap.add_argument("--report", action="store_true", help="Print coverage and exit.")
     a = ap.parse_args(argv)
 
@@ -339,8 +389,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     s = run(window_minutes=a.window, dry_run=a.dry_run)
-    print(f"scanned {s['scanned']}  due {s['due']}  captured {s['captured']}  "
-          f"missed {s['missed']}  errors {s['errors']}")
+    print(
+        f"scanned {s['scanned']}  due {s['due']}  captured {s['captured']}  "
+        f"missed {s['missed']}  errors {s['errors']}"
+    )
     return 0
 
 

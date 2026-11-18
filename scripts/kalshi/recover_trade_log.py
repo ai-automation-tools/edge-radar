@@ -27,15 +27,20 @@ Usage:
 """
 
 import argparse
+import sys
 import shutil
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from dotenv import load_dotenv
 from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
 import paths  # noqa: F401 -- path constants
 from paths import TRADE_LOG_PATH
 from kalshi_client import KalshiClient

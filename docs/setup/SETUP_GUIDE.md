@@ -65,7 +65,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-> **Important:** Always run Edge-Radar from the activated virtual environment. The `.pth` file inside the venv auto-configures Python's import paths. Running with a bare `python` outside the venv will produce `ModuleNotFoundError`.
+> **Important:** Always run Edge-Radar from the activated virtual environment, so the packages in `requirements.txt` are found. Each entry point puts `scripts/shared` on `sys.path` itself and then imports `paths`, which adds the other script folders, so no `.pth` file is needed. `tests/test_fresh_clone_imports.py` checks this for every script with a `__main__` block.
 
 ---
 

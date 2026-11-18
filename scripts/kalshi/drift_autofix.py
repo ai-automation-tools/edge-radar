@@ -41,6 +41,9 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
 from agent_cli import run_agent  # scripts/shared
 
 MAIN = Path(__file__).resolve().parents[2]

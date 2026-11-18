@@ -773,7 +773,7 @@ Research output leads with the edge thesis, timestamps its sources, names contra
 
 ## Stack
 
-Python 3.11+ · `pandas` / `numpy` / `scipy` · SQLite · Windows Task Scheduler · pre-commit (detect-secrets, black, flake8). Imports resolve via `.venv/Lib/site-packages/edge_radar.pth`. MCP servers: `docs/setup/mcp-servers.md`.
+Python 3.11+ · `pandas` / `numpy` / `scipy` · SQLite · Windows Task Scheduler · pre-commit (detect-secrets, black, flake8). Each entry point puts `scripts/shared` on `sys.path` and imports `paths` (no `.pth` needed; the old `edge_radar.pth` still works where it exists). MCP servers: `docs/setup/mcp-servers.md`.
 
 ---
 

@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-11-17 -- Scripts run in a fresh clone (ER-18)
+
+- **Fix** 18 entry points (the settler, futures scanner, executor, edge detector, backtests and
+  others) only imported because of `.venv/Lib/site-packages/edge_radar.pth`, which no setup step
+  creates. In a fresh clone they died with `ModuleNotFoundError`. Each now adds `scripts/shared`
+  to `sys.path` from its own location and imports `paths`, which adds the rest.
+- **Style** Five of those files predated black/flake8; they were formatted in a separate commit
+  with no logic change. Three more (`model_calibration.py`, `risk_check.py`,
+  `prediction_scanner.py`) need a larger lint cleanup and are left for ER-21.
+- **Docs** `SETUP_GUIDE.md` and `AGENTS.md` no longer say imports depend on the `.pth`.
+- `tests/test_fresh_clone_imports.py` loads every script with a `__main__` block in a child
+  interpreter that skips `.pth` files, and fails if one breaks or if a known-broken one is fixed
+  without being taken off the list.
+
+---
+
 ## 2026-11-17 -- Execute prompts wait for go (ER-25)
 
 - **Safety** Nine prompts under `prompts/` place orders. Most ran a fresh `scan.py ... --execute`
