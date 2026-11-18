@@ -25,10 +25,7 @@ source. `—` means never checked.
 | **ESPN site API** *(unofficial, undocumented)* | `site.api.espn.com/apis/site/v2/sports/…` and `/apis/v2/sports/…` return the shapes the parsers read | `scripts/shared/line_movement.py`, `rest_days.py`, `team_stats.py` | No official docs. Check with one live unauthenticated GET per endpoint and compare the keys the parser reads | 2026-11-16 |
 | **MLB Stats API** *(public, undocumented)* | `statsapi.mlb.com/api/v1` standings and pitcher endpoints | `scripts/shared/pitcher_stats.py`, `team_stats.py` | One live GET; github.com/toddrob99/MLB-StatsAPI tracks changes | 2026-11-16 |
 | **NHL web API** *(public, undocumented)* | `api-web.nhle.com/v1/standings/now` | `scripts/shared/team_stats.py` | One live GET | 2026-11-16 |
-| **NWS API** | `api.weather.gov/gridpoints/…`; requires a `User-Agent` header | `scripts/prediction/weather_edge.py`, `scripts/shared/sports_weather.py` | weather.gov/documentation/services-web-api | 2026-11-16 |
-| **CoinGecko API v3** | `api.coingecko.com/api/v3` `simple/price` and `coins/`; free-tier rate limit | `scripts/prediction/crypto_edge.py` | docs.coingecko.com (changelog) | 2026-11-16 |
-| **Yahoo Finance chart** *(unofficial)* | `query1.finance.yahoo.com/v8/finance/chart/` | `scripts/prediction/spx_edge.py` | One live GET | 2026-11-16 |
-| **FRED API** | `api.stlouisfed.org/fred` | `scripts/prediction/companies_edge.py` | fred.stlouisfed.org/docs/api/fred/ | 2026-11-16 |
+| **NWS API** | `api.weather.gov/gridpoints/…`; requires a `User-Agent` header | `scripts/shared/sports_weather.py` | weather.gov/documentation/services-web-api | 2026-11-16 |
 
 ## Notifications
 

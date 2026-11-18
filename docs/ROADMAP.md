@@ -77,7 +77,7 @@ One item per PR, titled `fix(ER-xx): …`.
 - [x] **ER-28** (P2) **`logs/` grew without limit.** Done 2026-11-18: the nightly Reconcile runs `scripts/shared/prune_logs.py`, which deletes dated logs past 90 days and trims fixed-name logs over 5 MB. The stale `venv/` folder is gone. Not done: the shadow book is still one JSON file rewritten daily; split it into monthly JSONL if it gets slow. Pinned by `tests/test_prune_logs.py`.
 - [x] **ER-26** (P2) **Dead AI tooling.** Done 2026-11-18: the four off-scope skills, both project agents (the stale `kalshi-bettor` and a generic writer) and the fictional agent roster are gone; the Kelly, scoring-rule and betting-theory notes moved to `skills/betting-logic-review/references/`; `/repo-review` is `/edge-radar-repo-review`; `docs/setup/mcp-servers.md` says no MCP is needed; memory is the project's auto-memory only. Owner: revoke the aX tokens and retire the user-scope coordination skill.
 - [x] **ER-30** (P2) **Homepage accessibility.** Done 2026-11-18: Lighthouse accessibility 100 on desktop, mobile and the light theme (was 91 / 88 / 88). The command palette is a native `<dialog>` with a combobox and listbox; the Quick start tabs are a real tablist with arrow keys; text no longer uses `--fg-5`; sliders and search show focus; a Pause motion button stops the loops, and the radar stops off-screen. Pinned by `tests/test_site.py`.
-- [ ] **Still open from the audit:** owner item ER-34; P3 ER-42 (model change, tracked as B5), 53. Smaller leftovers: a pending ledger row before each order POST (ER-13), one balance read per batch, a frozen `RiskConfig` (ER-19), Gate 1b in the AGENTS.md gate table and the site's gate grid together.
+- [ ] **Still open from the audit:** owner item ER-34; P3 ER-42 (model change, tracked as B5). Smaller leftovers: a pending ledger row before each order POST (ER-13), one balance read per batch, a frozen `RiskConfig` (ER-19), Gate 1b in the AGENTS.md gate table and the site's gate grid together.
 
 ### 🩹 Money-path defects: fix next
 
@@ -139,14 +139,13 @@ S8 (CLV capture) shipped 2026-09-10 and S9 (the CLV section of `betting_analysis
 - [x] `small` **Security headers on the public page** *(Site)* — done 2026-11-18 (ER-23): `site/vercel.json` sends a CSP (own origin plus consent.js and Google Fonts, `frame-ancestors 'self'`, `object-src 'none'`), `nosniff`, `Referrer-Policy` and `Permissions-Policy`, and caches the favicon and diagram for a day. `tests/test_site.py` fails if the page loads a script or stylesheet from an origin the CSP doesn't list. consent.js gets no SRI: it is the org's one shared copy and changes upstream.
 - [x] **About text: Kalshi only** *(Metadata)* — the GitHub About no longer names Polymarket, removed 2026-09-29. Done 2026-11-13 by the owner.
 
-### 💤 Dormant until prediction markets are re-enabled
+### 💤 Prediction markets: retired
 
-`ALLOW_PREDICTION_BETS=false` (Gate 4.7) blocks all of these today. If it is ever flipped, **C10c must land first.**
-
-- [ ] **R25b** Add TTLs to the prediction-module caches (crypto 1h, weather 6h, spx 5min, mentions/companies 24h). *(effort M)*
-- [ ] **R25c** Rebuild the crypto model with tests, then port the same pattern to the others. *(effort L)*
-- [ ] **C10c** Replace `edge * 20` with `min(edge / 0.01, 10)` in all 7 prediction scanners, as part of R25c. *(effort S)*
-- [ ] **M1-M4** Crypto ensemble, SPX vol model, weather calibration, mentions seasonality. Gated on R25b and R25c. *(effort L)*
+- [x] **ER-53** Decision recorded 2026-11-18 (owner): the crypto, weather, S&P 500, mentions, companies and politics
+  scanners are **archived to the `archive/prediction-scanners` branch and deleted from master**. They never placed a bet, and they
+  were the largest dormant code on the import path that places orders. Gate 4.7 stays as a guard. R25b, R25c, C10c and
+  M1-M4 (cache TTLs, model rebuilds, the composite fix, new models) are dropped with them; restore from the branch and
+  re-open them only as a new, evidence-backed plan.
 
 ### 🔭 Later
 

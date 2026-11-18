@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-11-18 -- Prediction-market scanners retired (ER-53)
+
+Owner's decision: archive them and delete them from master. The crypto, weather, S&P 500, mentions,
+companies and politics scanners never placed a bet. Gate 4.7 has kept them off since the 2026-04-24 audit
+found their fair values unreliable, and they were the largest dormant code (2,061 lines) on the import
+path that places orders.
+
+- **Archived:** branch `archive/prediction-scanners` points at `d3017ce`, the last master commit with
+  the code, its 8 prompts and its guide.
+- **Removed:** `scripts/prediction/`, `prompts/predictions/`, `docs/kalshi/kalshi-prediction-betting/`,
+  `docs/scripts/per-script/prediction_scanner.md`, `make scan-predictions`, the executor's `--prediction`
+  flag, and `scripts/prediction` on every `sys.path` list (`paths.py`, `pyproject.toml`, `drift_autofix`).
+  `scan.py prediction` now exits 1 and names the archive branch.
+- **Kept:** Gate 4.7 and `ALLOW_PREDICTION_BETS`, as a guard (the gate count stays 21), and the venue
+  eligibility mapping for those categories. `sports_weather.py` (NWS at outdoor venues) is sports code
+  and stays.
+- **ROADMAP:** R25b, R25c, C10c and M1-M4 are dropped with the code; reopen only as a new plan.
+- **Docs:** README, AGENTS.md, the docs index, kalshi README, scripts reference, architecture, setup,
+  upstreams, prompts README, the `/edge-radar` skill and the public page's coverage cards no longer
+  offer the scanners. The skill's "Market Data" action went too: `fetch_market_data.py` was removed
+  long ago.
+
+---
+
 ## 2026-11-18 -- Ops deck: no trading posture on a public-repo page (ER-24, ER-06)
 
 The ops deck (edge-radar.mikesailab.com) is served from this public repo. Owner's choice: strip it in

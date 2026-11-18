@@ -32,7 +32,7 @@ python scripts/scan.py futures --filter <filter>
 ```
 
 For enhancement history, see [Roadmap](../../ROADMAP.md).
-See also: [Sports Guide](../kalshi-sports-betting/SPORTS_GUIDE.md) | [Prediction Markets Guide](../kalshi-prediction-betting/PREDICTION_MARKETS_GUIDE.md)
+See also: [Sports Guide](../kalshi-sports-betting/SPORTS_GUIDE.md)
 
 ---
 

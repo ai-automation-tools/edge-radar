@@ -20,7 +20,7 @@
 | Domain | Coverage | Data Sources |
 |:-------|:---------|:-------------|
 | **Sports betting** | NBA, NHL, MLB, NFL, NCAA, MLS, soccer, UFC, boxing, F1, NASCAR, PGA, IPL, Wimbledon tennis, esports (31 game filters, 8 futures). **World Cup (F3) is OFF; NFL and NCAAF run 0.06 pilot floors (S1b/S21c)** | The Odds API, ESPN, NHL/MLB Stats, NWS |
-| **Prediction markets** | Crypto (BTC, ETH, XRP, DOGE, SOL), weather (13 cities), S&P 500 | CoinGecko, Yahoo Finance, NWS |
+| **Prediction markets** | Crypto, weather, S&P 500 scanners: retired 2026-11-18 (ER-53), on the `archive/prediction-scanners` branch | — |
 | **Championship futures** | NFL, NBA, NHL, MLB, PGA | Sportsbook futures odds |
 | **Execution pipeline** | Unified scan → risk-check → size → execute | Kalshi API (RSA-signed) |
 
@@ -50,7 +50,7 @@ How the books stay separate end to end: [docs/longshot/README.md](docs/longshot/
 |:--|:--|
 | `scripts/scan.py`, `scripts/doctor.py` | Unified entry point; environment validator (`--ops`: scheduled-task health) |
 | `scripts/kalshi/` | Client, executor (`GATES`), settler, edge detection, risk, daily summary |
-| `scripts/prediction/`, `scripts/shared/` | Crypto/weather/S&P scanners; stats, odds cache, `paths`, logging |
+| `scripts/shared/` | Stats, odds cache, `paths`, logging |
 | `scripts/backtest/` | Backtester, `calibration_study`, `correlation_check`, `shadow_book`, `betting_audit` |
 | `scripts/schedulers/`, `scripts/diagrams/` | Task Scheduler wrappers and installer; homepage diagram build/`--check` |
 | `app/config.py` | Single source of truth for env-driven knobs (`.env.example` lists them all) |
@@ -207,7 +207,6 @@ pip install -r requirements-dev.txt   # runtime + tests and hooks; requirements.
 # Scan (preview only)
 python scripts/scan.py sports --filter mlb,nhl --date today --save
 python scripts/scan.py futures --filter nba-futures
-python scripts/scan.py prediction --filter crypto
 
 # Strategy profile (P1) -- overlays `.env.<name>`, routes to its Kalshi subaccount
 python scripts/scan.py sports --profile longshot --filter mlb --date today

@@ -5,7 +5,7 @@ One-liner import that sets up sys.path for all Edge-Radar scripts.
 Usage (replaces the 3-line sys.path boilerplate):
     import bootstrap  # noqa: F401
 
-This adds scripts/shared, scripts/kalshi, scripts/prediction,
+This adds scripts/shared, scripts/kalshi,
 scripts/schedulers to sys.path and ensures data directories exist.
 """
 
@@ -19,4 +19,4 @@ _SHARED_DIR = _SCRIPTS_DIR / "shared"
 if str(_SHARED_DIR) not in sys.path:
     sys.path.insert(0, str(_SHARED_DIR))
 
-import paths  # noqa: F401 -- configures all paths + creates data dirs
+import paths  # noqa: E402,F401 -- configures all paths + creates data dirs

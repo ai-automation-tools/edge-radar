@@ -18,7 +18,6 @@ Domain guides for every Kalshi market Edge-Radar trades, plus the authoritative 
 | **[MLB Filtering Guide](./kalshi-sports-betting/MLB_FILTERING_GUIDE.md)** | Pitcher/matchup and weather filtering for baseball. |
 | **[Kalshi API Reference](./kalshi-sports-betting/KALSHI_API_REFERENCE.md)** | REST endpoints, RSA-signed auth, v2 order placement. |
 | **[Futures Guide](./kalshi-futures-betting/FUTURES_GUIDE.md)** | Championship/division futures de-vigging and PGA majors. |
-| **[Prediction Markets Guide](./kalshi-prediction-betting/PREDICTION_MARKETS_GUIDE.md)** | Crypto, weather, and S&P 500 scanners (execution gated off — see below). |
 
 ---
 
@@ -63,7 +62,7 @@ These markets are reachable by `--filter` but have **no external odds feed**, so
 | PGA Tour | `pga` | No game-level h2h odds | **Futures** (4 majors, via outrights) |
 | Player props (NBA/NHL) | (within `nba`/`nhl`) | No props odds feed | Scan only |
 | Esports (CS2, LoL) | `cs2` / `lol` / `esports` | No odds feed | Scan only |
-| Mentions | (prediction) | Not a sports market | Prediction scanner |
+| Mentions | — | Not a sports market | None (prediction scanners retired, ER-53) |
 
 ---
 
@@ -85,10 +84,7 @@ Championship and season-long outrights, priced by `futures_edge.py` against The 
 
 ## 🔮 Prediction Markets
 
-Crypto (BTC, ETH, XRP, DOGE, SOL), weather (13 cities), S&P 500, mentions, companies, and politics — scanned by `prediction_scanner.py`. See the **[Prediction Markets Guide](./kalshi-prediction-betting/PREDICTION_MARKETS_GUIDE.md)**.
-
-> [!IMPORTANT]
-> Prediction-market **execution is disabled by default** (Risk Gate 4.7, `ALLOW_PREDICTION_BETS=false`). The 2026-04-24 audit (R20) found the fair-value models unreliable and parked them pending a rebuild; scanning works, but these markets will not place bets until `ALLOW_PREDICTION_BETS=true` and the models are rebuilt.
+The crypto, weather, S&P 500, mentions, companies and politics scanners were **retired on 2026-11-18** (ER-53): they never placed a bet (Gate 4.7 kept them off after the 2026-04-24 audit found their fair values unreliable), and they were the largest dormant code on the import path that places orders. The code is on the [`archive/prediction-scanners`](https://github.com/ai-automation-tools/edge-radar/tree/archive/prediction-scanners) branch. Gate 4.7 stays as a guard.
 
 ---
 

@@ -346,7 +346,7 @@
 
     /* Coverage cards */
     .cov { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 26px; }
-    @media (min-width: 860px) { .cov { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 860px) { .cov { grid-template-columns: repeat(2, 1fr); } }
     /* Cronsole templates: one card per entry in registry/index.json, read live. */
     .tpl .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 12px; }
     .tpl .acts .btn { flex: 1 1 auto; justify-content: center; height: 36px; padding: 0 12px; font-size: 13px; }
@@ -744,7 +744,7 @@
         <div class="col-s">independent fair values from public APIs</div>
         <div class="node"><div class="t">The Odds API <span class="m">GET</span></div><div class="d mono">api.the-odds-api.com /v4/sports/…/odds</div><div class="d">8–20 sportsbook lines → no-vig consensus</div></div>
         <div class="node"><div class="t">Sports stats</div><div class="d mono">statsapi.mlb.com · api-web.nhle.com · site.api.espn.com</div></div>
-        <div class="node"><div class="t">Crypto · weather · equity</div><div class="d mono">api.coingecko.com · api.weather.gov · query1.finance.yahoo.com</div></div>
+        <div class="node"><div class="t">Venue weather</div><div class="d mono">api.weather.gov</div><div class="d">wind, rain and temperature at outdoor NFL and MLB venues</div></div>
       </div>
       <div class="conn a" aria-hidden="true"><svg viewBox="0 0 44 120" preserveAspectRatio="none"><line x1="2" y1="60" x2="42" y2="60"/><line class="mv" x1="2" y1="60" x2="42" y2="60"/></svg></div>
       <div class="conn-m" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M10 14l-4-4h8l-4 4z"/></svg></div>
@@ -810,7 +810,7 @@
       <div>
         <p class="eyebrow">Pipeline</p>
         <h2>Seven stages. Scan, size, execute, settle.</h2>
-        <p class="sub">One entry point, <code>scripts/scan.py</code>, runs the chain for sports, futures or prediction markets. A preview stops after stage 5 and prints what the gates said about every row it saw.</p>
+        <p class="sub">One entry point, <code>scripts/scan.py</code>, runs the chain for sports or futures. A preview stops after stage 5 and prints what the gates said about every row it saw.</p>
       </div>
     </div>
     <div class="steps" id="steps">
@@ -849,13 +849,6 @@
         <p>Sportsbook consensus, de-vigged and weighted by book tier, against Kalshi's game markets. Thirty-one game filters across the major leagues, college, soccer, combat sports, motorsport, golf, tennis and esports.</p>
         <div class="tags"><span class="tag on">NBA</span><span class="tag on">NHL</span><span class="tag on">MLB</span><span class="tag on">NFL · pilot</span><span class="tag on">NCAAF · pilot</span><span class="tag on">NCAAB</span><span class="tag on">MLS · soccer</span><span class="tag on">UFC · boxing</span><span class="tag on">F1 · NASCAR</span><span class="tag on">PGA</span><span class="tag on">tennis</span><span class="tag on">esports</span><span class="tag off">World Cup</span></div>
         <div class="foot">Per-sport floors: <code>MIN_EDGE_THRESHOLD_&lt;SPORT&gt;</code>, narrowed by market type when needed.</div>
-      </article>
-      <article class="card" style="--c:var(--sky)">
-        <div class="card-top"><span class="kind"><i></i>Prediction</span><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 18L10 11l4 4 6-8"/><path d="M15 7h5v5"/></svg></span></div>
-        <h3>Crypto, weather, S&amp;P 500</h3>
-        <p>Spot and volatility from CoinGecko, National Weather Service forecasts for thirteen cities, and index levels from Yahoo Finance, each turned into a probability for the bracket Kalshi lists.</p>
-        <div class="tags"><span class="tag on">BTC · ETH · XRP · DOGE · SOL</span><span class="tag on">13 cities</span><span class="tag on">SPX</span></div>
-        <div class="foot">Off by default behind <code>ALLOW_PREDICTION_BETS</code> (Gate 4.7).</div>
       </article>
       <article class="card" style="--c:var(--amber)">
         <div class="card-top"><span class="kind"><i></i>Futures</span><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 01-12 0V4z"/><path d="M6 6H3v2a3 3 0 003 3M18 6h3v2a3 3 0 01-3 3"/></svg></span></div>

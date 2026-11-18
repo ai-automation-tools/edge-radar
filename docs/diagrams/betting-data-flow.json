@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "874a716b98a9650e1949a2c56b9b8648c14db9ce"
+      "revision": "edd820574b222105d082f721c7a1dbf32e775076"
     }
   },
   "stages": [
@@ -308,8 +308,8 @@
         },
         {
           "path": "scripts/shared/paths.py",
-          "line": 31,
-          "end_line": 32
+          "line": 30,
+          "end_line": 31
         }
       ]
     },

@@ -62,7 +62,6 @@ _SUBDIRS = (
     "",
     "scripts/shared",
     "scripts/kalshi",
-    "scripts/prediction",
     "scripts/schedulers",
     "scripts",
 )
