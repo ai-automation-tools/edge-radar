@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-11-17 -- CI runs lint, secret scan and Python 3.11 (ER-21)
+
+- **CI** Only pytest on 3.12 ran, so nothing stopped a PR that skipped the local hooks. CI now
+  runs the tests on 3.11 and 3.12, and a `lint` job runs the pre-commit hooks (black, flake8,
+  detect-secrets, the `os.getenv` guard) on the files the PR changed. About 45 older files
+  aren't black-clean yet and get formatted when next touched. The required `ci` check is now a
+  gate job that passes only when the others do, so branch protection didn't change.
+- **Style** `model_calibration.py`, `risk_check.py` and `prediction_scanner.py` are now black and
+  flake8 clean (unused imports, f-strings without placeholders, two dead variables, long lines
+  split). The parsed code is unchanged apart from the removed imports and dead variables. With
+  that they get the ER-18 path block, so every entry point now runs in a fresh clone.
+- **Config** `pyproject.toml` set black to 120 columns while the hook used 100; both are 100.
+
+---
+
 ## 2026-11-17 -- Scripts run in a fresh clone (ER-18)
 
 - **Fix** 18 entry points (the settler, futures scanner, executor, edge detector, backtests and

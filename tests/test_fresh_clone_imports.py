@@ -18,14 +18,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MAIN_GUARD = re.compile(r"""^if __name__ == ["']__main__["']""", re.M)
 
-# Not yet black/flake8 clean, so any edit reformats the whole file. They get
-# the sys.path block with the lint cleanup (ER-21); remove them here then.
-KNOWN_BROKEN = {
-    "scripts/kalshi/model_calibration.py",
-    "scripts/kalshi/risk_check.py",
-    "scripts/prediction/prediction_scanner.py",
-}
-
 # A missing third-party package (Pillow, for make_favicon.py) is a requirements
 # question, not a sys.path one: only a project module that can't be found fails.
 PROJECT_MODULES = {p.stem for p in (ROOT / "scripts").rglob("*.py")} | {"app"}
@@ -74,8 +66,7 @@ def test_entry_points_import_without_venv_pth(tmp_path):
         results = dict(pool.map(load, _entry_points()))
 
     assert "scripts/kalshi/kalshi_settler.py" in results, "entry-point discovery found nothing"
-    broken = {rel for rel, r in results.items() if _path_failure(r)}
-    detail = {rel: results[rel].stderr.strip().splitlines()[-1:] for rel in broken - KNOWN_BROKEN}
-    assert not detail, f"entry points that fail without the venv .pth: {detail}"
-    fixed = KNOWN_BROKEN - broken
-    assert not fixed, f"now import cleanly, drop them from KNOWN_BROKEN: {sorted(fixed)}"
+    broken = {
+        rel: r.stderr.strip().splitlines()[-1:] for rel, r in results.items() if _path_failure(r)
+    }
+    assert not broken, f"entry points that fail without the venv .pth: {broken}"

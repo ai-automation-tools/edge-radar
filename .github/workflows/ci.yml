@@ -1,4 +1,5 @@
-# Runs the pytest suite on every pull request and on every push to master.
+# Runs the pytest suite (Python 3.11 and 3.12) on every pull request and on every push to
+# master, and the pre-commit hooks on the files a pull request changes.
 # Read-only token, no secrets: the suite mocks Kalshi and the odds APIs and
 # redirects every log and data path to a temp folder (tests/conftest.py).
 name: CI
@@ -16,19 +17,67 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
+  test:
+    name: test (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 is the floor in pyproject.toml; 3.12 is what the operator runs.
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
           cache: pip
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # A clean install has no edge_radar.pth, so tests/test_fresh_clone_imports.py
+      # runs here against a real fresh clone.
       - name: Run tests
         run: python -m pytest tests/ -q
+
+  lint:
+    # The same hooks a local commit runs (black, flake8, detect-secrets, the
+    # os.getenv guard), on the files this pull request changed. About 45 older
+    # files aren't black-clean yet; each one gets formatted when it's next touched.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run hooks on changed files
+        env:
+          # Guards local commits to master; CI checks out a merge ref.
+          SKIP: no-commit-to-branch
+        run: >-
+          pre-commit run --show-diff-on-failure
+          --from-ref "${{ github.event.pull_request.base.sha }}" --to-ref HEAD
+
+  ci:
+    # The single required status check: green only when every job above passed
+    # (lint is skipped on pushes to master).
+    if: always()
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All jobs passed
+        run: |
+          echo "test=${{ needs.test.result }} lint=${{ needs.lint.result }}"
+          [ "${{ needs.test.result }}" = success ]
+          [[ "${{ needs.lint.result }}" =~ ^(success|skipped)$ ]]

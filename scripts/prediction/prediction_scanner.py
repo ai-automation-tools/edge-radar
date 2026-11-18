@@ -14,16 +14,16 @@ Usage:
     python scripts/prediction/prediction_scanner.py scan --filter btc --save
 """
 
-import sys
-import json
-import logging
 import argparse
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from dataclasses import asdict
 
 # Shared imports
-import paths  # noqa: F401 -- path constants
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
+import paths  # noqa: F401,E402 -- path constants
 from opportunity import Opportunity
 
 from dotenv import load_dotenv
@@ -35,42 +35,49 @@ from kalshi_client import KalshiClient
 from app.config import get_config
 
 # Local imports
-from crypto_edge import detect_edge_crypto, CRYPTO_PREFIX_MAP, fetch_crypto_price, fetch_crypto_history
+from crypto_edge import (
+    detect_edge_crypto,
+    CRYPTO_PREFIX_MAP,
+    fetch_crypto_price,
+    fetch_crypto_history,
+)
 from weather_edge import detect_edge_weather, TICKER_CITY_MAP
 from spx_edge import detect_edge_spx, fetch_spx_data
 from mentions_edge import (
-    MENTION_PREFIXES, get_mention_type,
-    fetch_historical_counts, fetch_historical_mention_rate,
-    detect_edge_lastword, detect_edge_binary_mention,
+    MENTION_PREFIXES,
+    fetch_historical_counts,
+    fetch_historical_mention_rate,
+    detect_edge_lastword,
+    detect_edge_binary_mention,
 )
 from companies_edge import detect_edge_bankruptcy, fetch_bankruptcy_data
 from politics_edge import detect_edge_political_event, EVENT_BASE_RATES
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 load_dotenv()
-from logging_setup import setup_logging
+from logging_setup import setup_logging  # noqa: E402
+
 log = setup_logging("prediction_scanner")
 console = Console()
 
 MIN_EDGE = get_config().gates.min_edge_threshold
 
 
-
 # ── Filter Shortcuts ─────────────────────────────────────────────────────────
 
 FILTER_SHORTCUTS = {
     # Crypto
-    "crypto":  list(CRYPTO_PREFIX_MAP.keys()),
-    "btc":     ["KXBTC"],
-    "eth":     ["KXETH"],
-    "xrp":     ["KXXRP"],
-    "doge":    ["KXDOGE"],
-    "sol":     ["KXSOL"],
+    "crypto": list(CRYPTO_PREFIX_MAP.keys()),
+    "btc": ["KXBTC"],
+    "eth": ["KXETH"],
+    "xrp": ["KXXRP"],
+    "doge": ["KXDOGE"],
+    "sol": ["KXSOL"],
     # Weather
     "weather": list(TICKER_CITY_MAP.keys()),
     # S&P 500
-    "spx":     ["KXINX"],
-    "sp500":   ["KXINX"],
+    "spx": ["KXINX"],
+    "sp500": ["KXINX"],
     # TV Mentions
     "mentions": list(MENTION_PREFIXES.keys()),
     "lastword": ["KXLASTWORDCOUNT"],
@@ -80,17 +87,18 @@ FILTER_SHORTCUTS = {
     # Companies
     "companies": ["KXBANKRUPTCY", "KXIPO"],
     "bankruptcy": ["KXBANKRUPTCY"],
-    "ipo":     ["KXIPO"],
+    "ipo": ["KXIPO"],
     # Politics / Tech Events
     "politics": ["KXIMPEACH"],
     "impeach": ["KXIMPEACH"],
     "techscience": ["KXQUANTUM", "KXFUSION"],
     "quantum": ["KXQUANTUM"],
-    "fusion":  ["KXFUSION"],
+    "fusion": ["KXFUSION"],
 }
 
 
 # ── Market Fetching ──────────────────────────────────────────────────────────
+
 
 def get_all_prediction_prefixes() -> list[str]:
     """Return all known prediction market ticker prefixes."""
@@ -126,6 +134,7 @@ def categorize_prediction(ticker: str) -> str:
 
 
 # ── Main Scanner ─────────────────────────────────────────────────────────────
+
 
 def scan_prediction_markets(
     client: KalshiClient,
@@ -180,7 +189,9 @@ def scan_prediction_markets(
     for prefix in filter_prefixes:
         cursor = None
         for _ in range(3):
-            resp = client.get_markets(limit=1000, status="open", series_ticker=prefix, cursor=cursor)
+            resp = client.get_markets(
+                limit=1000, status="open", series_ticker=prefix, cursor=cursor
+            )
             batch = resp.get("markets", [])
             all_markets.extend(batch)
             cursor = resp.get("cursor", "")
@@ -191,9 +202,11 @@ def scan_prediction_markets(
     # Remove expired markets
     now = datetime.now(timezone.utc).isoformat()
     before = len(all_markets)
-    all_markets = [m for m in all_markets
-                   if (m.get("expected_expiration_time") or "") > now
-                   or not m.get("expected_expiration_time")]
+    all_markets = [
+        m
+        for m in all_markets
+        if (m.get("expected_expiration_time") or "") > now or not m.get("expected_expiration_time")
+    ]
     expired = before - len(all_markets)
     if expired:
         rprint(f"  Skipped {expired} expired markets")
@@ -203,7 +216,8 @@ def scan_prediction_markets(
     for m in all_markets:
         cat = categorize_prediction(m["ticker"])
         categorized.setdefault(cat, []).append(m)
-    rprint(f"  Categories: { {k: len(v) for k, v in categorized.items()} }")
+    sizes = {k: len(v) for k, v in categorized.items()}
+    rprint(f"  Categories: {sizes}")
 
     # 3. Fetch external data and detect edges
     opportunities: list[Opportunity] = []
@@ -220,6 +234,7 @@ def scan_prediction_markets(
                     coins_needed.add(coin_id)
 
         import time
+
         for i, coin_id in enumerate(coins_needed):
             if i > 0:
                 time.sleep(2)  # CoinGecko free tier rate limit
@@ -245,7 +260,9 @@ def scan_prediction_markets(
             if result and result["edge"] >= min_edge:
                 opportunities.append(Opportunity(**result))
 
-        rprint(f"  Weather opportunities: {sum(1 for o in opportunities if o.category == 'weather')}")
+        rprint(
+            f"  Weather opportunities: {sum(1 for o in opportunities if o.category == 'weather')}"
+        )
 
     # ── S&P 500 ──
     spx_markets = categorized.get("spx", [])
@@ -261,7 +278,9 @@ def scan_prediction_markets(
                 if result and result["edge"] >= min_edge:
                     opportunities.append(Opportunity(**result))
 
-            rprint(f"  S&P 500 opportunities: {sum(1 for o in opportunities if o.category == 'spx')}")
+            rprint(
+                f"  S&P 500 opportunities: {sum(1 for o in opportunities if o.category == 'spx')}"
+            )
         else:
             rprint("  [red]Failed to fetch S&P 500 data[/red]")
 
@@ -272,12 +291,19 @@ def scan_prediction_markets(
 
         # Separate LASTWORDCOUNT (numeric) from binary mention markets
         lastword_markets = [m for m in mention_markets if m["ticker"].startswith("KXLASTWORDCOUNT")]
-        binary_markets = [m for m in mention_markets if not m["ticker"].startswith("KXLASTWORDCOUNT")]
+        binary_markets = [
+            m for m in mention_markets if not m["ticker"].startswith("KXLASTWORDCOUNT")
+        ]
 
         # LASTWORDCOUNT: fetch historical counts
         if lastword_markets:
             counts = fetch_historical_counts(client, "KXLASTWORDCOUNT")
-            rprint(f"  LASTWORDCOUNT: {len(counts)} historical episodes, mean={sum(counts)/len(counts):.0f}" if counts else "  LASTWORDCOUNT: no historical data")
+            rprint(
+                f"  LASTWORDCOUNT: {len(counts)} historical episodes, "
+                f"mean={sum(counts)/len(counts):.0f}"
+                if counts
+                else "  LASTWORDCOUNT: no historical data"
+            )
             for m in lastword_markets:
                 result = detect_edge_lastword(m, counts)
                 if result and result["edge"] >= min_edge:
@@ -297,7 +323,9 @@ def scan_prediction_markets(
                 else:
                     rprint(f"  {series_prefix}: insufficient historical data")
 
-        rprint(f"  Mention opportunities: {sum(1 for o in opportunities if o.category == 'mentions')}")
+        rprint(
+            f"  Mention opportunities: {sum(1 for o in opportunities if o.category == 'mentions')}"
+        )
 
     # ── Companies ──
     company_markets = categorized.get("companies", [])
@@ -319,7 +347,9 @@ def scan_prediction_markets(
         if ipo_markets:
             rprint(f"  IPO markets: {len(ipo_markets)} (browse only, no automated edge)")
 
-        rprint(f"  Company opportunities: {sum(1 for o in opportunities if o.category == 'companies')}")
+        rprint(
+            f"  Company opportunities: {sum(1 for o in opportunities if o.category == 'companies')}"
+        )
 
     # ── Politics / Tech Events ──
     politics_markets = categorized.get("politics", [])
@@ -330,7 +360,10 @@ def scan_prediction_markets(
             if result and result["edge"] >= min_edge:
                 opportunities.append(Opportunity(**result))
 
-        rprint(f"  Political/tech opportunities: {sum(1 for o in opportunities if o.category == 'politics')}")
+        rprint(
+            "  Political/tech opportunities: "
+            f"{sum(1 for o in opportunities if o.category == 'politics')}"
+        )
 
     # Sort by composite score
     opportunities.sort(key=lambda o: o.composite_score, reverse=True)
@@ -338,6 +371,7 @@ def scan_prediction_markets(
 
 
 # ── Output ────────────────────────────────────────────────────────────────────
+
 
 def print_opportunities(opportunities: list[Opportunity]):
     if not opportunities:
@@ -347,7 +381,9 @@ def print_opportunities(opportunities: list[Opportunity]):
     from ticker_display import parse_game_datetime
     from kalshi_executor import preflight_gate_status
 
-    table = Table(title=f"Prediction Market Opportunities (edge >= {MIN_EDGE:.0%})", show_lines=True)
+    table = Table(
+        title=f"Prediction Market Opportunities (edge >= {MIN_EDGE:.0%})", show_lines=True
+    )
     table.add_column("Title", style="cyan", max_width=40)
     table.add_column("Date", style="dim")
     table.add_column("Cat.")
@@ -377,46 +413,76 @@ def print_opportunities(opportunities: list[Opportunity]):
     console.print(table)
 
 
-
 # ── CLI ───────────────────────────────────────────────────────────────────────
+
 
 def main():
     parser = argparse.ArgumentParser(description="Kalshi prediction market edge detector")
     sub = parser.add_subparsers(dest="command", required=True)
 
     scan_p = sub.add_parser("scan", help="Scan prediction markets for edge")
-    scan_p.add_argument("--min-edge", type=float, default=MIN_EDGE,
-                        help="Minimum edge threshold")
-    scan_p.add_argument("--filter", dest="ticker_filter",
-                        help="Filter: crypto, btc, eth, weather, spx, or raw ticker prefix")
-    scan_p.add_argument("--category", choices=["crypto", "weather", "spx", "mentions", "companies", "politics"],
-                        help="Filter by category")
-    scan_p.add_argument("--top", type=int, default=20,
-                        help="Number of top opportunities")
-    scan_p.add_argument("--save", action="store_true",
-                        help="Save results to watchlist")
-    scan_p.add_argument("--execute", action="store_true",
-                        help="Execute bets through the pipeline (requires confirmation)")
-    scan_p.add_argument("--unit-size", type=float, default=None,
-                        help="Dollar amount per bet (default: UNIT_SIZE from .env)")
-    scan_p.add_argument("--max-bets", type=int, default=5,
-                        help="Maximum number of bets to place")
-    scan_p.add_argument("--min-bets", type=int, default=None,
-                        help="Minimum approved bets required to proceed. If fewer pass "
-                             "risk checks, abort to avoid over-concentrating budget.")
-    scan_p.add_argument("--pick", type=str, default=None,
-                        help="Comma-separated row numbers to execute (e.g., '1,3,5')")
-    scan_p.add_argument("--ticker", type=str, nargs="+", default=None,
-                        help="Execute only these specific tickers")
-    scan_p.add_argument("--date", type=str, default=None,
-                        help="Only show markets on this date (today, tomorrow, YYYY-MM-DD, mar31)")
-    scan_p.add_argument("--budget", type=str, default=None,
-                        help="Max total cost for the batch. Percentage of bankroll (e.g. '10%%') "
-                             "or dollar amount (e.g. '15'). Bets scaled down proportionally.")
-    scan_p.add_argument("--exclude-open", action="store_true",
-                        help="Exclude markets where you already have an open position")
-    scan_p.add_argument("--report-dir", type=str, default=None,
-                        help="Override report output directory for --save")
+    scan_p.add_argument("--min-edge", type=float, default=MIN_EDGE, help="Minimum edge threshold")
+    scan_p.add_argument(
+        "--filter",
+        dest="ticker_filter",
+        help="Filter: crypto, btc, eth, weather, spx, or raw ticker prefix",
+    )
+    scan_p.add_argument(
+        "--category",
+        choices=["crypto", "weather", "spx", "mentions", "companies", "politics"],
+        help="Filter by category",
+    )
+    scan_p.add_argument("--top", type=int, default=20, help="Number of top opportunities")
+    scan_p.add_argument("--save", action="store_true", help="Save results to watchlist")
+    scan_p.add_argument(
+        "--execute",
+        action="store_true",
+        help="Execute bets through the pipeline (requires confirmation)",
+    )
+    scan_p.add_argument(
+        "--unit-size",
+        type=float,
+        default=None,
+        help="Dollar amount per bet (default: UNIT_SIZE from .env)",
+    )
+    scan_p.add_argument("--max-bets", type=int, default=5, help="Maximum number of bets to place")
+    scan_p.add_argument(
+        "--min-bets",
+        type=int,
+        default=None,
+        help="Minimum approved bets required to proceed. If fewer pass "
+        "risk checks, abort to avoid over-concentrating budget.",
+    )
+    scan_p.add_argument(
+        "--pick",
+        type=str,
+        default=None,
+        help="Comma-separated row numbers to execute (e.g., '1,3,5')",
+    )
+    scan_p.add_argument(
+        "--ticker", type=str, nargs="+", default=None, help="Execute only these specific tickers"
+    )
+    scan_p.add_argument(
+        "--date",
+        type=str,
+        default=None,
+        help="Only show markets on this date (today, tomorrow, YYYY-MM-DD, mar31)",
+    )
+    scan_p.add_argument(
+        "--budget",
+        type=str,
+        default=None,
+        help="Max total cost for the batch. Percentage of bankroll (e.g. '10%%') "
+        "or dollar amount (e.g. '15'). Bets scaled down proportionally.",
+    )
+    scan_p.add_argument(
+        "--exclude-open",
+        action="store_true",
+        help="Exclude markets where you already have an open position",
+    )
+    scan_p.add_argument(
+        "--report-dir", type=str, default=None, help="Override report output directory for --save"
+    )
 
     args = parser.parse_args()
 
@@ -434,20 +500,30 @@ def main():
         # Apply date and open-position filters
         if opportunities and args.date:
             from ticker_display import filter_by_date, resolve_date_arg
+
             target = resolve_date_arg(args.date)
             before = len(opportunities)
             opportunities = filter_by_date(opportunities, target)
-            rprint(f"[dim]Date filter ({target}): {before} -> {len(opportunities)} opportunities[/dim]")
+            rprint(
+                f"[dim]Date filter ({target}): {before} -> {len(opportunities)} opportunities[/dim]"
+            )
         if opportunities and args.exclude_open:
             from ticker_display import filter_exclude_tickers
+
             positions = client.get_positions(limit=200, count_filter="position")
             open_tickers = {p.get("ticker", "") for p in positions.get("market_positions", [])}
             before = len(opportunities)
             opportunities = filter_exclude_tickers(opportunities, open_tickers)
-            rprint(f"[dim]Excluded open positions: {before} -> {len(opportunities)} opportunities[/dim]")
+            rprint(
+                f"[dim]Excluded open positions: {before} -> {len(opportunities)} "
+                "opportunities[/dim]"
+            )
 
-        if opportunities and (args.execute or args.unit_size is not None or args.budget is not None):
+        if opportunities and (
+            args.execute or args.unit_size is not None or args.budget is not None
+        ):
             from kalshi_executor import execute_pipeline, UNIT_SIZE, parse_budget_arg
+
             execute_pipeline(
                 client=client,
                 opportunities=opportunities,
@@ -464,9 +540,14 @@ def main():
 
         if args.save and opportunities:
             from report_writer import save_scan_report
-            rpt = save_scan_report(opportunities, report_type="prediction",
-                                   filter_label=args.ticker_filter or "", min_edge=args.min_edge,
-                                   output_dir=args.report_dir)
+
+            rpt = save_scan_report(
+                opportunities,
+                report_type="prediction",
+                filter_label=args.ticker_filter or "",
+                min_edge=args.min_edge,
+                output_dir=args.report_dir,
+            )
             if rpt:
                 rprint(f"[dim]Report saved to {rpt}[/dim]")
 
