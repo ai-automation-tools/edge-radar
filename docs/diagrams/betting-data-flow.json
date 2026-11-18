@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "5ee77272ee995da3ab0824ad918e96882162c00f"
+      "revision": "8a234270e856098512fb509c2500ea71a74672a0"
     }
   },
   "stages": [
@@ -216,8 +216,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 2591,
-          "end_line": 2695
+          "line": 2597,
+          "end_line": 2701
         }
       ]
     },
@@ -232,13 +232,13 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 870,
-          "end_line": 905
+          "line": 876,
+          "end_line": 911
         },
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 628,
-          "end_line": 679
+          "line": 634,
+          "end_line": 685
         }
       ]
     },
@@ -252,8 +252,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1605,
-          "end_line": 1738
+          "line": 1611,
+          "end_line": 1744
         }
       ]
     },
@@ -267,8 +267,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1575,
-          "end_line": 1584
+          "line": 1581,
+          "end_line": 1590
         }
       ]
     },
@@ -283,8 +283,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1991,
-          "end_line": 2225
+          "line": 1997,
+          "end_line": 2231
         },
         {
           "path": "scripts/kalshi/kalshi_client.py",
@@ -303,8 +303,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1833,
-          "end_line": 1946
+          "line": 1839,
+          "end_line": 1952
         },
         {
           "path": "scripts/shared/paths.py",

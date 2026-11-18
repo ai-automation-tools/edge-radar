@@ -307,20 +307,29 @@ def _time_to_event_rejection(opp: "Opportunity") -> str | None:
     return f"event_too_far_out ({days}d > {MAX_DAYS_TO_EVENT}d max)"
 
 
-def exposure_segment(opp: "Opportunity") -> str:
-    """The bucket `MAX_SEGMENT_EXPOSURE_PCT` is measured over (S4).
+def segment_key(ticker: str) -> str:
+    """The bucket `MAX_SEGMENT_EXPOSURE_PCT` is measured over (S4), from a ticker.
 
-    Sport first (`nfl`, `mlb`, ...), because a sport is the unit that actually
-    goes cold together -- one league's whole slate settles on the same weekend,
-    off the same model, against the same calibration prior. Falls back to the
-    scanner's `category` for rows with no detectable sport (futures on a
-    league-less ticker, prediction markets), and finally to `"unknown"`.
+    Sport (`nfl`, `mlb`, ...), because a sport is the unit that actually goes
+    cold together -- one league's whole slate settles on the same weekend, off
+    the same model, against the same calibration prior. A ticker with no
+    detectable sport (a league-less future, a prediction market) is `"unknown"`.
+
+    The ticker alone, on purpose: open positions and resting orders carry no
+    scanner category, so a new bet keyed by category would never meet the
+    exposure it should be counted against (ER-39). Every sport-less ticker
+    shares one "unknown" ceiling, which is the conservative direction.
 
     Deliberately NOT the event key: Gate 6 (`MAX_PER_EVENT`) already binds a
     single game, and it was one of the gates that passed the whole way while
     26 NFL positions accumulated across 26 different events.
     """
-    return _detect_sport(opp.ticker) or (opp.category or "").strip().lower() or "unknown"
+    return _detect_sport(ticker) or "unknown"
+
+
+def exposure_segment(opp: "Opportunity") -> str:
+    """`segment_key` for an opportunity."""
+    return segment_key(opp.ticker)
 
 
 def exposure_from_positions(market_positions: list[dict]) -> tuple[float, dict[str, float]]:
@@ -331,10 +340,7 @@ def exposure_from_positions(market_positions: list[dict]) -> tuple[float, dict[s
     arrives as a *string* from the v2 API ("0.960000"), so it must be coerced;
     a silent `float("")` would zero the whole book and open every gate.
 
-    Segments are keyed off the ticker alone, since a positions row carries no
-    category. That makes a league-less futures ticker land in "unknown"
-    together -- acceptable, because the cap is per-segment and "unknown"
-    getting its own shared ceiling is the conservative direction.
+    Segments come from `segment_key`, the same key new bets use.
     """
     total = 0.0
     by_segment: dict[str, float] = {}
@@ -345,7 +351,7 @@ def exposure_from_positions(market_positions: list[dict]) -> tuple[float, dict[s
             continue
         if at_risk <= 0:
             continue
-        seg = _detect_sport(p.get("ticker", "")) or "unknown"
+        seg = segment_key(p.get("ticker", ""))
         total += at_risk
         by_segment[seg] = by_segment.get(seg, 0.0) + at_risk
     return total, by_segment
@@ -426,7 +432,7 @@ def resting_exposure(
                 remaining,
             )
         committed = round(remaining * price, 4)
-        seg = _detect_sport(ticker) or "unknown"
+        seg = segment_key(ticker)
         total += committed
         by_segment[seg] = by_segment.get(seg, 0.0) + committed
     return total, by_segment

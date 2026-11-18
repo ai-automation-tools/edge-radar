@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-11-18 -- Fee rounding and segment keys (ER-36, ER-39)
+
+- **Fees** `taker_fee()` rounds the cent amount to 6 places before rounding up, so float noise no
+  longer adds a cent to an exact-cent fee (4 contracts at 50c is $0.07, not $0.08; 81 of the 19,800
+  price and size pairs were a cent high). `tests/test_fees.py` checks every pair in exact arithmetic.
+- **Gate 2b** Open positions, resting orders and new bets now share one segment key,
+  `segment_key(ticker)`: the sport, else `unknown`. A new bet on a sport-less ticker used to be keyed
+  by its scanner category (`futures`), while the positions it should count against sat in `unknown`,
+  so `MAX_SEGMENT_EXPOSURE_PCT` never saw them together.
+- **Diagram** Re-pinned to the new executor: every cited executor range moved down 6 lines, same code.
+
+---
+
 ## 2026-11-18 -- Homepage and diagram page in the org house style (ER-31)
 
 - **Site** The homepage stylesheet uses only tokens below its two token blocks (the GitHub button,

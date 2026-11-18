@@ -9,6 +9,7 @@ is 1.02c per contract against a 3.0-4.0c minimum-edge floor.
 """
 
 import math
+from fractions import Fraction
 
 import pytest
 from opportunity import Opportunity
@@ -48,10 +49,16 @@ def fee_rate_7pct(monkeypatch):
 
 class TestFeeModel:
     def test_matches_kalshi_published_formula(self, fee_rate_7pct):
-        # fee = roundup(rate * C * P * (1-P)), rounded UP to the next cent.
-        for contracts, price in [(7, 0.14), (1, 0.50), (100, 0.30), (3, 0.85)]:
-            expected = math.ceil(0.07 * contracts * price * (1 - price) * 100) / 100
-            assert fees.taker_fee(contracts, price) == expected
+        # fee = roundup(rate * C * P * (1-P)), rounded UP to the next cent, checked in
+        # exact arithmetic over every price and 1-200 contracts (ER-36: float noise
+        # rounded 81 exact-cent fees up a cent, e.g. 4 @ 50c to $0.08).
+        rate = Fraction(7, 100)
+        for cents in range(1, 100):
+            p = Fraction(cents, 100)
+            for contracts in range(1, 201):
+                expected = math.ceil(rate * contracts * p * (1 - p) * 100) / 100
+                assert fees.taker_fee(contracts, cents / 100) == expected, (contracts, cents)
+        assert fees.taker_fee(4, 0.50) == 0.07
 
     def test_the_review_trade(self, fee_rate_7pct):
         # KXMLSSPREAD-26AUG19TORCLT-CLT2: 7 contracts @ 14c, claimed edge +4.67%.
