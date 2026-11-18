@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-11-17 -- The ledger records every real fill (ER-02, X2)
+
+- **Fix** BUG-01: an order that filled after the create response settled at $0, because nothing
+  re-read it. The settler now re-reads every open `resting`/`partial` order of its profile
+  (`GET /portfolio/orders/{id}`) before settling and raises the row's fills and cost. A `resting`
+  row is settled only once the venue confirms it, and one predicate decides exposure in both
+  phases. A venue-side cancel with no fills closes the row at $0 (closes X2).
+- **Fix** BUG-02: the live-order janitor decided "zero fill" from the log, which misses late fills,
+  so a partly filled order was closed as a $0 cancel. Janitors now pass the venue's fill count
+  to `mark_cancelled`, which closes only zero-fill rows and keeps the rest open as `partial`.
+- **Fix** BUG-03: a log write that failed after Kalshi accepted the order (on Windows,
+  `PermissionError` while CLV-Capture reads the file) was recorded as a failed order, hiding a
+  real position. Bookkeeping after acceptance can no longer reach the error handlers. The write
+  retries for about 3 s, then goes to `data/history/trade_journal.jsonl`, which the next settle
+  merges back in.
+- **New** `kalshi_settler.py audit-fills`: read-only check of closed rows against venue fills.
+  At commit time it found one closed `partial` row under-booked (1 of 8 contracts); older orders
+  return 404 and can't be checked.
+- **Docs** Betting diagram re-pinned; the Settler node reads "refresh fills, P&L, CLV".
+
+---
+
 ## 2026-11-17 -- Live orders need approval; client-level cap and kill switch (ER-01)
 
 - **Fix** `KalshiClient.create_order` now refuses an order whose notional (contracts x the price of

@@ -216,8 +216,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 2432,
-          "end_line": 2532
+          "line": 2465,
+          "end_line": 2565
         }
       ]
     },
@@ -232,13 +232,13 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1361,
-          "end_line": 1535
+          "line": 1371,
+          "end_line": 1545
         },
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 600,
-          "end_line": 651
+          "line": 607,
+          "end_line": 658
         }
       ]
     },
@@ -252,8 +252,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1556,
-          "end_line": 1689
+          "line": 1566,
+          "end_line": 1699
         }
       ]
     },
@@ -267,8 +267,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1527,
-          "end_line": 1535
+          "line": 1537,
+          "end_line": 1545
         }
       ]
     },
@@ -283,8 +283,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1942,
-          "end_line": 2113
+          "line": 1952,
+          "end_line": 2146
         },
         {
           "path": "scripts/kalshi/kalshi_client.py",
@@ -303,8 +303,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1784,
-          "end_line": 1897
+          "line": 1794,
+          "end_line": 1907
         },
         {
           "path": "scripts/shared/paths.py",
@@ -317,14 +317,14 @@
       "id": "settler",
       "type": "backend",
       "label": "Settler",
-      "sublabel": "P&L, CLV back to row",
+      "sublabel": "refresh fills, P&L, CLV",
       "stage": 4,
       "row": 3,
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_settler.py",
-          "line": 355,
-          "end_line": 506
+          "line": 348,
+          "end_line": 665
         }
       ]
     },
@@ -338,8 +338,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_settler.py",
-          "line": 210,
-          "end_line": 270
+          "line": 212,
+          "end_line": 272
         }
       ]
     }
