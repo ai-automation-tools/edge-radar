@@ -26,6 +26,8 @@ from trade_log import (
     settlement_revenue_dollars,
     get_filled_contracts,
     get_filled_cost,
+    recover_journal,
+    set_row_fills,
 )
 
 from dotenv import load_dotenv
@@ -340,6 +342,156 @@ def backfill_fees(client: KalshiClient, apply: bool = False) -> dict:
     }
 
 
+_VENUE_CANCELLED = {"canceled", "cancelled", "expired"}
+
+
+def _has_exposure(trade: dict) -> bool:
+    """Open, not an error, and holding fills: the one settle predicate for both phases.
+
+    A `resting` row is settled only after the pre-settle refresh has promoted it
+    with real fills (BUG-01). Before, Phase 2 settled any open row whose ticker
+    settled, so an order that filled after the create response booked $0.
+    """
+    return (
+        trade.get("closed_at") is None
+        and trade.get("status") != "error"
+        and trade.get("fill_status") != "resting"
+    )
+
+
+def _count(order: dict, *keys: str) -> float:
+    for key in keys:
+        if order.get(key) not in (None, ""):
+            return float(order[key])
+    return 0.0
+
+
+def fetch_order_states(client: KalshiClient, trades: list[dict]) -> dict[str, dict]:
+    """Venue order state for every open `resting` / `partial` Kalshi row (BUG-01, X2).
+
+    One `GET /portfolio/orders/{id}` per row; there are only ever a handful. A
+    read that fails leaves its row out, and an unconfirmed `resting` row is then
+    not settled this run rather than settled at a fill count that may be stale.
+    Only this client's profile: another profile's orders sit in a subaccount
+    this client can't read (they 401), so asking every hour only adds noise.
+    """
+    from app.config import get_config
+
+    profile = get_config().system.profile
+    states: dict[str, dict] = {}
+    for t in trades:
+        oid = t.get("order_id")
+        if (
+            not oid
+            or t.get("closed_at") is not None
+            or t.get("status") == "error"
+            or t.get("fill_status") not in ("resting", "partial")
+            or (t.get("venue") or "kalshi") != "kalshi"
+            or t.get("profile", "main") != profile
+        ):
+            continue
+        try:
+            resp = client.get_order(oid)
+        except Exception as e:  # noqa: BLE001
+            log.warning("Fill refresh: could not read order %s (%s); row left as is", oid, e)
+            continue
+        order = resp.get("order", resp) if isinstance(resp, dict) else None
+        if order:
+            states[oid] = order
+    return states
+
+
+def apply_order_states(
+    trades: list[dict], states: dict[str, dict], now: datetime | None = None
+) -> int:
+    """Bring open rows up to the venue's fills; return how many rows changed.
+
+    More fills than the log knows: the row's fills, cost and status are raised
+    (`set_row_fills`). No fills and the venue has cancelled or expired the order:
+    the row is closed as cancelled at $0 (X2: a venue-side cancel used to leave
+    it `resting` forever).
+    """
+    stamp = (now or datetime.now(timezone.utc)).isoformat()
+    changed = 0
+    for t in trades:
+        order = states.get(t.get("order_id") or "")
+        if order is None or t.get("closed_at") is not None:
+            continue
+        fill = _count(order, "fill_count_fp", "fill_count")
+        remaining = _count(order, "remaining_count_fp", "remaining_count")
+        if fill <= 0 and get_filled_contracts(t) <= 0:
+            if (order.get("status") or "").lower() in _VENUE_CANCELLED:
+                t.update(fill_status="cancelled", closed_at=stamp, net_pnl=0, remaining_count=0)
+                changed += 1
+            continue
+        if set_row_fills(t, fill, remaining):
+            t["fills_refreshed_at"] = stamp
+            changed += 1
+    return changed
+
+
+def audit_closed_fills(client: KalshiClient) -> list[dict]:
+    """Closed rows booked with fewer fills than the venue reports (ER-02 one-off). Read-only.
+
+    The settler never revisits a closed row, so rows closed before BUG-01/02 were
+    fixed keep whatever fill count they were closed with. One `get_order` per
+    closed resting / partial / cancelled row. Prints the mismatches and returns
+    them; correcting their P&L is a separate, owner-approved step.
+    """
+    rows = [
+        t
+        for t in load_trade_log()
+        if t.get("closed_at") is not None
+        and t.get("status") != "error"
+        and t.get("order_id")
+        and t.get("fill_status") in ("resting", "partial", "cancelled")
+        and (t.get("venue") or "kalshi") == "kalshi"
+    ]
+    found = []
+    for t in rows:
+        try:
+            resp = client.get_order(t["order_id"])
+        except Exception as e:  # noqa: BLE001
+            found.append(
+                {"trade_id": t.get("trade_id"), "ticker": t.get("ticker"), "error": str(e)}
+            )
+            continue
+        order = resp.get("order", resp)
+        venue_fill = _count(order, "fill_count_fp", "fill_count")
+        if venue_fill > get_filled_contracts(t):
+            found.append(
+                {
+                    "trade_id": t.get("trade_id"),
+                    "ticker": t.get("ticker"),
+                    "side": t.get("side"),
+                    "fill_status": t.get("fill_status"),
+                    "logged_fill": get_filled_contracts(t),
+                    "venue_fill": venue_fill,
+                    "result": t.get("settlement_result"),
+                    "closed_at": t.get("closed_at"),
+                }
+            )
+    table = Table(title=f"Closed rows vs venue fills ({len(rows)} checked)")
+    for col in ("ticker", "side", "fill_status", "logged", "venue", "result", "note"):
+        table.add_column(col)
+    for f in found:
+        table.add_row(
+            str(f.get("ticker")),
+            str(f.get("side", "")),
+            str(f.get("fill_status", "")),
+            str(f.get("logged_fill", "")),
+            str(f.get("venue_fill", "")),
+            str(f.get("result") or ""),
+            f.get("error", "")[:40],
+        )
+    console.print(table)
+    rprint(
+        f"{sum('error' not in f for f in found)} under-booked, "
+        f"{sum('error' in f for f in found)} unreadable"
+    )
+    return found
+
+
 def settle_trades(client: KalshiClient) -> dict:
     """
     Fetch settlements from Kalshi and update the trade log.
@@ -352,18 +504,26 @@ def settle_trades(client: KalshiClient) -> dict:
     applies the settlements, and saves.
     """
     # ── Phase 1: fetch everything from Kalshi (no lock) ────────────────────────
+    # BUG-03: an accepted order whose log write failed sits in the journal.
+    recovered = recover_journal()
+    if recovered:
+        rprint(f"  [yellow]Recovered {recovered} journaled trade(s) into the log[/yellow]")
     snapshot = load_trade_log()
 
-    # Find unsettled trades (skip zero-fill resting orders — they have no exposure)
-    unsettled = [
-        t
-        for t in snapshot
-        if t.get("closed_at") is None
-        and t.get("status") != "error"
-        and t.get("fill_status") != "resting"
-    ]
+    # BUG-01: re-read open resting/partial orders so late fills count before
+    # anything settles. Applied to the snapshot here (so newly filled rows are
+    # in the tickers we check) and again to the fresh read in Phase 2.
+    order_states = fetch_order_states(client, snapshot)
+    apply_order_states(snapshot, order_states)
+
+    unsettled = [t for t in snapshot if _has_exposure(t)]
 
     if not unsettled:
+        if order_states:
+            with trade_log_lock():
+                trade_log = load_trade_log()
+                if apply_order_states(trade_log, order_states):
+                    save_trade_log(trade_log)
         rprint("[dim]No unsettled trades in log.[/dim]")
         return {"settled": 0, "still_open": 0}
 
@@ -428,11 +588,10 @@ def settle_trades(client: KalshiClient) -> dict:
     with trade_log_lock():
         trade_log = load_trade_log()
         settlement_log = load_settlement_log()
+        apply_order_states(trade_log, order_states)
 
         for trade in trade_log:
-            if trade.get("closed_at") is not None:
-                continue
-            if trade.get("status") == "error":
+            if not _has_exposure(trade):
                 continue
 
             ticker = trade.get("ticker", "")
@@ -1012,6 +1171,9 @@ def main():
     )
 
     sub.add_parser("reconcile", help="Compare local trade log vs Kalshi API positions")
+    sub.add_parser(
+        "audit-fills", help="Read-only: closed rows booked with fewer fills than the venue reports"
+    )
 
     bf_p = sub.add_parser(
         "backfill-fees", help="Re-stamp real fill fees onto rows the renamed-field bug zeroed"
@@ -1030,6 +1192,9 @@ def main():
     elif args.command == "reconcile":
         client = KalshiClient()
         reconcile_positions(client)
+
+    elif args.command == "audit-fills":
+        audit_closed_fills(KalshiClient())
 
     elif args.command == "backfill-fees":
         client = KalshiClient()
