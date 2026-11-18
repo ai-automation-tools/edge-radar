@@ -65,7 +65,7 @@ python -m pip install --upgrade pip
 pip install -r requirements-dev.txt   # runtime + tests and hooks; requirements.txt is runtime only
 ```
 
-Both files are hashed locks with exact versions, so pip refuses a download whose hash doesn't match. To add or bump a package, edit `requirements.in` (runtime) or `requirements-dev.in` (tools), then run `make lock` (needs [uv](https://docs.astral.sh/uv/)). Dependabot raises weekly minor/patch bumps against the locks.
+Both files are hashed locks with exact versions, so pip refuses a download whose hash doesn't match. To add or bump a package, edit `requirements.in` (runtime) or `requirements-dev.in` (tools), then run `make lock` (needs [uv](https://docs.astral.sh/uv/)). Dependabot doesn't bump these (its re-lock drops `--universal`); it still raises security alerts, and the Upstream Check routine flags breaking releases.
 
 > **Important:** Always run Edge-Radar from the activated virtual environment, so the packages in `requirements.txt` are found. Each entry point puts `scripts/shared` on `sys.path` itself and then imports `paths`, which adds the other script folders, so no `.pth` file is needed. `tests/test_fresh_clone_imports.py` checks this for every script with a `__main__` block.
 

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-11-17 -- Dependabot no longer bumps the Python locks (ER-20 follow-up)
+
+- **Fix** ER-20 moved Python updates to Dependabot's `uv` ecosystem. Its first PR (#389) re-locked
+  without `--universal` and the runtime constraint: it dropped the Windows-only `tzdata` and
+  `colorama` and pinned numpy/scipy to their 3.11 releases on every Python. The Python block is
+  gone; bump with `make lock`. Actions updates and security alerts are unchanged.
+
+---
+
 ## 2026-11-17 -- Money-path hardening (ER-35, 37, 38, 40, 41, 43, 44, 46)
 
 - **ER-46** Demo detection is an exact host match (`demo-api.kalshi.co`) instead of a substring
