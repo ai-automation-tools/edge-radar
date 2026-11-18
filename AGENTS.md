@@ -729,7 +729,7 @@ Full CLI reference: `docs/scripts/SCRIPTS_REFERENCE.md`. Scheduled tasks: `docs/
 ## Session Startup Checklist
 
 1. `git sync-master` — local master goes stale otherwise (work happens on `mike_desktop`, pushes go to remote master).
-2. Read `data/positions/open_positions.json` (exposure) and `data/history/today_trades.json` (today's P&L).
+2. `python scripts/kalshi/kalshi_executor.py status`: open positions, exposure and today's P&L.
 3. If the daily loss limit is breached, **no new positions**.
 4. Confirm `DRY_RUN` in `.env`.
 5. `python scripts/shared/check_odds_keys.py` — cached Odds API quota (`--live` probes each key and costs N requests).
@@ -775,7 +775,7 @@ Research output leads with the edge thesis, timestamps its sources, names contra
 
 ## Stack
 
-Python 3.11+ · `pandas` / `numpy` / `scipy` · SQLite · Windows Task Scheduler · pre-commit (detect-secrets, black, flake8). Each entry point puts `scripts/shared` on `sys.path` and imports `paths` (no `.pth` needed; the old `edge_radar.pth` still works where it exists). MCP servers: `docs/setup/mcp-servers.md`.
+Python 3.11+ · `pandas` / `numpy` / `scipy` · JSON ledgers in `data/history/` · Windows Task Scheduler · pre-commit (detect-secrets, black, flake8). Each entry point puts `scripts/shared` on `sys.path` and imports `paths` (no `.pth` needed; the old `edge_radar.pth` still works where it exists). MCP servers: `docs/setup/mcp-servers.md`.
 
 ---
 

@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/ARCHITECTURE.md"><strong>Explore the docs »</strong></a>
+  <a href="docs/setup/ARCHITECTURE.md"><strong>Explore the docs »</strong></a>
 </p>
 
 <p align="center">
@@ -34,7 +34,7 @@
   <a href="https://claude.ai/claude-code"><img src="https://img.shields.io/badge/Claude_Code-slash_commands-8B5CF6?style=flat-square" alt="Claude Code slash commands"></a>
 </p>
 
-> **Scans thousands of Kalshi markets, cross-references 12 sportsbooks and free data APIs, prices fair value with a normal-CDF model, and executes Kelly-sized limit orders** — every bet cleared through 21 risk gates and logged with fill-accurate accounting for closing-line-value tracking.
+> **Scans thousands of Kalshi markets, cross-references nine US sportsbooks (Pinnacle joins on live runs) and free data APIs, prices fair value with a normal-CDF model, and executes Kelly-sized limit orders** — every bet cleared through 21 risk gates and logged with fill-accurate accounting for closing-line-value tracking.
 
 > [!WARNING]
 > **Risk and eligibility.** You can lose the whole stake on every bet. Results quoted here come from one operator's small sample and are not a forecast. You are responsible for meeting Kalshi's age and location rules. If betting stops being fun, US help is at 1-800-GAMBLER. Edge-Radar is not affiliated with Kalshi or The Odds API. Not financial or legal advice.
@@ -45,7 +45,7 @@
 
 | Category | Coverage | Data sources |
 |:---------|:---------|:-------------|
-| 🏟️ **Sports betting** | NFL, NBA, MLB, NHL, NCAAB/NCAAF, UFC, soccer/MLS, F1, NASCAR, PGA, IPL, esports: 31 game filters, plus 8 futures filters | The Odds API (12 sportsbooks), ESPN, NHL/MLB Stats, NWS |
+| 🏟️ **Sports betting** | NFL, NBA, MLB, NHL, NCAAB/NCAAF, UFC, soccer/MLS, F1, NASCAR, PGA, IPL, esports: 31 game filters, plus 8 futures filters | The Odds API (9 US sportsbooks), ESPN, NHL/MLB Stats, NWS |
 | 🏆 **Championship futures** | Super Bowl, NBA Finals, Stanley Cup, World Series, PGA Tour — priced with N-way de-vig | Sportsbook outright odds |
 | 📈 **Prediction markets** | Crypto (BTC, ETH, XRP, SOL, DOGE), S&P 500 + VIX, weather (13 cities), politics | CoinGecko, Yahoo Finance, NWS |
 
@@ -55,7 +55,7 @@
 
 The betting logic data-flow diagram, every box linked to the code it describes, is on the [homepage](https://edge-radar.ai-automation-tools.dev/#pipeline); [`docs/diagrams/`](docs/diagrams/README.md) is its source.
 
-Fair value is a sport-specific normal-CDF model over a weighted-median consensus of 12 sportsbooks (sharp books like Pinnacle/Circa weighted 3×, recreational 0.7×), then adjusted by team-stats win%, sharp-money line movement, weather, pitcher matchups, rest/back-to-back fatigue, and book-disagreement signals. **[Sports Guide →](docs/kalshi/kalshi-sports-betting/SPORTS_GUIDE.md)** breaks down each signal and the de-vig math.
+Fair value is a sport-specific normal-CDF model over a weighted-median consensus of nine US sportsbooks (Pinnacle joins on live runs); Pinnacle is weighted 3×, recreational books 0.7×, then adjusted by team-stats win%, sharp-money line movement, weather, pitcher matchups, rest/back-to-back fatigue, and book-disagreement signals. **[Sports Guide →](docs/kalshi/kalshi-sports-betting/SPORTS_GUIDE.md)** breaks down each signal and the de-vig math.
 
 > [!IMPORTANT]
 > Every scan defaults to **preview mode**. No money is risked until you pass `--execute`. Each scan row shows a **Gate** column (R18) that previews whether it will pass the static risk gates — `ok` if all clear, or a short label (`score`, `conf`, `no-fav`, `pred-off`, `live-off`, etc.) for the failing gate.
@@ -113,7 +113,7 @@ Result is capped by max bet ($100), the bet-ratio cap, and available bankroll. <
 ```bash
 # 0. Clone repo and enter project
 git clone https://github.com/ai-automation-tools/edge-radar.git
-cd Edge-Radar
+cd edge-radar
 
 # 1. Create + activate virtual environment
 python -m venv .venv
@@ -290,7 +290,7 @@ All external data is **free**. Only Kalshi requires a funded account.
 | API | Purpose |
 |:----|:--------|
 | **[Kalshi](https://kalshi.com)** | Market data + order execution (API key + RSA signing) |
-| **[The Odds API](https://the-odds-api.com)** | 12 US sportsbook odds (500 free req/mo) |
+| **[The Odds API](https://the-odds-api.com)** | US sportsbook odds, nine books on `regions=us` (500 free req/mo) |
 | **[ESPN](http://site.api.espn.com)** | NBA, NFL, NCAAB, NCAAF standings + line movement |
 | **[NHL Stats API](https://api-web.nhle.com)** | Standings, goal differential, last 10 record |
 | **[MLB Stats API](https://statsapi.mlb.com)** | Standings, run differential, pitcher stats |

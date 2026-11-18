@@ -40,7 +40,7 @@ See also: [Sports Guide](../kalshi-sports-betting/SPORTS_GUIDE.md) | [Prediction
 
 Futures use **N-way de-vigging** instead of the 2-way de-vig used for game outcomes:
 
-1. **Fetch** outright odds from 5-12 US sportsbooks via The Odds API
+1. **Fetch** outright odds from the US sportsbooks via The Odds API
 2. **Each book** has odds for every team/player (e.g., 30 NBA teams to win the title)
 3. **Implied probabilities** are calculated: `1 / decimal_odds` for each outcome
 4. **De-vig** by normalizing: divide each implied probability by the sum of all implied probabilities for that book. This removes the house edge.

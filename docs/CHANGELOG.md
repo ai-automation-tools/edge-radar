@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-11-18 -- Docs match the code (ER-29)
+
+- **Docs** every risk-gate count says 21 (ARCHITECTURE said 18, the executor doc 16, the skill fifteen),
+  and the ARCHITECTURE and executor gate tables gain the missing 3.05, 3.55 and 6b rows. Sportsbook
+  claims now say nine US books plus Pinnacle on live runs (`BOOK_WEIGHTS`), not 12 with Circa. The
+  README's docs link, the `cd edge-radar` quick start (README and site), the skill's Automation Guide
+  link, and two stale AGENTS.md lines (positions files, SQLite) are fixed.
+- **Config** `.env.example` documents `MAX_EDGE`, `EDGE_RADAR_PROFILE` and the per-category
+  `MIN_EDGE_THRESHOLD_<SPORT>_<CATEGORY>` floors.
+- **Tests** new `tests/test_doc_accuracy.py`: relative links resolve, gate counts and tables match
+  AGENTS.md, sportsbook claims match `BOOK_WEIGHTS`, and every key `app/config.py` reads is in
+  `.env.example`.
+
+---
+
 ## 2026-11-18 -- logs/ stays bounded (ER-28)
 
 - **Ops** new `scripts/shared/prune_logs.py`, run by `maintenance\reconcile.bat` after the nightly

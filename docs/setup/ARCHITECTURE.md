@@ -26,7 +26,7 @@ The system processes every opportunity through seven sequential stages. Each sta
 | **2. Categorize** | Classify by type | Determines which edge model applies |
 | **3. Compare** | Fair value vs. Kalshi ask price | Score on 4 dimensions: edge, confidence, liquidity, time |
 | **4. Cap** | Limit to top 3 per game/event | Prevents concentration in a single contest |
-| **5. Risk-Check** | 18 risk gates + Kelly sizing | Reject or cap — see [Risk Management](#%EF%B8%8F-risk-management) |
+| **5. Risk-Check** | 21 risk gates + Kelly sizing | Reject or cap — see [Risk Management](#%EF%B8%8F-risk-management) |
 | **6. Execute** | Place limit orders on Kalshi | Full trade journal entry with rationale |
 | **7. Monitor** | Track positions, settle, calibrate | Realized P&L + closing line value tracking |
 
@@ -38,7 +38,7 @@ Each market type has a specialized edge model. All models produce the same outpu
 
 ### Game Outcomes (Moneyline / 2-Way De-Vig)
 
-Fetch head-to-head odds from 8-12 US sportsbooks. De-vig each book's line using the multiplicative method to extract true implied probability. Take the **weighted median** across all books — sharp books (Pinnacle, Circa) weighted 3x, recreational books (DraftKings, FanDuel) weighted 0.7x. Confidence factors in book count, estimate spread, and team stats signal.
+Fetch head-to-head odds from nine US sportsbooks (Pinnacle joins on live runs). De-vig each book's line using the multiplicative method to extract true implied probability. Take the **weighted median** across all books — Pinnacle weighted 3x, recreational books (DraftKings, FanDuel) weighted 0.7x. Confidence factors in book count, estimate spread, and team stats signal.
 
 The odds event is **opponent- and date-validated** before pricing: it must contain both of the market's teams on opposite sides *and* agree with the ticker's schedule (moneyline = embedded start time; date-only tickers = ET game date). If the specific game is absent or ambiguous, no edge is emitted. This prevents pricing a market against a different game (wrong opponent, or the wrong game of a playoff series). Soccer h2h is 3-way (home/draw/away): the "team to win?" binary uses the team's devigged win share, with draws falling to the NO side.
 
@@ -90,7 +90,7 @@ Four independent attributes are calculated for every opportunity. They build on 
 ```mermaid
 flowchart TD
     subgraph DATA ["📡 Data Sources"]
-        ODDS["Sportsbook Odds\n8-12 US Books"]
+        ODDS["Sportsbook Odds\n9 US Books + Pinnacle"]
         STATS["Team Stats\nESPN / NHL / MLB APIs"]
         SHARP["Line Movement\nESPN Open→Close"]
         WEATHER["Weather\nNWS Forecasts"]
@@ -165,7 +165,7 @@ flowchart TD
 
 The model's estimate of the true probability, derived purely from sportsbook odds:
 
-1. Fetch odds from 8-12 US sportsbooks
+1. Fetch odds from nine US sportsbooks (Pinnacle joins on live runs)
 2. De-vig each book's line (multiplicative method)
 3. Take **weighted median** — sharp books 3x, recreational books 0.7x
 4. For spreads/totals: apply **normal CDF** with sport-specific stdev
@@ -231,7 +231,7 @@ The minimum score to pass risk checks is **6.0** (configurable via `MIN_COMPOSIT
 
 ### Risk Gate Pipeline
 
-Every order must pass gates 1-7 (including 2b, 3.5, 3.6, 3.7, 4.5, 4.6, 4.6b, 4.7 and 4.8) before execution. Gates 8-9 are sizing caps that downsize the order rather than rejecting it. **Gate 2b does both** — it rejects when a ceiling is already breached and caps otherwise.
+Every order must pass gates 1-7 (including 2b, 3.05, 3.5, 3.55, 3.6, 3.7, 4.5, 4.6, 4.6b, 4.7 and 4.8) before execution. Gates 8-9 are sizing caps that downsize the order rather than rejecting it. **Gate 2b does both** — it rejects when a ceiling is already breached and caps otherwise.
 
 | | Gate | Check | Behavior |
 | :--- | :--- | :--- | :--- |
@@ -239,7 +239,9 @@ Every order must pass gates 1-7 (including 2b, 3.5, 3.6, 3.7, 4.5, 4.6, 4.6b, 4.
 | 2 | **Position count** | Number of open positions | **Reject** if count ≥ `MAX_OPEN_POSITIONS` |
 | 2b | **Cumulative exposure (S4)** | Total open at-risk dollars, and the row's own sport, against **equity** (cash + position value) | **Reject** if already ≥ `MAX_OPEN_EXPOSURE_PCT` or ≥ `MAX_SEGMENT_EXPOSURE_PCT`; otherwise **Cap** to the remaining headroom. The only gate that measures a standing total. |
 | 3 | **Edge threshold** | Calculated edge, **plus the exchange fee** (F1) | **Reject** if edge < per-sport floor (or `MIN_EDGE_THRESHOLD` global fallback). A floor ≥ 1.0 is unreachable and means the sport is **off** — reported as `sport_disabled`. |
+| 3.05 | **Edge ceiling (B7)** | Claimed edge | **Reject** if edge > `MAX_EDGE` (0.50); an edge that large is a model or matching bug |
 | 3.5 | **Market price floor (R7)** | Contract ask price | **Reject** if price < `MIN_MARKET_PRICE` (lottery-ticket filter, no edge/confidence exception) |
+| 3.55 | **Market price ceiling** | Contract ask price as a cost/payout ratio | **Reject** if price > `MAX_MARKET_PRICE` (1.0 disables) |
 | 3.6 | **Liquidity floor (L2)** | Bid/ask spread and trailing-24h volume | **Reject** if spread > `MAX_BID_ASK_SPREAD` or volume < `MIN_MARKET_VOLUME_24H`. Fails open on a missing book. |
 | 3.7 | **Time to event (S5)** | Days from now to a **game's** date | **Reject** if > `MAX_DAYS_TO_EVENT_FOR_GAME_MARKETS`. **Futures exempt by category.** Fails open on an unparseable date. |
 | 4 | **Composite score** | Weighted score (edge + confidence + liquidity + time) | **Reject** if score < `MIN_COMPOSITE_SCORE` |
@@ -250,6 +252,7 @@ Every order must pass gates 1-7 (including 2b, 3.5, 3.6, 3.7, 4.5, 4.6, 4.6b, 4.
 | 4.8 | **Live/in-play safety (L1)** | Game already started (`is_game_started`) | **Reject** unless `ALLOW_LIVE_BETS=true` |
 | 5 | **Duplicate ticker** | Already holding this exact market | **Reject** if ticker in open positions |
 | 6 | **Per-event cap** | Too many positions on the same game | **Reject** if event count ≥ `MAX_PER_EVENT` |
+| 6b | **Opposing side (S22)** | Other side of the same game held or resting | **Reject**. Futures exempt |
 | 7 | **Series dedup** | Same matchup bet on a recent date (sport + team pair) | **Reject** if matchup key appears in trade log within `SERIES_DEDUP_HOURS` (per-sport override via `SERIES_DEDUP_HOURS_<SPORT>` — MLB/NHL default to 72h, others 48h — R9, 2026-04-27) |
 | 8 | **Max bet size** | Bet exceeds max size | **Cap** — downsize to `MAX_BET_SIZE` |
 | 9 | **Bet ratio cap** | Single bet cost vs. median batch cost | **Cap** — downsize so cost ≤ `MAX_BET_RATIO` × median batch cost |
