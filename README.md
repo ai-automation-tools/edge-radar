@@ -301,7 +301,7 @@ All external data is **free**. Only Kalshi requires a funded account.
 ---
 
 <p align="center">
-  <a href="docs/setup/SETUP_GUIDE.md">Setup</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="docs/setup/ARCHITECTURE.md">Architecture</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="docs/scripts/SCRIPTS_REFERENCE.md">Scripts</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="docs/CHANGELOG.md">Changelog</a>
+  <a href="docs/setup/SETUP_GUIDE.md">Setup</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="docs/setup/ARCHITECTURE.md">Architecture</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="docs/scripts/SCRIPTS_REFERENCE.md">Scripts</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="docs/CHANGELOG.md">Changelog</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="CONTRIBUTING.md">Contributing</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<a href="SECURITY.md">Security</a>
 </p>
 
 <p align="center">
