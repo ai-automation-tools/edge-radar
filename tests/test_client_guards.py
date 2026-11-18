@@ -5,6 +5,7 @@
 `_post`, so nothing can reach the venue.
 """
 
+import importlib.util
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -16,6 +17,11 @@ import venue_eligibility as vel
 from kalshi_client import KalshiClient, OrderRefusedError
 
 ROOT = Path(__file__).resolve().parent.parent
+_spec = importlib.util.spec_from_file_location(
+    "_guard_live_orders", ROOT / "scripts" / "hooks" / "guard_live_orders.py"
+)
+guard = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(guard)
 
 
 @pytest.fixture
@@ -86,18 +92,55 @@ def test_refusals_never_disable_a_venue(live):
         assert not vel.is_structural_rejection(str(exc.value))
 
 
-def test_harness_asks_before_order_commands():
+@pytest.mark.parametrize(
+    "command",
+    [
+        "python scripts/scan.py sports --filter nba --execute",
+        ".venv/Scripts/python.exe scripts/scan.py sports --go",
+        "cd x && python scan.py sports --mode execute --max-bets 3",
+        "python scripts/scan.py sports --mode=execute",
+        "python scripts/doctor.py --verify-eligibility --ticker KXT",
+        'python -c "from kalshi_client import KalshiClient; KalshiClient().create_order(...)"',
+        "python - <<'EOF'\nc.intra_exchange_transfer(5, 0, 3)\nEOF",
+        "$env:DRY_RUN='true'; python scripts/scan.py sports --send-it",
+    ],
+)
+def test_hook_blocks_order_commands(command):
+    assert guard.blocked(command)
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "python scripts/scan.py sports --filter nba",  # preview
+        "python scripts/scan.py sports --good-flag",  # --go needs a word boundary
+        "git commit -m 'fix(ER-01): --execute help text'",
+        "grep -n create_order scripts/kalshi/kalshi_client.py",
+        "python -m pytest tests/test_client_guards.py -q",
+    ],
+)
+def test_hook_allows_everything_else(command):
+    assert not guard.blocked(command)
+
+
+def test_hook_exits_2_and_is_wired_for_both_shells(monkeypatch, capsys):
+    import io
+
+    monkeypatch.setattr(
+        "sys.stdin", io.StringIO(json.dumps({"tool_input": {"command": "python scan.py --go"}}))
+    )
+    assert guard.main() == 2 and "! <command>" in capsys.readouterr().err
+
     rules = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))
-    ask = rules["permissions"]["ask"]
-    for needle in ("--execute", "--go", "--send-it", "--mode execute", "create_order"):
-        assert any(needle in r and r.startswith("Bash(") for r in ask), needle
-        assert any(needle in r and r.startswith("PowerShell(") for r in ask), needle
+    (entry,) = rules["hooks"]["PreToolUse"]
+    assert entry["matcher"] == "Bash|PowerShell"
+    assert "guard_live_orders.py" in entry["hooks"][0]["command"]
     assert "Edit(./.env)" in rules["permissions"]["deny"]
 
 
 def test_skill_and_agent_do_not_invite_bypasses():
     skill = (ROOT / "skills" / "edge-radar" / "SKILL.md").read_text(encoding="utf-8")
     assert "disable-model-invocation: true" in skill.split("---")[1]
-    assert "no confirmation needed" not in skill
+    assert "no confirmation needed" not in skill and "still asks" not in skill
     agent = (ROOT / ".claude" / "agents" / "KALSHI_BETTOR.md").read_text(encoding="utf-8")
     assert "insist" not in agent and "just do it" not in agent
