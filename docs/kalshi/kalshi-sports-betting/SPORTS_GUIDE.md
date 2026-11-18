@@ -304,17 +304,6 @@ python scripts/scan.py sports --filter mlb --execute --pick 1,3,5
 python scripts/scan.py sports --execute --ticker KXNBAGAME-26MAR22LALBOS-LAL
 ```
 
-### From Saved Scan
-
-Scan and save results first, then execute from the saved file to avoid re-fetching odds:
-
-```bash
-python scripts/scan.py sports --filter ncaamb --save
-python scripts/scan.py sports --from-file --execute --max-bets 3
-```
-
-Saved opportunities are stored in `data/watchlists/kalshi_opportunities.json`.
-
 ### Date & Position Filters
 
 ```bash

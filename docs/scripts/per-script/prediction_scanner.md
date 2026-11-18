@@ -21,7 +21,7 @@ python scripts/prediction/prediction_scanner.py scan [flags]
 | `--min-edge N` | `0.03` | Minimum edge threshold |
 | `--top N` | `20` | Number of top opportunities |
 | `--date DATE` | (none) | Only show markets on this date (`today`, `tomorrow`, `YYYY-MM-DD`, `mar31`) |
-| `--save` | off | Save to `data/watchlists/prediction_opportunities.json` |
+| `--save` | off | Save a markdown report to `reports/Predictions/` |
 | `--exclude-open` | off | Skip markets where you already have an open position |
 | `--execute` | off | Place orders through executor pipeline |
 | `--unit-size N` | (from .env) | Dollar amount per bet |
@@ -38,7 +38,7 @@ python scripts/scan.py prediction
 # Crypto only, execute at $1 per bet
 python scripts/scan.py prediction --filter crypto --execute --unit-size 1
 
-# Weather predictions, save to watchlist
+# Weather predictions, save a report
 python scripts/scan.py prediction --filter weather --save
 
 # Skip open positions

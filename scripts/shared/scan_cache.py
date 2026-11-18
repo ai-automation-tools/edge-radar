@@ -35,6 +35,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from paths import DATA_DIR
+from trade_log import write_text_atomic
 
 log = logging.getLogger("scan_cache")
 
@@ -66,6 +67,7 @@ def _opp_to_dict(opp) -> dict:
 
 def _dict_to_opp(d: dict):
     from opportunity import Opportunity
+
     return Opportunity(
         ticker=d.get("ticker", ""),
         title=d.get("title", ""),
@@ -95,6 +97,7 @@ def _sized_to_dict(s) -> dict:
 
 def _dict_to_sized(d: dict):
     from kalshi_executor import SizedOrder
+
     return SizedOrder(
         opportunity=_dict_to_opp(d),
         contracts=int(d.get("contracts", 1) or 1),
@@ -128,7 +131,7 @@ def store(
             "bankroll_at_scan": bankroll,
             "rows": [_sized_to_dict(s) for s in sized_orders],
         }
-        _CACHE_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        write_text_atomic(_CACHE_FILE, json.dumps(payload, indent=2))
         return _CACHE_FILE
     except OSError as e:
         log.debug("scan_cache.store failed: %s", e)

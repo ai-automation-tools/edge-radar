@@ -57,7 +57,7 @@ def trade_log_lock(timeout: float = _LOCK_TIMEOUT_SECONDS):
     ``with`` block, so a concurrent writer's changes are merged rather than
     clobbered. On lock-acquire timeout the write still proceeds (falling back to
     atomic-write-only semantics) rather than dropping a trade — a blocked write
-    is worse than a rare lost-update, and it's logged.
+    is worse than a rare lost-update, and it's logged at ERROR.
     """
     if not _HAVE_FILELOCK:
         global _warned_no_filelock
@@ -76,9 +76,11 @@ def trade_log_lock(timeout: float = _LOCK_TIMEOUT_SECONDS):
     try:
         lock.acquire()
     except _FileLockTimeout:
-        log.warning(
+        # ERROR, not WARNING (ER-45): a writer stuck 30 s means another process
+        # hung holding the lock, and this write may now lose its update.
+        log.error(
             "trade_log_lock: timed out after %ss waiting for %s; proceeding "
-            "without the lock (atomic write only).",
+            "without the lock (atomic write only). Check for a hung process.",
             timeout,
             lock_path,
         )
@@ -103,11 +105,19 @@ def _atomic_write_json(path: Path, data) -> None:
     concurrent read-modify-write cycles across processes is a separate concern
     handled by ``trade_log_lock`` (M2) — hold that lock and re-read inside it.
     """
+    write_text_atomic(path, json.dumps(data, indent=2, default=str))
+
+
+def write_text_atomic(path: Path, text: str) -> None:
+    """Write ``text`` to ``path`` via a temp file and ``os.replace`` (see above).
+
+    Also used by the scan and odds caches, so a reader never sees half a file.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
     try:
-        with os.fdopen(fd, "w") as f:
-            json.dump(data, f, indent=2, default=str)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp_name, path)

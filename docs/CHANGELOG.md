@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-11-18 -- Dead and fragile code (ER-45)
+
+- **Removed** `app/domain/`, a re-export layer only its own tests imported, and the readers for
+  `data/watchlists/kalshi_opportunities.json` and `prediction_opportunities.json`, which nothing has
+  written for months: `kalshi_executor.py run --from-file` and `risk_check.py --report watchlist`
+  (and the watchlist section of its saved dashboard). Docs that said `--save` writes those files now
+  say it writes a markdown report.
+- **Config** `get_config()` loads the repo-root `.env` once per process before its first read, so a
+  script that imports config before calling `load_dotenv()` still gets its settings.
+- **Caches** The scan cache and odds cache write through a temp file and `os.replace`
+  (`trade_log.write_text_atomic`), like the trade log, so a reader never sees half a file.
+- **Trade-log lock** A 30 s lock timeout now logs at ERROR, not WARNING: it means another process
+  hung holding the lock and the write may lose its update.
+
+---
+
 ## 2026-11-18 -- Fee rounding and segment keys (ER-36, ER-39)
 
 - **Fees** `taker_fee()` rounds the cent amount to 6 places before rounding up, so float noise no

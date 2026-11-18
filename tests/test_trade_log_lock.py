@@ -34,6 +34,21 @@ class TestTradeLogLock:
             save_trade_log([{"trade_id": "Y"}])
         assert load_trade_log()[0]["trade_id"] == "Y"
 
+    def test_timeout_logs_an_error_and_still_writes(self, monkeypatch, caplog):
+        class _Stuck:
+            def __init__(self, path, timeout):
+                self.path = path
+
+            def acquire(self):
+                raise trade_log._FileLockTimeout(self.path)
+
+        monkeypatch.setattr(trade_log, "FileLock", _Stuck)
+        with caplog.at_level("ERROR", logger="trade_log"):
+            with trade_log_lock(timeout=0.01):
+                save_trade_log([{"trade_id": "Z"}])
+        assert load_trade_log()[0]["trade_id"] == "Z"
+        assert any("timed out" in r.message for r in caplog.records if r.levelname == "ERROR")
+
 
 class TestAppendTrades:
     def test_append_adds_records(self):

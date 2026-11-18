@@ -30,18 +30,27 @@ SCHEDULERS_DIR = SCRIPTS_DIR / "schedulers"
 DATA_DIR = PROJECT_ROOT / "data"
 TRADE_LOG_PATH = DATA_DIR / "history" / "kalshi_trades.json"
 SETTLEMENT_LOG_PATH = DATA_DIR / "history" / "kalshi_settlements.json"
-SPORTS_OPPORTUNITIES_PATH = DATA_DIR / "watchlists" / "kalshi_opportunities.json"
-PREDICTION_OPPORTUNITIES_PATH = DATA_DIR / "watchlists" / "prediction_opportunities.json"
 VENUE_ELIGIBILITY_PATH = DATA_DIR / "cache" / "venue_eligibility.json"
 
 # Ensure data directories exist
-for d in [DATA_DIR / "history", DATA_DIR / "watchlists", DATA_DIR / "positions",
-          DATA_DIR / "cache"]:
+for d in [
+    DATA_DIR / "history",
+    DATA_DIR / "watchlists",
+    DATA_DIR / "positions",
+    DATA_DIR / "cache",
+]:
     d.mkdir(parents=True, exist_ok=True)
 
 # Add script directories to sys.path (idempotent)
 # PROJECT_ROOT first so `from app.config import ...` resolves; script subdirs
 # remain for the existing `from kalshi_client import ...` pattern.
-for p in [str(PROJECT_ROOT), str(SCRIPTS_DIR), str(KALSHI_DIR), str(PREDICTION_DIR), str(SHARED_DIR), str(SCHEDULERS_DIR)]:
+for p in [
+    str(PROJECT_ROOT),
+    str(SCRIPTS_DIR),
+    str(KALSHI_DIR),
+    str(PREDICTION_DIR),
+    str(SHARED_DIR),
+    str(SCHEDULERS_DIR),
+]:
     if p not in sys.path:
         sys.path.insert(0, p)
