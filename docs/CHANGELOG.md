@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-11-18 -- Ops deck: no trading posture on a public-repo page (ER-24, ER-06)
+
+The ops deck (edge-radar.mikesailab.com) is served from this public repo. Owner's choice: strip it in
+place rather than move it.
+
+- **Removed:** the `DRY_RUN=false` line, the "live" badge on execute tasks, the Task Scheduler folder
+  path, the copy-to-run `schtasks` / `Start-ScheduledTask` triggers, and the copy/toast machinery they
+  needed. The halt box keeps the runbook (`DRY_RUN=true` stops everything; disable one task by name).
+- **Linked, not copied:** the hand-maintained "How it works" and "Pipeline" sections, which had drifted
+  from the public page, are replaced by links to it and to the betting diagram.
+- **House style:** the org source bar now heads the deck (it replaces the topbar repo button), and
+  the 12px timeline dots get a 24px hit area on every pointer, 32px on touch.
+- **Kept:** the schedule and its times. The same times are in `docs/task-schedules/README.md` and the
+  public Cronsole templates, and `test_site.py` pins the deck to the README.
+- **ER-06 at HEAD:** the last personal address in tracked files (three lines of
+  `docs/longshot/FORK-ROADMAP-ARCHIVE.md`) is described instead of quoted. History is left as is
+  (owner's call).
+
+---
+
 ## 2026-11-18 -- Smaller agent docs (ER-47)
 
 Every agent session loaded ~30k tokens of AGENTS.md and the `/edge-radar` skill before doing anything,
