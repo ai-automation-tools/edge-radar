@@ -274,3 +274,24 @@ def test_public_page_widgets_use_native_semantics(public: str) -> None:
     # motion: a pause control, and the diagram's motion choice is never overwritten
     assert 'id="motionBtn"' in public and "IntersectionObserver" in public
     assert "localStorage.getItem('archify-motion') === null" in public
+
+
+def test_public_page_first_paint_stays_light(public: str) -> None:
+    """ER-32: nothing external blocks the first paint, the fallback font cannot reflow the hero,
+    and the 845 KB interactive diagram loads only on request."""
+    blocking = re.findall(
+        r'<link\b[^>]*rel="stylesheet"[^>]*>',
+        re.sub(r"<noscript>.*?</noscript>", "", public, flags=re.S),
+    )
+    assert not [tag for tag in blocking if "https://" in tag], blocking
+    assert "font-size-adjust:" in public
+    # ch widths follow whichever font is showing, so they moved text on the swap
+    assert not re.search(r"max-width:\s*[\d.]+ch", public)
+    assert (
+        '<iframe id="diagram-frame"'
+        in public.split('<template id="diagramTpl">', 1)[1].split("</template>", 1)[0]
+    )
+    assert public.count("<iframe") == 1
+    assert re.search(
+        r'<img src="diagram/betting-data-flow\.png" width="\d+" height="\d+" loading="lazy"', public
+    )

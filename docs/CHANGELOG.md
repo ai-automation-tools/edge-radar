@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-11-18 -- Homepage performance (ER-32)
+
+- **Site** Measured with Chrome DevTools traces on Slow 4G: desktop layout shift is 0.008 (the audit
+  measured 0.20) and phone LCP is 1.34 s at 4x CPU slowdown (2.39 s before).
+  - The Google Fonts stylesheet no longer blocks the first paint. Until Inter arrives the system font
+    stands in, scaled to Inter's x-height with `font-size-adjust`, so the swap barely moves text.
+  - Text widths use `em` instead of `ch`; `ch` follows whichever font is showing, so the hero's fine
+    print gained a line in the fallback and the hero re-centred on the swap.
+  - On phones the three hero buttons stack; the row fitted by 2px in Inter and broke in the fallback.
+  - The data-flow diagram shows its 240 KB picture first. The 845 KB interactive page loads when
+    the reader asks for it, takes focus, and still follows the page theme.
+- **Tests** `tests/test_site.py` checks there is no render-blocking external CSS, no `ch` widths and
+  a poster-first diagram.
+
+---
+
 ## 2026-11-18 -- Homepage accessibility (ER-30)
 
 - **Site** Lighthouse accessibility is 100 on desktop, mobile and the light theme (it was 91, 88, 88):

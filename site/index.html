@@ -28,10 +28,13 @@
     })();
   </script>
 
-  <!-- No build step: the whole stylesheet is inline. Fonts are the only external resource besides the shared consent script. -->
+  <!-- No build step: the whole stylesheet is inline. Fonts are the only external resource besides the shared consent script.
+       ER-32: the font CSS loads without blocking the first paint; until it lands the system font stands in,
+       scaled by font-size-adjust on body to Inter's x-height so the swap barely moves the layout. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
   <style>
     /* Design tokens. Same ground, surfaces and type as ai-automation-tools.dev so the two read as siblings;
        the page accent is Edge-Radar's emerald, the colour the org page gives this tool. Dark is the default;
@@ -66,6 +69,7 @@
     html { scroll-behavior: smooth; }
     body {
       margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.6;
+      font-size-adjust: 0.546; /* Inter's x-height: the fallback renders at Inter's size (ER-32) */
       -webkit-font-smoothing: antialiased;
       background-image: radial-gradient(rgba(255,255,255,0.035) 1.2px, transparent 0);
       background-size: 24px 24px; background-attachment: fixed;
@@ -122,10 +126,12 @@
     @media (min-width: 900px) { .hero { grid-template-columns: 1.02fr .98fr; padding-block: 80px 40px; gap: 48px; } }
     h1 { margin: 18px 0 0; font-size: clamp(34px, 4.6vw, 52px); line-height: 1.04; letter-spacing: -.035em; font-weight: 700; text-wrap: balance; }
     h1 em { font-style: normal; color: transparent; background: linear-gradient(90deg, #6ee7b7, #34d399 55%, #38bdf8); -webkit-background-clip: text; background-clip: text; }
-    .lede { margin: 20px 0 0; max-width: 54ch; font-size: 16.5px; color: var(--fg-3); }
+    .lede { margin: 20px 0 0; max-width: 34em; /* em, not ch: ch follows the font, so it moved on the swap (ER-32) */ font-size: 16.5px; color: var(--fg-3); }
     .lede b { color: var(--fg-2); font-weight: 500; }
-    .fine { margin: 14px 0 0; max-width: 54ch; font-size: 13px; color: var(--fg-3); }
+    .fine { margin: 14px 0 0; max-width: 34em; font-size: 13px; color: var(--fg-3); }
     .cta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px; }
+    /* Phones stack the three buttons: a row that fits by 2px in Inter breaks in the fallback font, and the swap moved them (ER-32) */
+    @media (max-width: 479px) { .cta { flex-direction: column; } .cta .btn { justify-content: center; } }
     .btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: var(--r-md); font-size: 14px; font-weight: 600; border: 1px solid transparent; cursor: pointer; font-family: inherit; transition: transform .2s var(--ease), background .2s, border-color .2s, box-shadow .2s; }
     .btn:active { transform: translateY(1px); }
     .btn-primary { background: var(--accent); color: var(--accent-ink); }
@@ -161,9 +167,9 @@
     section { scroll-margin-top: 72px; padding-block: 60px; border-top: 1px solid rgba(39,39,42,.6); }
     .sec-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; }
     h2 { margin: 10px 0 0; font-size: 26px; letter-spacing: -.025em; font-weight: 650; }
-    .sub { margin: 8px 0 0; max-width: 60ch; color: var(--fg-3); font-size: 15px; }
+    .sub { margin: 8px 0 0; max-width: 38em; color: var(--fg-3); font-size: 15px; }
     .sub code, .note code { font-family: var(--mono); font-size: 12.5px; color: var(--fg-2); background: rgba(24,24,27,.8); padding: 1px 5px; border-radius: 4px; }
-    .note { margin: 14px 0 0; font-size: 12.5px; color: var(--fg-4); max-width: 80ch; }
+    .note { margin: 14px 0 0; font-size: 12.5px; color: var(--fg-4); max-width: 50em; }
 
     /* Equation line */
     .eq { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; margin-top: 26px; padding: 14px 16px; border: 1px dashed var(--line-2); border-radius: var(--r-lg); font-family: var(--mono); font-size: 14px; color: var(--fg-4); }
@@ -300,6 +306,9 @@
     @media (min-width: 980px) { .steps::before, .steps::after { display: block; } }
     .diagram { margin: 26px 0 0; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--surface); }
     .diagram iframe { display: block; width: 100%; height: clamp(420px, 62vw, 860px); border: 0; background: var(--bg); }
+    .diagram .poster { position: relative; display: grid; place-items: center; background: #050810; }
+    .diagram .poster img { display: block; width: 100%; height: auto; }
+    .diagram .poster .btn { position: absolute; }
     .diagram figcaption { padding: 10px 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--fg-4); }
     .diagram figcaption a, .fine a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
     .step { --mx: 50%; --my: 50%; position: relative; z-index: 1; display: flex; flex-direction: column; gap: 4px; padding: 14px 14px 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; transition: transform .3s var(--ease), border-color .3s, background .3s; }
@@ -811,8 +820,13 @@
       <div class="step"><span class="n">07</span><b>Settle</b><span>Outcomes, measured fees, Brier pair, drift and post-kickoff alarms. <code>make settle</code></span></div>
     </div>
     <!-- Copies scripts/diagrams/build_betting_diagram.py writes from docs/diagrams/ (the source). -->
+    <!-- ER-32: a 240 KB picture first; the 845 KB interactive page loads only when asked for. -->
     <figure class="diagram">
-      <iframe id="diagram-frame" src="diagram/betting-data-flow.html" loading="lazy" title="Edge-Radar betting logic data flow, interactive: Kalshi markets, The Odds API, ESPN stats and weather feed the market filter, odds cache and context signals; fair probability and edge become an Opportunity; risk gates reject or approve; Kelly sizing, order placement, trade log, settler and settlements, with settlements feeding calibration back"></iframe>
+      <div class="poster">
+        <img src="diagram/betting-data-flow.png" width="2048" height="1320" loading="lazy" decoding="async" alt="Edge-Radar betting logic data flow: Kalshi markets, The Odds API, ESPN stats and weather feed the market filter, odds cache and context signals; fair probability and edge become an Opportunity; risk gates reject or approve; Kelly sizing, order placement, trade log, settler and settlements, with settlements feeding calibration back">
+        <button type="button" class="btn btn-primary" id="diagramLoad">Load the interactive diagram</button>
+      </div>
+      <template id="diagramTpl"><iframe id="diagram-frame" src="diagram/betting-data-flow.html" title="Edge-Radar betting logic data flow, interactive: Kalshi markets, The Odds API, ESPN stats and weather feed the market filter, odds cache and context signals; fair probability and edge become an Opportunity; risk gates reject or approve; Kelly sizing, order placement, trade log, settler and settlements, with settlements feeding calibration back"></iframe></template>
       <figcaption>The betting path as data flow. Every box links to the code it describes; Route and Lens trace paths. <a href="diagram/betting-data-flow.html">Open full screen ↗</a></figcaption>
     </figure>
   </section>
@@ -1366,10 +1380,15 @@
   // defaults it to Live once and then leaves the reader's choice alone. Reduced-motion readers still get Still. Its theme follows this page's switch.
   (function () {
     try { if (localStorage.getItem('archify-motion') === null) localStorage.setItem('archify-motion', 'live') } catch (_) {}
-    const frame = document.getElementById('diagram-frame')
-    const sync = () => { try { frame.contentDocument.documentElement.setAttribute('data-theme', document.documentElement.classList.contains('light') ? 'light' : 'dark') } catch (_) {} }
-    frame.addEventListener('load', sync)
-    new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    const load = document.getElementById('diagramLoad')
+    load.addEventListener('click', () => {
+      const frame = document.getElementById('diagramTpl').content.firstElementChild.cloneNode()
+      const sync = () => { try { frame.contentDocument.documentElement.setAttribute('data-theme', document.documentElement.classList.contains('light') ? 'light' : 'dark') } catch (_) {} }
+      frame.addEventListener('load', sync)
+      new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+      load.parentElement.replaceWith(frame)
+      frame.focus()
+    }, { once: true })
   })()
 </script>
 <script src="https://ai-automation-tools.dev/consent.js" defer></script>
