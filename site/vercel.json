@@ -15,7 +15,11 @@
       ]
     },
     {
-      "source": "/(favicon.svg|diagram/(.*))",
+      "source": "/favicon.svg",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
+    },
+    {
+      "source": "/diagram/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
     }
   ]

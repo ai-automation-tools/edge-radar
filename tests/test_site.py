@@ -54,12 +54,14 @@ def test_public_headers_allow_every_external_origin(public: str) -> None:
     assert hdrs["X-Content-Type-Options"] == "nosniff"
     csp = dict(d.strip().split(" ", 1) for d in hdrs["Content-Security-Policy"].split(";"))
     assert csp["frame-ancestors"] == "'self'" and csp["object-src"] == "'none'"
-    sheets = [t for t in re.findall(r"<link[^>]*>", public) if 'rel="stylesheet"' in t]
+    sheets = [
+        t for t in re.findall(r"<link\b[^>]*>", public, re.I) if 'rel="stylesheet"' in t.lower()
+    ]
     for tags, directive in (
-        (re.findall(r"<script[^>]*>", public), "script-src"),
+        (re.findall(r"<script\b[^>]*>", public, re.I), "script-src"),
         (sheets, "style-src"),
     ):
-        for url in re.findall(r'(?:src|href)="(https://[^"/]+)', " ".join(tags)):
+        for url in re.findall(r'(?:src|href)="(https://[^"/]+)', " ".join(tags), re.I):
             assert url in csp[directive], f"{url} missing from {directive}"
 
 
