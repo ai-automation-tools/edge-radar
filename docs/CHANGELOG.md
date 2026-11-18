@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-11-18 -- logs/ stays bounded (ER-28)
+
+- **Ops** new `scripts/shared/prune_logs.py`, run by `maintenance\reconcile.bat` after the nightly
+  reconcile: deletes `<name>_<date>.log` files more than 90 days old and cuts fixed-name logs over 5 MB
+  to their newest 1 MB at a line break. The wrapper still exits with the reconcile's code.
+- **Tests** `tests/test_prune_logs.py`.
+
+---
+
 ## 2026-11-18 -- Security headers on the public site (ER-23)
 
 - **Site** new `site/vercel.json`: a Content-Security-Policy limited to the page's own origin, the org
