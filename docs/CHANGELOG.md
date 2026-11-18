@@ -11,11 +11,15 @@
 - **Fix** Kill switch: while `data/KILL` exists, `create_order` and `intra_exchange_transfer` refuse.
   `DRY_RUN=true` still short-circuits first, so previews are unchanged. Refusals raise
   `OrderRefusedError`, which the executor records per order and never treats as a venue block.
-- **Security** New tracked `.claude/settings.json`: Claude Code asks before any Bash or PowerShell
-  command containing `--execute`, `--go`, `--send-it`, `--mode execute`, `--verify-eligibility`,
-  `create_order` or `intra_exchange_transfer`, and denies edits to `.env`, `.env.longshot` and `keys/`.
-  The `edge-radar` skill is now user-invoked only (`disable-model-invocation`), and `KALSHI_BETTOR`
-  no longer follows a user who "insists" on overriding a risk limit.
+- **Security** New tracked `.claude/settings.json` with a PreToolUse hook,
+  `scripts/hooks/guard_live_orders.py`. It blocks any agent-run Bash or PowerShell command carrying
+  `--execute`, `--go`, `--send-it`, `--mode execute`, `--verify-eligibility`, `create_order` or
+  `intra_exchange_transfer` (read-only commands such as `git` and `grep` pass). A hook, not ask
+  rules, because ask rules don't hold in bypass-permissions sessions; checked in a bypass-mode
+  session. The owner places orders by typing `! <command>`. The settings also deny edits to
+  `.env`, `.env.longshot` and `keys/`. The `edge-radar` skill is now user-invoked only
+  (`disable-model-invocation`) and hands the order command to the user; `KALSHI_BETTOR` no longer
+  follows a user who "insists" on overriding a risk limit.
 - **Docs** Betting diagram re-pinned: the "Place order" node cites the new guard and reads
   "DRY_RUN, cap, KILL block"; the knobs card lists `data/KILL`.
 

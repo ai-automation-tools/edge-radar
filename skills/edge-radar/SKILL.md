@@ -378,7 +378,7 @@ Unless `--execute` or `--go` was passed, **always ask the user to confirm** befo
 
 ### Step 5: Execute
 
-Once confirmed, add `--execute` to the scan command. All 4 scanners support `--execute`, `--unit-size`, `--max-bets`, and `--pick` directly.
+Once confirmed, add `--execute` to the scan command and **give it to the user to run themselves** as `! <command>` in the prompt. A PreToolUse hook (`scripts/hooks/guard_live_orders.py`, ER-01) blocks any agent-run command that can place orders, in every permission mode. All 4 scanners support `--execute`, `--unit-size`, `--max-bets`, and `--pick` directly.
 
 > **R26 row-order lock (sports scanner only, 2026-04-29):** When `--execute` is paired with `--pick` or `--ticker`, the executor replays the previous preview's cached rows from `data/cache/last_scan.json` instead of rescanning live. Row indices map to the same tickers the user saw — drift between calls no longer reorders the table. Re-use the same filter args (`--filter`, `--date`, `--exclude-open`, `--min-edge`, `--top`) on both calls; if any change, a bold red banner warns that picks reference a NEW ranking and the executor rescans. Pass `--rescan` to opt out (force live rescan); set `SCAN_CACHE_ENABLED=false` in `.env` to disable globally.
 
@@ -432,7 +432,7 @@ After execution, summarize:
 | `/edge-radar reconcile` | `kalshi_settler.py reconcile` |
 | `/edge-radar risk` | `risk_check.py` |
 | `/edge-radar detail KXNBAGAME-26MAR25LALBOS-LAL` | `edge_detector.py detail KXNBAGAME-26MAR25LALBOS-LAL` |
-| `/edge-radar bet nba --go --unit-size 1 --max-bets 3` | `scan.py sports --filter nba --execute --unit-size 1 --max-bets 3` (skips the preview step; Claude Code still asks before running it, per `.claude/settings.json`) |
+| `/edge-radar bet nba --go --unit-size 1 --max-bets 3` | `scan.py sports --filter nba --execute --unit-size 1 --max-bets 3` (skips the preview step; the user runs it as `! <command>`, since the ER-01 hook blocks agent-run order commands) |
 | `/edge-radar scan all` | `scan.py sports` (no filter = all sports) |
 | `/edge-radar scan all --date today` | `scan.py sports --date today` (all sports, today only) |
 | `/edge-radar bet all --unit-size 1 --max-bets 10` | `scan.py sports --unit-size 1 --max-bets 10` then confirm then `--execute` |
@@ -721,7 +721,7 @@ Flags: `--sport`, `--category`, `--confidence`, `--min-edge`, `--after`, `--simu
 ## Safety Rules
 
 1. **Always check status first** before any scan or bet — if daily loss limit is breached, STOP.
-2. **Never execute without confirmation** unless `--execute`/`--go` was explicitly passed.
+2. **Never execute yourself.** Order-placing commands are the user's to run (`! <command>`); the ER-01 hook blocks them for agents.
 3. **Preview is the default** — every scan shows a table first, orders only placed with `--execute`.
 4. **Fifteen risk gates enforced** — daily loss, position count, edge (per-sport), market price floor (3.5, R7), composite score, min confidence (4.5), NO-side favorite guard (4.6, R1), NO-side global edge floor (4.6b, R28), prediction-market safety (4.7, R25), live/in-play safety (4.8, L1), duplicate ticker, per-event cap, series dedup, max bet size, bet ratio cap All checked before every order. Plus the resting-order janitor at the top of every live execute run.
 5. **API keys are in `.env`** — never print, log, or expose them.

@@ -45,7 +45,7 @@ Three script directories, all run from the repo root via Bash.
 | Scan specific sport | `python scripts/kalshi/kalshi_executor.py run --filter <sport>` |
 | Scan prediction markets | `python scripts/kalshi/kalshi_executor.py run --prediction --filter <category>` |
 | Scan futures/championships | `python scripts/kalshi/futures_edge.py scan --filter <sport>-futures` |
-| Execute bets | `python scripts/kalshi/kalshi_executor.py run --execute --max-bets <N>` |
+| Execute bets (user runs it, `! <command>`) | `python scripts/kalshi/kalshi_executor.py run --execute --max-bets <N>` |
 | Settle completed bets | `python scripts/kalshi/kalshi_settler.py settle` |
 | Performance report | `python scripts/kalshi/kalshi_settler.py report` |
 | Detailed P&L breakdown | `python scripts/kalshi/kalshi_settler.py report --detail` |
@@ -231,7 +231,7 @@ When the user starts a session with you, automatically:
 3. Show the preview table to the user
 4. Explain the top opportunities briefly
 5. User says "go" or "execute" or adjusts parameters
-6. You run: python scripts/kalshi/kalshi_executor.py run --filter nba --execute --max-bets <N>
+6. Give the user the command to run themselves: ! python scripts/kalshi/kalshi_executor.py run --filter nba --execute --max-bets <N>
 7. Report results: orders placed, fill status, total cost
 8. Remind user to settle after games complete
 ```
@@ -243,7 +243,7 @@ When the user starts a session with you, automatically:
 2. You run: python scripts/kalshi/futures_edge.py scan --filter nfl-futures
 3. Show opportunities -- explain N-way de-vigged fair values
 4. User says "go" or adjusts
-5. You run: python scripts/kalshi/kalshi_executor.py run --filter nfl-futures --execute --max-bets <N>
+5. Give the user the command to run themselves: ! python scripts/kalshi/kalshi_executor.py run --filter nfl-futures --execute --max-bets <N>
 6. Note: futures tie up capital for weeks/months -- mention this
 ```
 
@@ -281,7 +281,7 @@ When the user starts a session with you, automatically:
 
 ## What You Do NOT Do
 
-- **Never place bets without showing the user first** and getting a "go ahead" for that preview (the harness also asks before any `--execute` command)
+- **Never place bets without showing the user first** and getting a "go ahead" for that preview; the user then runs the order command themselves (`! <command>`), because the ER-01 hook blocks it for agents
 - **Never modify .env, risk limits, or system configuration** -- that's the user's domain
 - **Never fabricate odds, edges, or P&L numbers** -- always run the actual scripts
 - **Never continue betting after daily loss limit is hit**
