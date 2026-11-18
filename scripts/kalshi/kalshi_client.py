@@ -18,7 +18,9 @@ Usage:
 import datetime
 import base64
 import logging
+import random
 import sys
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -45,6 +47,19 @@ V2_XFER_PATH = "/portfolio/intra_exchange_instance_transfer"
 # ER-01: client-level kill switch. While this file exists, every real order and
 # transfer is refused, whatever called the client (executor, doctor, a one-liner).
 KILL_FILE = Path(__file__).resolve().parent.parent.parent / "data" / "KILL"
+
+
+# ER-46: the only hosts treated as demo. Anything else is live, so DRY_RUN guards
+# it -- a substring test made any URL containing "demo" (a path, a typo'd host)
+# skip the DRY_RUN block on create_order and place real orders.
+DEMO_HOSTS = frozenset({"demo-api.kalshi.co"})
+
+# ER-44: extra attempts for an idempotent GET after a transport error, a 429 or
+# a 5xx. POST and DELETE are never retried here (see `_request`).
+GET_RETRIES = 2
+
+# ER-40: page cap when following `cursor`, so a venue bug can't loop forever.
+MAX_PAGES = 50
 
 
 def _refuse_if_killed(what: str) -> None:
@@ -100,7 +115,7 @@ class KalshiClient:
                 )
             self._private_key = self._load_private_key(key_file)
 
-        self.is_demo = "demo" in self.base_url
+        self.is_demo = (urlparse(self.base_url).hostname or "").lower() in DEMO_HOSTS
         self.dry_run = cfg.system.dry_run
 
         log.info(
@@ -159,7 +174,42 @@ class KalshiClient:
         body: dict | None = None,
         timeout: int = 15,
     ) -> dict:
-        """Make an authenticated request to the Kalshi API."""
+        """Make an authenticated request, retrying a failed GET with jittered backoff.
+
+        ER-44: a GET changes nothing, so a lost response, a 429 or a 5xx is worth
+        another try (the balance endpoint now allows 1 request/second). POST and
+        DELETE get exactly one attempt: after a lost create_order response the
+        order may exist, which ER-13's client_order_id lookup handles.
+        """
+        attempts = 1 + (GET_RETRIES if method.upper() == "GET" else 0)
+        for attempt in range(attempts):
+            try:
+                return self._request_once(method, path, params, body, timeout)
+            except KalshiAPIError as e:
+                retryable = e.status_code in (0, 429) or e.status_code >= 500
+                if not retryable or attempt + 1 == attempts:
+                    raise
+                delay = 0.5 * 2**attempt + random.uniform(0, 0.25)
+                log.warning(
+                    "Kalshi GET %s failed (%s), retry %d/%d in %.1fs",
+                    path,
+                    e.status_code or "no response",
+                    attempt + 1,
+                    attempts - 1,
+                    delay,
+                )
+                time.sleep(delay)
+        raise AssertionError("unreachable")
+
+    def _request_once(
+        self,
+        method: str,
+        path: str,
+        params: dict | None,
+        body: dict | None,
+        timeout: int,
+    ) -> dict:
+        """One authenticated request to the Kalshi API."""
         url = f"{self.base_url}{path}"
         if params:
             # Filter out None values
@@ -205,6 +255,20 @@ class KalshiClient:
 
     def _delete(self, path: str, body: dict | None = None) -> dict:
         return self._request("DELETE", path, body=body)
+
+    def _get_all(self, path: str, params: dict, list_keys: tuple[str, ...]) -> dict:
+        """GET every page, following `cursor` (ER-40); `list_keys` are concatenated."""
+        out = self._get(path, params)
+        for _ in range(MAX_PAGES - 1):
+            if not out.get("cursor"):
+                return out
+            page = self._get(path, {**params, "cursor": out["cursor"]})
+            for k in list_keys:
+                out[k] = (out.get(k) or []) + (page.get(k) or [])
+            out["cursor"] = page.get("cursor", "")
+        if out.get("cursor"):
+            log.warning("%s: stopped after %d pages, results may be incomplete", path, MAX_PAGES)
+        return out
 
     # ── Market Data (public-ish, but we sign anyway) ──────────────────────────
 
@@ -315,18 +379,22 @@ class KalshiClient:
 
         Args:
             count_filter: "position" (non-zero position) or "total_traded"
+
+        Without a `cursor`, every page is fetched and merged (ER-40), so `limit`
+        is the page size, not a cap. Pass a cursor to read one page.
         """
-        return self._get(
-            "/portfolio/positions",
-            params={
-                "limit": limit,
-                "cursor": cursor,
-                "ticker": ticker,
-                "event_ticker": event_ticker,
-                "count_filter": count_filter,
-                "subaccount": self.subaccount,
-            },
-        )
+        params = {
+            "limit": limit,
+            "cursor": cursor,
+            "ticker": ticker,
+            "event_ticker": event_ticker,
+            "count_filter": count_filter,
+            "subaccount": self.subaccount,
+        }
+        if cursor:
+            return self._get("/portfolio/positions", params)
+        keys = ("market_positions", "event_positions")
+        return self._get_all("/portfolio/positions", params, keys)
 
     def get_fills(
         self,
@@ -618,17 +686,20 @@ class KalshiClient:
 
         Args:
             status: resting | canceled | executed
+
+        Without a `cursor`, every page is fetched and merged (ER-40); pass a
+        cursor to read one page.
         """
-        return self._get(
-            "/portfolio/orders",
-            params={
-                "limit": limit,
-                "cursor": cursor,
-                "ticker": ticker,
-                "status": status,
-                "subaccount": self.subaccount,
-            },
-        )
+        params = {
+            "limit": limit,
+            "cursor": cursor,
+            "ticker": ticker,
+            "status": status,
+            "subaccount": self.subaccount,
+        }
+        if cursor:
+            return self._get("/portfolio/orders", params)
+        return self._get_all("/portfolio/orders", params, ("orders",))
 
     # ── Account / Subaccounts ────────────────────────────────────────────────
 
@@ -662,11 +733,20 @@ class KalshiClient:
     # ── Convenience / Analysis ────────────────────────────────────────────────
 
     def get_balance_dollars(self) -> dict:
-        """Get balance formatted in dollars instead of cents."""
+        """Get balance in dollars.
+
+        ER-43: reads the venue's `*_dollars` strings when present and falls back
+        to the integer-cents fields; a missing or null value reads as 0.
+        """
         raw = self.get_balance()
+
+        def dollars(key: str) -> float:
+            d = raw.get(f"{key}_dollars")
+            return float(d) if d not in (None, "") else float(raw.get(key) or 0) / 100
+
         return {
-            "balance": raw.get("balance", 0) / 100,
-            "portfolio_value": raw.get("portfolio_value", 0) / 100,
+            "balance": dollars("balance"),
+            "portfolio_value": dollars("portfolio_value"),
             "updated_ts": raw.get("updated_ts"),
         }
 
