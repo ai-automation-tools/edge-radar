@@ -105,3 +105,11 @@ def test_missing_report_on_execute_preset_is_a_failure(tmp_path, monkeypatch):
 def test_non_execute_preset_never_fails(tmp_path, monkeypatch):
     monkeypatch.setattr(r, "REPO", tmp_path)
     assert r.failure("daily-summary", 3) is None
+
+
+def test_subject_carries_the_report_mode_line():
+    """ER-12: the subject says LIVE and how many orders were really placed."""
+    body = "# Sports Execution Report\n\n**LIVE · REAL MONEY · PROD** · 0 placed · 3 blocked\n"
+    want = "Edge-Radar | X | LIVE · REAL MONEY · PROD · 0 placed · 3 blocked"
+    assert r.with_mode("Edge-Radar | X", body) == want
+    assert r.with_mode("Edge-Radar | X", "# Daily Summary\n\n**Status: OK**\n") == "Edge-Radar | X"

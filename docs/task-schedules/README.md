@@ -351,6 +351,10 @@ cd /d "%~dp0..\..\.."
 - **Failed execute run (ER-07):** for the five execute presets, a non-zero `exit code` in the scan log or no
   fresh report sends `[FAILED] <subject>` with the log's last run and exits **1**. Every execute run writes a
   report, even with zero bets, so a missing one means the scan died.
+- **Mode in the subject (ER-12):** an execution report opens with a mode line such as
+  `**LIVE · REAL MONEY · PROD** · 2 placed · 1 failed`, and the subject gets it appended:
+  `Edge-Radar | Same Day Execution Report | LIVE · REAL MONEY · PROD · 2 placed · 1 failed`. A live run that
+  placed nothing says `0 placed`. Other modes: `DRY RUN · nothing sent`, `DEMO · paper orders`, `PREVIEW · …`.
 - **No fresh report, other presets:** exits 2 and sends nothing. A stale email is worse than none.
 - **Preview:** `render_report_email.py same-day --dry-run out.html`. **Probe Resend without spending quota:** `send_report_email.py --check`.
 - Every successful send stamps `logs/last_email_sent.json`, so a broken mail path is detectable on its own.
