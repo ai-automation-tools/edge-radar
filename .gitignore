@@ -64,6 +64,8 @@ notebooks/analysis/*.html
 
 
 # === Project-specific ===
+# Local screenshots and images (ER-51 untracked the old ones; never commit these).
+.claude/images/
 .claude/memory/
 # Per-machine Claude Code permission settings — local only.
 .claude/settings.local.json

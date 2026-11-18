@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-18 -- Keep local images ignored
+
+- **`.gitignore`** ignores `.claude/images/` again. ER-51 removed the tracked files there and the old
+  `.claude/images/screenshots/` rule with them, which left a checkout's local screenshots showing as
+  untracked files that `git add -A` would commit.
+
+---
+
 ## 2026-11-18 -- Stale branches (ER-49)
 
 - **GitHub** Deleted 13 stale remote branches (every PR merged or abandoned; the head SHAs are in
