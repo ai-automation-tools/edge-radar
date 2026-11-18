@@ -4,8 +4,8 @@
     Recreate the .claude/skills junctions that point at the canonical /skills source.
 
 .DESCRIPTION
-    The Edge-Radar Claude Code skills (edge-radar, edge-radar-analysis) live once,
-    under /skills at the repo root. Claude Code only discovers skills under
+    The Edge-Radar Claude Code skills live once, under /skills at the repo root
+    (every folder there with a SKILL.md is linked; there is no list to keep). Claude Code only discovers skills under
     .claude/skills/, so each is wired up as a Windows directory *junction*
     pointing back to /skills.
 
@@ -23,24 +23,28 @@ $ErrorActionPreference = 'Stop'
 
 # Repo root = two levels up from this script (scripts/setup/ -> repo).
 $repo   = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$skills = @('edge-radar', 'edge-radar-analysis', 'betting-logic-review')
+$skills = Get-ChildItem -LiteralPath (Join-Path $repo 'skills') -Directory |
+    Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'SKILL.md') } |
+    Select-Object -ExpandProperty Name
+New-Item -ItemType Directory -Force -Path (Join-Path $repo '.claude\skills') | Out-Null
 
 foreach ($name in $skills) {
     $link   = Join-Path $repo ".claude\skills\$name"
     $target = Join-Path $repo "skills\$name"
 
-    if (-not (Test-Path -LiteralPath $target)) {
-        Write-Warning "Source missing: $target - skipping '$name' (is /skills present?)"
-        continue
-    }
-
     if (Test-Path -LiteralPath $link) {
         $item = Get-Item -LiteralPath $link -Force
-        if ($item.LinkType -eq 'Junction' -and ($item.Target -contains $target)) {
+        if ($item.LinkType -eq 'Junction' -and ($item.Target -ccontains $target)) {
             Write-Host "ok      .claude/skills/$name already linked"
             continue
         }
-        Remove-Item -LiteralPath $link -Recurse -Force
+        if ($item.LinkType) {
+            # Remove the link itself. Remove-Item -Recurse can follow a junction
+            # and empty the real skill folder it points at.
+            $item.Delete()
+        } else {
+            Remove-Item -LiteralPath $link -Recurse -Force  # a stray copy, not a link
+        }
     }
 
     New-Item -ItemType Junction -Path $link -Target $target | Out-Null

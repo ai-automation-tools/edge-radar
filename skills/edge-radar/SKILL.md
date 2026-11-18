@@ -3,6 +3,7 @@ name: edge-radar
 description: Unified Edge-Radar skill for scanning markets, placing wagers, managing portfolio, settling bets, and researching edge across Kalshi sports, futures, and prediction markets. Covers all scripts, filters, risk gates, and workflows.
 argument-hint: <action> [market/filter] [flags] — e.g., "scan nba", "bet mlb --unit-size 2", "status", "settle", "detail TICKER"
 user-invocable: true
+model: opus
 disable-model-invocation: true
 allowed-tools: Read, Bash, Glob, Grep
 ---

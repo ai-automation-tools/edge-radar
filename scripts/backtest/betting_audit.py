@@ -476,7 +476,12 @@ def run_analysis(status: str, md_path: Path, json_path: Path, timeout: int = 120
         # A bare `--allowedTools` only pre-approved them; anything else the user's
         # settings allowed still ran, unattended, in the live checkout.
         proc = run_agent(
-            prompt, cwd=ROOT, timeout=timeout, allow_tools=["Read", "Grep", "Glob"], max_turns=40
+            prompt,
+            cwd=ROOT,
+            timeout=timeout,
+            model="opus",  # reads the live book; see AUTOMATION_GUIDE model table
+            allow_tools=["Read", "Grep", "Glob"],
+            max_turns=40,
         )
     except (OSError, subprocess.TimeoutExpired) as e:
         return f"## Analysis\n\n_Analysis pass failed: {e}_\n"

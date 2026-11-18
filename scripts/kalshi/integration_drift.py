@@ -382,6 +382,7 @@ def run_analysis(status: str, md_path: Path, json_path: Path, timeout: int = 900
             prompt,
             cwd=paths.PROJECT_ROOT,
             timeout=timeout,
+            model="sonnet",  # read-only docs triage; see AUTOMATION_GUIDE model table
             allow_tools=["Read", "Grep", "Glob", "WebFetch", "WebSearch"],
             max_turns=40,
         )
