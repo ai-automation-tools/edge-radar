@@ -49,7 +49,8 @@ Background on the math, if a finding needs it: [Kelly sizing](references/kelly-c
 2. **Distinguish live from latent.** A wrong constant behind a code path nothing
    currently reaches is a *latent* finding — say so, and say what would activate it.
    Do not inflate it to Critical.
-3. **Read `docs/CHANGELOG.md` before flagging a design choice.** Most of the
+3. **Read `docs/RULES-RATIONALE.md` (and the dated `docs/CHANGELOG.md` entry, or
+   `docs/changelog/<YYYY-MM>.md` before 2026-10) before flagging a design choice.** Most of the
    surprising decisions (no correlation guard, `high` capped to `medium`, soccer
    stdev 1.8) were measured and deliberate. Re-litigating them wastes the review.
    If you disagree, cite new evidence.

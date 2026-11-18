@@ -452,7 +452,8 @@ def build(now: datetime, days: int = 60, recent: int = 14) -> tuple[str, str, di
 
 ANALYSIS_PROMPT = """You are reviewing Edge-Radar's weekly betting audit (status {status}).
 Report: {md}. Raw data: {js}. Repo root is the current directory; AGENTS.md holds the
-rules and docs/CHANGELOG.md the reasoning behind each one. The newest
+rules, docs/RULES-RATIONALE.md the evidence behind each one, and docs/CHANGELOG.md
+(months before 2026-10 in docs/changelog/) the dated history. The newest
 docs/my-documents/repo-reviews/*-betting-logic-review.md says what was already found.
 
 For each flag: trace it to the code (scripts/kalshi/edge_detector.py,

@@ -41,7 +41,7 @@ Parse the user's intent from the arguments. The skill supports natural language 
 |------|---------|-------------|
 | `--unit-size N` or `$N` (dollar amount) | `$1.00` | Dollar amount per bet |
 | `--max-bets N` | `5` | Maximum bets to place |
-| `--min-edge N` | `0.03` global; `0.04` NBA/NCAAB/MLB | Minimum edge. Per-sport overrides via `MIN_EDGE_THRESHOLD_<SPORT>` env. NBA/NCAAB/MLB run a `0.04` peer floor (lowered from 0.06 on 2026-06-14 — the 06-03/06-05 edge-matching fixes de-inflated edges, so the higher floor was double-correcting the model's ~15% over-claim; 2-4 week experiment, recalibrate on fresh post-fix data). |
+| `--min-edge N` | `0.03` global | Minimum edge; per-sport floors via `MIN_EDGE_THRESHOLD_<SPORT>` (run `doctor.py` for the live values) |
 | `--execute`, `--go`, `--send-it` | off | Skip preview, execute immediately |
 | `--dry-run`, `--preview` | on (default) | Preview only, no orders |
 | `--save` | off | Save results as markdown report to `reports/` |
@@ -73,94 +73,6 @@ Market types: `sports`, `futures`, `prediction`. (`polymarket` / `poly` / `pm` w
 Aliases: `sport` = `sports`, `pred` = `prediction`.
 
 The `scan` subcommand is auto-inserted if omitted. All flags are forwarded directly.
-
-### Makefile Shortcuts
-
-For quick access, the Makefile provides 22 targets:
-
-```bash
-make scan-mlb          # Scan MLB today, exclude open, save report
-make scan-nba          # Scan NBA
-make scan-nhl          # Scan NHL
-make scan-nfl          # Scan NFL
-make scan-sports       # All sports
-make scan-futures      # All futures
-make scan-predictions  # All prediction markets
-make scan-all          # Everything
-make status            # Portfolio status
-make risk              # Risk dashboard
-make settle            # Settle completed bets
-make report            # P&L report
-make reconcile         # Compare local log vs API
-make backtest          # Full backtest analysis
-make backtest-sim      # Strategy-comparison simulation + save
-make doctor            # Environment validator (shows the config actually in force)
-make test              # Run full test suite (667 tests)
-make test-quick        # Quick test run (stop on first failure)
-make lint-config       # Guard: block new os.getenv from bypassing app/config.py
-make install           # Install dependencies
-make hooks             # Install pre-commit hooks
-make help              # List all targets
-```
-
----
-
-## Filter Quick Reference
-
-### Sports (Game Betting) — `edge_detector.py`
-
-| Filter | Sport | Edge Detection |
-|--------|-------|----------------|
-| `nba` | NBA Basketball | Yes |
-| `nhl` | NHL Hockey | Yes |
-| `mlb` | MLB Baseball | Yes |
-| `nfl` | NFL Football | Yes (seasonal) |
-| `ncaamb` | NCAA Men's Basketball | Yes |
-| `ncaabb` | NCAA Basketball (additional) | Yes |
-| `ncaawb` | NCAA Women's Basketball | Browse only |
-| `ncaafb` | NCAA Football | Browse only |
-| `mls` | MLS Soccer | Browse only |
-| `soccer` | All soccer combined | Browse only |
-| `ucl`, `epl`, `laliga`, `seriea`, `bundesliga`, `ligue1` | European leagues | Browse only |
-| `ufc`, `boxing` | Combat sports | Browse only |
-| `f1`, `nascar` | Motorsports | Browse only |
-| `pga` | PGA Golf (majors) | Yes — routes to futures (4 majors only) |
-| `ipl` | IPL Cricket | Browse only |
-| `cs2`, `lol`, `esports` | Esports | Browse only |
-| `tennis`, `wimbledon` | ATP + WTA match-winner | Yes — needs date-tolerant matching (`_is_tennis_market()`), since tennis tickers don't carry a reliable start time |
-| `wc`, `worldcup` | World Cup (`KXWCSPREAD` etc.) | Yes |
-
-37 filter shortcuts are registered in `FILTER_SHORTCUTS` (`scripts/kalshi/edge_detector.py`) — the table above covers the common ones. When unsure, read that dict rather than guessing.
-
-**Market types per sport.** Most sports scan all three of moneyline / spread / total. **MLB was moneyline-only until 2026-07-20**, when `KXMLBSPREAD` + `KXMLBTOTAL` were wired in (they'd launched on Kalshi after MLB was first integrated in March and were silently absent from the maps). First scan after the fix went 106 → 407 MLB markets. Deep-bracket MLB Unders are a young, uncalibrated sub-population — treat high claimed edges there with suspicion until more settle.
-
-### Futures (Championships) — `futures_edge.py`
-
-| Filter | What It Scans | Edge Detection |
-|--------|---------------|----------------|
-| `futures` | All futures | Yes (where available) |
-| `nfl-futures` / `superbowl` | Super Bowl champion | Yes |
-| `nba-futures` | NBA Finals + conferences | Yes |
-| `nhl-futures` | Stanley Cup + conferences | Yes |
-| `mlb-futures` | World Series + playoffs | Yes |
-| `ncaab-futures` | NCAAB MOP | Yes |
-| `golf-futures` | Golf major winners (4 majors only) | Yes |
-
-### Prediction Markets — `prediction_scanner.py`
-
-| Filter | Category | Edge Detection | Data Source |
-|--------|----------|----------------|-------------|
-| `crypto`, `btc`, `eth`, `xrp`, `doge`, `sol` | Crypto prices | Yes | CoinGecko |
-| `weather` | Temperature forecasts | Yes | NWS API |
-| `spx`, `sp500` | S&P 500 levels | Yes | Yahoo Finance + VIX |
-| `mentions`, `lastword`, `nbamention`, `foxnews`, `politicsmention` | TV mentions | Yes | Historical rates |
-| `companies`, `bankruptcy`, `ipo` | Corporate events | Partial | Historical baseline |
-| `politics`, `impeach` | Political events | Yes | Time-decay model |
-| `techscience`, `quantum`, `fusion` | Tech milestones | Yes | Time-decay model |
-
-### Raw Ticker Prefixes
-
-Any Kalshi ticker prefix works as a filter (e.g., `KXNHLGOAL`, `KXNBA3PT`, `KXUFCFIGHT`).
 
 ---
 
@@ -194,16 +106,9 @@ Morning P&L digest. Joins yesterday's settlements (rolling 24h window) with curr
 .venv/Scripts/python.exe scripts/kalshi/daily_summary.py --no-bankroll         # skip Kalshi balance fetch
 ```
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--hours N` | `24` | Rolling-window size for "yesterday" |
-| `--save` | off | Write to `reports/Performance/daily_summary_YYYY-MM-DD.md` |
-| `--out PATH` | (none) | Explicit output path (overrides `--save` default) |
-| `--no-bankroll` | off | Skip live Kalshi balance fetch (offline-safe) |
+`--hours N` (default 24), `--out PATH`, `--no-bankroll` (offline), `--no-ops` (skip the ops-health table).
 
-Sections: **Yesterday** (W-L, P&L, ROI, per-sport table, top-win/top-loss), **Open Exposure** ($ at risk + per-sport split), **Pending Today** (open positions whose game datetime lands today PST), **Context** (live Kalshi balance + 7-day rolling line: WR, P&L, Brier).
-
-**Automated cadence (U2, 2026-04-30):** `\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\Daily-Summary` runs daily at 4:50 AM PT and emails it as the same task's second action (`render_report_email.py daily-summary`; the separate `Email-Daily-Summary` task was merged in 2026-09-23). The digest lands before the 5:05 AM same-day execute so "Open Exposure" reflects overnight carry rather than today's new fills.
+Sections: **Ops health** first (scheduled tasks, settlement, backup), then **Yesterday**, **Open Exposure**, **Pending Today**, **Context**. The `Daily-Summary` task runs it at 4:50 AM PT and emails it (`docs/task-schedules/README.md`).
 
 ---
 
@@ -379,8 +284,6 @@ Unless `--execute` or `--go` was passed, **always ask the user to confirm** befo
 
 Once confirmed, add `--execute` to the scan command and **give it to the user to run themselves** as `! <command>` in the prompt. A PreToolUse hook (`scripts/hooks/guard_live_orders.py`, ER-01) blocks any agent-run command that can place orders, in every permission mode. All 4 scanners support `--execute`, `--unit-size`, `--max-bets`, and `--pick` directly.
 
-> **R26 row-order lock (sports scanner only, 2026-04-29):** When `--execute` is paired with `--pick` or `--ticker`, the executor replays the previous preview's cached rows from `data/cache/last_scan.json` instead of rescanning live. Row indices map to the same tickers the user saw — drift between calls no longer reorders the table. Re-use the same filter args (`--filter`, `--date`, `--exclude-open`, `--min-edge`, `--top`) on both calls; if any change, a bold red banner warns that picks reference a NEW ranking and the executor rescans. Pass `--rescan` to opt out (force live rescan); set `SCAN_CACHE_ENABLED=false` in `.env` to disable globally.
-
 **Sports:**
 ```bash
 python scripts/scan.py sports \
@@ -414,306 +317,16 @@ After execution, summarize:
 
 ---
 
-## Routing Examples
-
-| User Says | Command |
-|-----------|---------|
-| `/edge-radar nba` | `scan.py sports --filter nba` |
-| `/edge-radar bet mlb --unit-size 2 --max-bets 10` | `scan.py sports --filter mlb --unit-size 2 --max-bets 10` then confirm then `--execute` |
-| `/edge-radar mlb --date tomorrow --exclude-open` | `scan.py sports --filter mlb --date tomorrow --exclude-open` |
-| `/edge-radar nba --category spread` | `scan.py sports --filter nba --category spread` |
-| `/edge-radar nba-futures` | `scan.py futures --filter nba-futures` |
-| `/edge-radar superbowl` | `scan.py futures --filter nfl-futures` |
-| `/edge-radar crypto` | `scan.py prediction --filter crypto` |
-| `/edge-radar weather --min-edge 0.05` | `scan.py prediction --filter weather --min-edge 0.05` |
-| `/edge-radar status` | `kalshi_executor.py status` |
-| `/edge-radar settle` | `kalshi_settler.py settle` + `report --detail` |
-| `/edge-radar reconcile` | `kalshi_settler.py reconcile` |
-| `/edge-radar risk` | `risk_check.py` |
-| `/edge-radar detail KXNBAGAME-26MAR25LALBOS-LAL` | `edge_detector.py detail KXNBAGAME-26MAR25LALBOS-LAL` |
-| `/edge-radar bet nba --go --unit-size 1 --max-bets 3` | `scan.py sports --filter nba --execute --unit-size 1 --max-bets 3` (skips the preview step; the user runs it as `! <command>`, since the ER-01 hook blocks agent-run order commands) |
-| `/edge-radar scan all` | `scan.py sports` (no filter = all sports) |
-| `/edge-radar scan all --date today` | `scan.py sports --date today` (all sports, today only) |
-| `/edge-radar bet all --unit-size 1 --max-bets 10` | `scan.py sports --unit-size 1 --max-bets 10` then confirm then `--execute` |
-| `/edge-radar bet mlb --pick '1,3,5'` | `scan.py sports --filter mlb --execute --pick '1,3,5'` (R26: replays last `--filter mlb` preview from `data/cache/last_scan.json`; mismatched filter args trigger a red banner + rescan) |
-| Two-call pattern (preview, then pick) | `scan.py sports --filter mlb --exclude-open` (preview), then `scan.py sports --filter mlb --exclude-open --pick '1,3' --execute` — keep the same flags so R26 replays cleanly. Add `--rescan` to force a live rescan. |
-| `/edge-radar bet mlb --budget 10% --max-bets 5` | `scan.py sports --filter mlb --budget 10% --max-bets 5` then confirm then `--execute` |
-| `/edge-radar bet all --budget 15 --unit-size 1` | `scan.py sports --budget 15 --unit-size 1` then confirm then `--execute` |
-
----
-
-## Report Output
-
-When `--save` is used, the report format depends on whether `--unit-size` was passed:
-
-**With `--unit-size` (execution report):** Sport, Bet, Type, Pick, Qty, Price, Cost, Edge, total cost.
-
-**Without `--unit-size` (scan report):** Sport, Bet, Type, Pick, When, Mkt, Fair, Edge, Conf, Score, Gate.
-
-| Scanner | Report Path |
-|---------|-------------|
-| Sports (scan) | `reports/Sports/{date}_{sport}_sports_scan.md` |
-| Sports (execution) | `reports/Sports/{date}_{sport}_sports_execution.md` |
-| Futures | `reports/Futures/{date}_{category}_futures_scan.md` |
-| Predictions | `reports/Predictions/{date}_{category}_prediction_scan.md` |
-| Settle/P&L | `reports/Accounts/Kalshi/` |
-| Automated | `reports/Sports/schedulers/same-day-executions/` |
-
----
-
-## Risk Limits (Current)
-
-- **Sizing:** Batch-aware Kelly — `(KELLY_FRACTION / batch_size) * trusted_edge(edge) / (1 - price) * bankroll`, with flat unit size as floor. When placing N bets simultaneously, each gets `fraction/N` to prevent over-committing.
-- **Kelly price complement (C11, 2026-07-27):** the `/ (1 - price)` term is the real Kelly for a binary contract (`f* = (q - p) / (1 - p)`). It was missing until 2026-07-27 — the even-money approximation, exact only at 50c — which under-sized favorites by `1/(1-p)` (2.5x at 60c, 5.9x at 83c) and pinned nearly every bet above ~60c to the flat unit floor at 1 contract. The 60c+ band is the best-calibrated in the book (44/52 vs a 73.6% break-even, p=0.044), so this was leaving real money on the table.
-- **Which knob moves what:** below ~30c the flat floor `round(UNIT_SIZE / price)` binds and Kelly never clears it, so **`UNIT_SIZE` is the longshot knob**. Above ~60c Kelly binds and `UNIT_SIZE` is irrelevant, so **`KELLY_FRACTION` is the favorites knob**. They bind at different prices and are tuned independently.
-- **Kelly edge soft-cap (C1, 2026-04-18):** `trusted_edge()` damps the edge used in Kelly sizing above `KELLY_EDGE_CAP=0.15`. Excess is multiplied by `KELLY_EDGE_DECAY=0.5` (e.g., 25% claimed edge sizes like 20%). Raw edge unchanged in gates, reports, and rationale. Calibration showed claimed edges ≥25% realize -35% ROI — this downsizes likely-fake signals.
-- **Budget cap (C11b, 2026-07-27):** `--budget X` caps the total batch cost. Accepts `10%` (of bankroll) or `15` (flat dollars). The budget is a **fixed pool**, so sizing one class of bet up necessarily takes capital from the others. When the batch exceeds it, contracts scale down while preserving Kelly edge-weighting — but **never below a bet's flat unit floor** `round(unit_size / price)`. The cap bisects for the largest feasible scale rather than taking one proportional pass, and drops whole orders (lowest composite first) *only* when the floors alone cannot fit. Each surviving bet keeps at least 1 contract.
-- **Kelly fraction:** `KELLY_FRACTION` in `.env`. Code default 0.25; **live value is 0.5**. It is divided by `batch_size = min(len(opportunities), --max-bets)`, and that divisor doubles as a crude correlation guard (a slate sharing an underlying splits *one* Kelly allocation), which makes it effectively a **portfolio** Kelly fraction. At 1.0 a fully correlated slate reaches full Kelly. **Keep it ≤ 0.5.**
-- **Unit size:** code default $1.00, **live `.env` is $1.00** (minimum per bet, overridable with `--unit-size`). The scheduler `.bat` files pass `--unit-size 1` explicitly — CLI flags beat `.env`, so both must move together.
-- **Max bet size:** code default $100, **live `.env` is $8** (gate 8 — sizing cap, not reject). Backstop only; nothing in the recent book reaches it.
-- **Bet ratio cap:** code default 3.0x, **live `.env` is 5x** batch median cost (gate 9 — sizing cap, not reject)
-
-> **Always run `make doctor` (or `python scripts/doctor.py`) before quoting a limit.** The live `.env` overrides many shipped defaults — the account is small (**~$122 equity as of 2026-08-27** — **$88.06 cash + $33.77 in positions**, after two operator deposits totalling $40; the historical reviews quote the ~$92 it stood at). **The cash figure is the sum across exchange shards** — $73.07 on shard 0, $15.00 on shard 3 (Tennis & Baseball); `doctor.py` prints the split. Because the account is that small, `MAX_DAILY_LOSS` is $30 not $250, and several floors are tuned down accordingly. Quoting the code default as if it were in force is the most common error in this area.
-- **Max per event:** 2 positions on the same game (reject gate)
-- **Series dedup (C5, 2026-04-18; R9, 2026-04-27):** Reject a new bet if the same matchup (sport + team pair, date-agnostic) was bet within the dedup window. Global default `SERIES_DEDUP_HOURS=48`; per-sport overrides via `SERIES_DEDUP_HOURS_<SPORT>` (live: MLB=72, NHL=72 to cover 3-game series cycles after F12 — a NYM/LAD MLB pair bet 49h apart slipped the global window and both lost). Catches consecutive-night series bleeds like the LA Angels @ NY Yankees Apr 13/14/15 pattern. 0 disables (global or per-sport).
-- **Daily loss limit:** code default $250, **live `.env` is $30** (reject gate).
-- **Max open positions:** 50 (reject gate)
-- **Minimum edge (C3, 2026-04-18; lowered 2026-06-14):** 3% global; **4% MLB/NBA/NCAAB** (per-sport overrides via `MIN_EDGE_THRESHOLD_<SPORT>` env). Lowered 0.06 → 0.04 on 2026-06-14 after the 06-03/06-05 edge-matching fixes de-inflated edges — the higher floor had been double-correcting the model's ~15% over-claim (running as a 2-4 week experiment; recalibrate on fresh post-fix data). Rejection message shows the sport-specific floor in use.
-- **Venue eligibility preflight (S3, 2026-08-26):** Before any **live** order, `execute_pipeline` reads `data/cache/venue_eligibility.json` keyed on **venue + product** and refuses to place when the verdict is `blocked` **or `unknown`**. **Fails closed on purpose** — the opposite of gates 3.6/3.7/2b, which fail *open* on missing data: an unmeasurable spread is a sizing question whose worst case is a bad bet, an unverified jurisdiction is a legality question whose worst case is an order the venue is barred from filling. **Dry runs skip it** (they never reach the venue). A **structural** rejection (jurisdiction / permission / KYC) aborts the batch on the **first** occurrence and records the block — those errors are deterministic, so the next order fails identically; between 2026-08-20 and 08-25 Kalshi rejected **16 orders across 6 runs** (3 within one second on 08-20, 4 on 08-23) because the loop kept going. Transient patterns (`insufficient_balance`, rate limits, `deprecated_v1_order_endpoint`, closed market, invalid price) are checked **first** and can never disable a venue. **Nothing clears a block automatically** — only a real venue acceptance (a `dry_run_blocked` response deliberately does not count) or `python scripts/doctor.py --verify-eligibility --ticker <open sports ticker>`, which places a **real** 1¢ unfillable order and cancels it. An `ok` verdict decays to `unknown` after 30 days (`ELIGIBILITY_TTL_DAYS`): Kalshi says it will send further instructions "as necessary to maintain access", so eligibility is a lease. A `blocked` never decays — time passing is not evidence a restriction was lifted. `doctor.py` reports `unknown` as **FAIL**, not WARN.
-- **Never truncate the tail of a venue error.** These messages put the instruction last, and all three surfaces cut it off: the console at 80 chars, the trade log at 200, the daily digest at 110 — which landed on **"Check you…"**, 25 characters short of "Check your email for more details", the entire fix for a six-day outage. All three now route through `venue_eligibility.actionable_reason()`, which elides the **middle** and keeps both ends; the trade log stores the full body. **If you are reporting a venue rejection to the user, quote the end of the message.**
-- **Cumulative exposure ceilings (S4, 2026-08-26):** Gate 2b — `MAX_OPEN_EXPOSURE_PCT` (total open at-risk / equity) and `MAX_SEGMENT_EXPOSURE_PCT` (same, per sport). Code defaults 0/0 = off; **live `.env` is 0.50 / 0.33**. **The only gate that measures a standing total** — `MAX_OPEN_POSITIONS` counts rows, `MAX_PER_EVENT` binds one game, `MAX_BET_RATIO` and `--budget` each bind a single batch, and every one of them passed the whole way while 26 NFL positions accumulated to **31% of a ~$92 bankroll** across roughly a dozen scans over three months. **Denominated in equity (cash + position value), not cash** — every dollar bought subtracts from cash *and* adds to exposure, so a cash denominator climbs at twice the rate of the risk. Segment = `segment_key(ticker)`: the sport, else `unknown`, the same key for positions, resting orders and new bets; deliberately *not* the event key, which Gate 6 already binds and which passed 26 times across 26 events. **Rejects when a ceiling is already breached AND trims** the order to the smaller remaining headroom (`APPROVED_CAPPED_EXPOSURE`) — reject-only would let a book at 49.9% add a full `MAX_BET_SIZE`. The batch loop accumulates approved cost into both counters, so N individually-compliant orders can't walk through together; the R26 replay path re-checks it like gates 5/6/7. **Fails open on unknown equity.** Positions are read from `market_exposure_dollars`, which the v2 API returns as a *string*. **The live 0.50/0.33 was the operator's call over the review's 0.20/0.10, knowing the current book passes** (27.8% total, all NFL) — so it binds on the next pileup, not this one, and doesn't jam other sports behind the frozen NFL book. Not visible in preflight (portfolio state); the scan banner prints standing exposure and the largest segment instead.
-- **Time-to-event cap (S5, 2026-08-26):** Gate 3.7 rejects a **game** market more than `MAX_DAYS_TO_EVENT_FOR_GAME_MARKETS` days before its event. Code default 0 = off; **live `.env` is 14**. **Futures are exempt by category**, not by ticker prefix — `KXMLB-26-LAD` (World Series) and `KXMLBGAME-26AUG26...` share a prefix, so only the scanner's own `category` reliably separates them; a championship's "event" is a whole season. **This caps lead time, not sports:** near-dated college football at 3-4 days out is untouched, while all 26 NFL positions (min 25d, median 35d, max 112d, 20 of them from the one scheduled task with no date filter) would have been blocked. The mechanism it targets: nothing settled for months, so no feedback arrived while exposure stacked. **Fails open** on an unparseable date, like Gate 3.6. Preflight label: `far`. 0 disables.
-- **Sizing is whole-account; spending is per-shard (X1, 2026-08-27):** Kalshi **sharded the exchange on 2026-08-24** — Crypto to shard 2, **Tennis & Baseball (i.e. all of MLB) to shard 3**, everything else on shard 0 — and **cash does not follow the markets**. `bankroll` is `get_balance()["balance"]`, the **sum across every shard** (operator's call 2026-08-27, verified: `8806` before and after a $15 inter-shard move), so an order can be correctly sized against the full balance and still be unspendable where it lands. The venue's error for that is `404 user_not_found` — the market resolves, then the per-shard user lookup does not. `shard_funding.ensure_shard_funded()` runs immediately before each order and moves **exactly the shortfall** from `SHARD_FUNDING_SOURCE` (never a round-up — cash parked on the sports shard cannot back an NFL order), refusing above `MAX_AUTO_SHARD_TRANSFER` (live $25). Kalshi's transfer is **explicitly non-atomic**, so the destination balance is re-read afterwards and the order skipped if still short. Fails **open** on an unknown shard, **closed** on a transfer that did not settle. `AUTO_SHARD_TRANSFER=false` ⇒ the order is **skipped and logged `shard_underfunded`**, never placed to fail. **`cancel_order()` needs `exchange_index` for an off-shard order** — without it the cancel returns a bare `404 not_found`, which the R4 janitor cannot distinguish from "already gone". `doctor.py` prints the per-shard split under the balance.
-
-- **A sport with no settled history does not get live money (S1, 2026-08-26):** NFL was switched off on 2026-08-26 (`MIN_EDGE_THRESHOLD_NFL=1.0`, the F3 unreachable-floor idiom) and has run a 0.06 pilot floor since 2026-09-19 (S1b/S21c; current floors: AGENTS.md). At the switch-off: 24 open live positions, **$28.50 = 31% of bankroll**, entries back to 2026-05-23, and **zero** NFL rows in the settlement log; its `margin_stdev: 13.5` is a hardcoded prior, not a fit. **The `.env` key is a tourniquet, not the rule** — the rule is that a cold-start segment runs in dry-run/pilot until it has evidence, and it becomes mechanical when `strategy_state.json` (S10) ships, at which point the key comes out. **The 24 existing positions are held, not flattened** (S2): exiting a 5-20¢-wide book pays exactly the illiquidity penalty Gate 3.6 exists to avoid. A pre-declared review is armed for **Tuesday 2026-09-15** (Windows task `NFL-Week1-Review`), owned by `scripts/backtest/nfl_week1_review.py` — the only thing permitted to change that key.
-- **Liquidity floor (L2, 2026-08-18):** Gate 3.6 rejects markets whose bid/ask spread exceeds `MAX_BID_ASK_SPREAD` (default 0.05 — dollars on a $0-1 contract) or whose trailing-24h volume is below `MIN_MARKET_VOLUME_24H` (default 0 = off). This enforces the AGENTS.md Hard Stop "the market is clearly illiquid (spread > 5%)", which had been documented since launch but **never implemented** — spread reached scoring only through the soft 20%-weight `liquidity` composite term, which saturates at 0 only at a 50¢ spread, so a 20¢-wide book still scored 6.0/10 there and cleared `MIN_COMPOSITE_SCORE`. The 2026-08-18 NFL Week 1 audit found 13 of 27 open positions past the documented line and 18 of 27 with zero 24h volume. Two consequences drove the fix: edge measured against an ask nobody trades at is largely the spread itself, and a zero-volume book offers no exit before settlement. **Fails open** — an opportunity carrying no recorded spread is not rejected. Preflight label: `illiq`. Either knob at 0 disables that half.
-- **Minimum market price (R7, 2026-04-22):** Gate 3.5 rejects bets priced below `MIN_MARKET_PRICE`. Hard floor with no edge/confidence exception — F10 from the 14-day review showed sub-10¢ bets at 1W-3L with the model claiming "+50% edge" on 8-10¢ longshots. `MIN_MARKET_PRICE=0` disables. **The floor has moved twice: 0.06 → 0.12 (2026-07-14, after a 30d window showed sub-15¢ at 0W-21L) → 0.10 (2026-07-22, deliberate re-opening of the longshot lane). Live value is 0.10.** Treat the current setting as an open experiment: full-history sub-15¢ is 6W-47L / 53 bets, and its headline +47.5% ROI is 99% a single trade — the lane is roughly breakeven ex that winner, and −100% in June / −33% in July. Report it with and without the top winner.
-- **Minimum composite score:** 6.0 (reject gate, confidence is factored into composite)
-- **Minimum confidence (R3, 2026-04-21):** Gate 4.5 rejects opportunities below `MIN_CONFIDENCE` (default `medium`). Values: low | medium | high. Low-confidence bets realized 0W-3L / -105% ROI across two review windows.
-- **NO-side favorite guard (R1, 2026-04-21):** Gate 4.6 rejects NO bets priced below `NO_SIDE_FAVORITE_THRESHOLD=0.25` unless edge ≥ `NO_SIDE_MIN_EDGE=0.25` AND confidence=high. Plus a sizing dampener: NO bets priced below `NO_SIDE_KELLY_PRICE_FLOOR=0.35` are sized at `NO_SIDE_KELLY_MULTIPLIER=0.5` of Kelly (half-Kelly). All 13 high-edge losers in the 14-day window were NO-side.
-- **NO-side global edge floor (R28, 2026-06-23):** Gate 4.6b. On top of R1's favorite guard, **every** NO bet must clear `NO_SIDE_MIN_EDGE_GLOBAL=0.08` — the effective NO floor is `max(per-sport floor, 8%)`. A 90-day review put NO at −7% ROI against YES at +48%. `NO_SIDE_KELLY_MULTIPLIER_GLOBAL` (default 1.0 = off) can additionally shrink all NO sizing. Set the floor to 0 to disable. This gate is doing real work — it is the binding constraint on most NO-side totals.
-- **Live/in-play safety gate (L1, 2026-07):** Gate 4.8 rejects opportunities on already-started games (`is_game_started`) unless `ALLOW_LIVE_BETS=true`. Default off. Preview label: `live-off`. Two supporting knobs for when it *is* enabled: `MAX_LIVE_BOOK_AGE_SECONDS=1200` drops bookmakers whose in-play line is staler than 20 min from the consensus, and `MIN_LIVE_CONSENSUS_BOOKS=3` skips a game whose consensus the stale filter thinned below 3 fresh books (fires only when staleness actually removed books; pre-game is unaffected). `ODDS_LIVE_TTL_SECONDS=45` shortens both cache layers when a sport response contains an in-play event.
-- **NBA consensus-book minimum (R29, 2026-06-23):** NBA games with fewer than `MIN_CONSENSUS_BOOKS_NBA=8` agreeing books drop to `low` confidence, which Gate 4.5 then rejects. Filters stale recreational lines. 0 disables.
-- **High-confidence composite cap (C4, 2026-06-24):** The sports composite weight caps `high` to `medium` (`{low:3, medium:6, high:6}`), so "high" no longer earns a score premium — it can't float no-signal bets up the `--max-bets` queue or help clear Gate 4. The 306-bet review found High at 41.5% WR / +13.5% ROI vs Medium 53.2% / +44.4%, and — decisively — High losing to Medium *at equal claimed edge* (5–10% bucket: 34% vs 63% WR). A tight ≥8-sharp-book consensus means the price is efficient, so a large model edge against it is more likely model error than signal. The `high` **label** is retained and still gates NO-favorite bets at 4.6. Sizing never used confidence. **Scoped to sports only** — futures and prediction earn "high" by different rules and were explicitly out of scope.
-- **Futures composite edge scale (C10, 2026-07-23):** The futures composite used `min(10, edge * 20)` (saturating at a 50% edge) while sports used `min(edge / 0.01, 10)` (saturating at 10%) — one term 5x stricter, dating to a copy-paste on the launch-day commit. Clearing `MIN_COMPOSITE_SCORE=6.0` therefore needed ~11% edge at high confidence / 23% medium / 34% low, against championship futures edges that run 1–4% in practice. **Gate 4 was unreachable**, which explains **0 futures bets in 85 logged trades**. `futures_edge.py` now uses the sports scale. The futures `high: 9` weight is deliberately untouched (C4 scoped futures out, and there's still no futures settlement data).
-- **Pre-wager calibration preflight (2026-07-31):** `execute_pipeline` compares the cached stdevs against what `model_calibration` would compute from current settled data, and warns when they disagree. Deliberately not an age check — the C8 loop spent its whole life writing hardcoded defaults back on schedule with exit 0, so every age-based check said "fresh". A legitimate skip (too few samples) or hold (gap within noise) recomputes to the same value and stays silent. `REQUIRE_FRESH_CALIBRATION=true` turns the warning into a hard stop on `--execute`; default false warns and continues, because most sports are legitimately out of season and halting all betting on a diagnostic is the worse failure.
-- **Calibration staleness TTL (C8, 2026-06-23):** `CALIBRATION_STDEVS_TTL_DAYS=30` caps how old the auto-recalibrated per-sport stdevs in `data/cache/calibration_stdevs.json` may be before the code falls back to hardcoded defaults. Scans log the age on load (`age 17.8 days`) — worth a glance when edges look off.
-- **Prediction-market safety gate (R25, 2026-04-24):** Gate 4.7 rejects opportunities where `opp.category` is `crypto`, `weather`, `spx`, `mentions`, `companies`, or `politics` unless `ALLOW_PREDICTION_BETS=true`. Default off. 2026-04-24 audit surfaced that all 6 prediction modules cache stale data with zero TTL, produce nonsense fair values (Miami weather at $1.00 fair on a 1°F window, crypto +80% "edges" on 4¢ tails), and have placed zero of 173 historical settled bets — no calibration data exists. Kept blocked until R25b (TTL caches) and R25c (rebuild one model with tests) are shipped.
-- **Resting-order janitor (R4, 2026-04-21):** At the top of any `--execute` run (non-dry-run), resting orders older than `RESTING_ORDER_MAX_HOURS=24` with zero fills are auto-cancelled. Partial/full fills untouched — settler handles them. Piggybacks on the 5AM daily execute task; no new scheduler. **Kalshi deprecated the v1 order endpoints mid-2026** — both placement and cancel were migrated to v2 (`/portfolio/events/orders`); v1 now returns HTTP 410 `deprecated_v1_order_endpoint`. The v1 **GET** order endpoints remain current. If you see 410s in `logs/kalshi_executor_*.log`, they predate the 2026-07-21 cancel migration.
-- **Cross-process trade-log lock (M2, 2026-07-20):** `data/history/kalshi_trades.json` is written under a cross-process lock with merge-safe append, so a settle and an execute running concurrently no longer clobber each other. This is what made the hourly settle task safe.
-- **Confidence bumps one-way (R13, 2026-04-24):** `_adjust_confidence_with_stats()` in `edge_detector.py` now drops a tier on `contradicts` but no-ops on `supports`. Applies uniformly to team stats, rest/B2B, and sharp-money signals. 30-day calibration showed High-confidence WR (47%) below Medium (53%) and NBA High at 1-6 / -71% ROI — upward bumps correlated with inflated claimed edge, not better outcomes. Base "high" tier still reachable via the ≥8 sharp-books + tight-consensus rule. No env var.
-- **File-backed Odds API response cache (R24b, 2026-04-28):** Two-tier cache for The Odds API responses — in-process dict in front of a new file-backed layer at `data/cache/odds/<sport_key>__<markets>.json`. Survives across CLI invocations so back-to-back scans (scheduler bursts, dashboard re-renders) don't refetch the same sport keys. Knobs: `ODDS_CACHE_TTL_SECONDS=300` (5 min default — longer than typical filter-fiddling, shorter than meaningful pre-game line movement; 0 disables), `ODDS_CACHE_ENABLED=true`. Hits log `Odds API file cache hit for X (age Ns, M events)` so cache age is visible. Distinct from R23's quota cache at `data/cache/odds_api_quota.json` — that tracks per-key remaining requests, this caches the actual sportsbook payloads.
-- **File-backed scan cache + row-order lock (R26, 2026-04-29):** Each preview's post-dedup, post-risk-gate, post-budget-cap rows are persisted to `data/cache/last_scan.json`. When `--execute --pick/--ticker` is invoked, the executor replays the cached rows instead of rescanning live — so row indices map to the same tickers the user saw in the preview, even if Kalshi prices or composite scores drift between calls. Knobs: `SCAN_CACHE_TTL_SECONDS=600` (10 min default), `SCAN_CACHE_ENABLED=true`. New `--rescan` CLI flag opts out per-call. **Fingerprint mismatch warning:** if any of `{scanner, filter, category, date, exclude_open, min_edge, top}` differ between the preview and the execute call (e.g. `--exclude-open` dropped on the second call), the executor prints a bold red banner explaining `--pick` row numbers will reference a NEW ranking, lists the differing args, and rescans. Pass `--rescan` to silence the warning intentionally. Banner on hit: `Replaying cached preview (N rows, age Xs)`. Motivated by 2026-04-29 user bug where two back-to-back live scans reordered rows and `--pick '1,3,4,5'` placed the wrong bets.
-- **Truthful post-pick cost line (R26 follow-up, 2026-04-29):** When `--pick` or `--ticker` is filtering, the summary now prints `Placing N orders, total cost: $X.XX (selected from M-row menu totaling $Y.YY)` — replacing the old misleading `Total cost: $9.40 of $70.99 available` which showed the menu total even when only 3 of 10 rows were actually placed.
-
-Gates 1-7 (including 2b, 3.05, 3.5, 3.55, 3.6, 3.7, 4.5, 4.6, 4.6b, 4.7, 4.8, 6b) reject orders outright. Gates 8-9 downsize and approve, logging the approval subtype (`APPROVED`, `APPROVED_CAPPED_MAX_BET`, `APPROVED_CAPPED_BET_RATIO`, `APPROVED_CAPPED_EXPOSURE`). **Gate 2b does both** — it rejects at/over a ceiling and trims otherwise.
-
-Preview rows carry a **Gate** column (R18) naming the first gate that would reject at execute time: `ok` · `edge` (3) · `off` (3, sport switched off) · `edge-hi` (3.05) · `price` (3.5) · `price-hi` (3.55) · `illiq` (3.6) · `far` (3.7) · `score` (4) · `conf` (4.5) · `no-fav` (4.6) · `pred-off` (4.7) · `live-off` (4.8). **Static only** — gates 1, 2, 2b, 5, 6 and 7 need live portfolio state, so `ok` means the row itself has no blockers, not that execution will succeed.
-
-> **Where these knobs live (post-2026-04-25):** every env var named in this section is typed, defaulted, and validated in `app/config.py` (the single source of truth — see `CONFIG_CENTRALIZATION_SUMMARY.md` and `docs/CHANGELOG.md` 2026-04-25). User-facing surface is unchanged: still set everything in `.env`; same names, same defaults. The lint guard (`make lint-config`) blocks any new `os.getenv` from sneaking back in.
-
----
-
-## Daily Workflow Reference
-
-### Morning
-```bash
-.venv/Scripts/python.exe scripts/kalshi/daily_summary.py --save  # U2 (2026-04-30) — yesterday + open exposure + 7d context
-make status                    # Check balance & positions
-make settle                    # Settle overnight results
-make report                    # Quick P&L summary
-make risk                      # Check if limits breached
-```
-
-### Scanning
-```bash
-make scan-mlb                  # MLB today, exclude open, save
-make scan-nba                  # NBA scan
-make scan-futures              # All futures
-make scan-predictions          # Prediction markets
-make scan-all                  # Everything
-```
-
-Or with full control:
-```bash
-python scripts/scan.py sports --filter mlb --date today --exclude-open --save
-python scripts/scan.py sports --filter nba
-python scripts/scan.py futures --filter nba-futures
-python scripts/scan.py prediction --filter crypto
-```
-
-### Executing
-```bash
-python scripts/scan.py sports --filter mlb --execute --unit-size 1 --max-bets 10
-python scripts/scan.py sports --filter mlb --execute --unit-size 1 --max-bets 5 --budget 10%
-python scripts/scan.py sports --filter nba --execute --pick '1,3,5'
-```
-
-### Evening
-```bash
-make settle                    # Settle completed bets
-make report                    # Detailed P&L
-make reconcile                 # Compare local vs API
-```
-
----
-
-## Automation
-
-See **[Automation Guide](../../docs/setup/AUTOMATION_GUIDE.md)** for the full setup walkthrough.
-
-### Windows Task Scheduler (Recommended)
-
-```powershell
-# Install morning execution + nightly settlement
-python scripts/schedulers/automation/install_windows_task.py install execute
-python scripts/schedulers/automation/install_windows_task.py install settle
-
-# Or install all four tasks at once
-python scripts/schedulers/automation/install_windows_task.py install all
-
-# Check task status
-python scripts/schedulers/automation/install_windows_task.py status
-
-# Trigger a task immediately (test)
-python scripts/schedulers/automation/install_windows_task.py run execute
-```
-
-Installer profiles (`install_windows_task.py`):
-
-| Profile | Schedule | Description |
-|---------|----------|-------------|
-| `daily-summary` | 4:50 AM PT | Morning P&L digest (U2, 2026-04-30) — yesterday + open exposure + today pending + 7d context. Emailed at 5:00 AM PT |
-| `scan` | 8:00 AM | Preview scan — saves report, no bets |
-| `execute` | 8:00 AM | Scan + execute — places live orders |
-| `settle` | 11:00 PM | Settle bets, update P&L |
-| `next-day` | 9:00 PM | Scan + execute tomorrow's games |
-| `calibration` | 2:00 AM, 1st of month | 30-day calibration report (R16) — Brier, calibration curve, prescriptive recommendations |
-
-**What is actually registered** under `\Edge-Radar-MikesAILab\` differs from the installer profiles above — the live schedule has grown well past them. Read it from the machine rather than this table:
-
-```powershell
-Get-ScheduledTask -TaskPath "\Edge-Radar-MikesAILab\*" |
-  ForEach-Object { $i = $_ | Get-ScheduledTaskInfo
-    [PSCustomObject]@{ Task=$_.TaskName; State=[string]$_.State
-                       LastRun=$i.LastRunTime; Result=$i.LastTaskResult; NextRun=$i.NextRunTime } } |
-  Sort-Object LastRun -Descending | Format-Table -AutoSize
-```
-
-The live execution cadence is four Kalshi runs a day, each emailing its report as a second action (since 2026-09-23; `Daily-Polymarket-Execution` was removed 2026-09-29):
-
-| Time (PT) | Task | Notes |
-|---|---|---|
-| 4:50 AM | `Daily-Summary` | emailed 5:00 AM |
-| 5:05 AM | `All-Sports-SameDay-Execution` | `--date today` |
-| 11:00 AM | `All-Sports-NoDateFilter-Midday-Execution` | no date filter — *can bet games several days out* |
-| 2:00 PM | `All-Sports-SameDay-Late-Execution` | |
-| 8:30 PM | `All-Sports-NextDay-Execution` | `--date tomorrow` |
-| hourly :35 | `Hourly-Settle` | U1 (2026-07-20) |
-| 11:30 PM | `Reconcile` | nightly drift check (`NightlySettle` retired 2026-09-23 — `Hourly-Settle` covers it) |
-| weekly/monthly | `Backtest`, `Weekly-Analysis`, `Calibration`, `MonthlyCalibration`, `WeeklyAccountGraph` | |
-
-`Weekly-Futures-Execution` has been live again since 2026-08-24 and emails its own report as a second action. `R8-Review` and `U2-Review` are registered with one-shot triggers whose start boundaries have passed — they have **never run and will never fire** until re-registered.
-
-> **The three intraday Kalshi executes each pass `--budget 12%` — this is deliberate** (operator-confirmed 2026-07-23). Stale `.bat` headers had long described a de-escalating 12% → 8% → 5% ladder that was never implemented and is not wanted; the headers were corrected to match the flags. **Don't "fix" these back down to the ladder.** The shared ceiling is ~36% of bankroll per day in theory, but `--budget` is a per-batch cap and Gate 5 (`--exclude-open`) plus series dedup keep real deployment to a few dollars a day.
-
-### Bat Scripts (Manual)
-
-```bash
-# Preview only (no bets)
-scripts\schedulers\same_day_executions\same_day_scan.bat
-
-# Scan + execute (places live orders)
-scripts\schedulers\same_day_executions\same_day_execute.bat
-```
-
-Config: `--unit-size 1`, `--max-bets 5`, `--budget 12%`, `--date today`, `--exclude-open`, `--save`.
-
-> `scripts/schedulers/*` is **gitignored** — the `.bat` files are local-only and won't appear in `git status` or diffs. Edits there don't propagate to a fresh clone. Only `scripts/schedulers/automation/*.py` is tracked.
-
-### Per-Sport Scan-Only Scripts
-
-```
-scripts/schedulers/same_day_scans/     # Today's games by sport
-scripts/schedulers/next_day_scans/     # Tomorrow's games by sport
-```
-
----
-
-## Low-Level API Access
-
-For debugging or raw market queries:
-
-```bash
-python scripts/kalshi/kalshi_client.py balance
-python scripts/kalshi/kalshi_client.py positions
-python scripts/kalshi/kalshi_client.py orders
-python scripts/kalshi/kalshi_client.py markets --limit 50
-python scripts/kalshi/kalshi_client.py market --ticker <TICKER>
-```
-
----
-
-## Edge Detection Signals
-
-The scanner uses 9 signals to detect mispriced contracts:
-
-| Signal | Source | What It Does |
-|--------|--------|-------------|
-| Normal CDF Model | Math | Spread/total probabilities via bell curve with sport-specific stdev |
-| Sharp Book Weighting | Odds API | Pinnacle 3x, DraftKings 0.7x — sharp lines pull consensus |
-| Team Stats | ESPN/NHL/MLB APIs | Win%, goal/run differential validates book fair value |
-| Sharp Money | ESPN | Open-vs-close odds detect reverse line movement |
-| Pitcher Matchups | MLB Stats API | ERA, FIP, WHIP, K/9, rest days — adjusts total stdev |
-| Rest Days / B2B | ESPN | NBA/NHL back-to-back detection — fatigue adjusts stdev + confidence |
-| Weather | NWS | 61 NFL/MLB venue forecasts adjust total expectations |
-| Book Disagreement | Odds API | >4pt spread range flags injury news |
-| CLV Tracking | Kalshi | Closing line value validates model accuracy over time |
-
-MLB pitcher data is fetched in parallel (ThreadPoolExecutor, 8 workers) for speed.
-
----
-
-## Trade Logging
-
-Orders are logged to `data/history/kalshi_trades.json` with **fill-based accounting**:
-- `requested_contracts` / `requested_cost` — what we asked for
-- `filled_contracts` / `filled_cost` — what the exchange actually executed
-- `fill_status` — `resting` | `partial` | `filled`
-- `venue` — always `kalshi` now (added with PM2c for Polymarket, which was removed 2026-09-29; older records lack the field, and readers default to `kalshi`)
-
-Resting orders (zero fills) are excluded from exposure calculations and settlement. The settler, risk dashboard, and P&L reports all use filled values, not requested. Writes go through a cross-process lock (M2) so concurrent settle/execute merge safely.
-
-> **The trade log accumulates orphans that never close out.** Two known kinds: records with `status: "error"` (an API rejection — e.g. six World Cup rows from the 2026-06-20 v1→v2 410 outage, four of which were successfully re-placed two days later) and zero-fill `resting` orders whose market has since closed. Both sit in the log as permanently "open." This does **not** affect risk gating — Gate 5 reads live positions from the Kalshi API, not the log — but it inflates any open-position count derived from the log, so cross-check against `kalshi_executor.py status` before reporting exposure.
-
----
-
-## Calibration
-
-```bash
-python scripts/kalshi/model_calibration.py --save        # Full calibration report
-python scripts/kalshi/model_calibration.py --days 30     # Last 30 days only
-```
-
-Reports: Brier score, calibration curve (predicted vs realized), dimension breakdowns, confidence x category cross-tab, prioritized recommendations.
-
----
-
-## Backtesting
-
-```bash
-python scripts/backtest/backtester.py                        # Full analysis
-python scripts/backtest/backtester.py --simulate --save       # Strategy comparison + save
-python scripts/backtest/backtester.py --sport mlb             # MLB only
-python scripts/backtest/backtester.py --category total        # Totals only
-python scripts/backtest/backtester.py --confidence medium     # Medium confidence only
-python scripts/backtest/backtester.py --min-edge 0.10         # Edge >= 10%
-python scripts/backtest/backtester.py --after 2026-04-01      # Recent trades only
-```
-
-Reports: equity curve, max drawdown, Sharpe ratio, profit factor, win/lose streaks, breakdowns by sport/category/confidence/edge bucket, calibration curve (predicted prob vs actual win rate), strategy simulation comparing filter strategies.
-
-Flags: `--sport`, `--category`, `--confidence`, `--min-edge`, `--after`, `--simulate`, `--save`, `--quiet`.
+## References
+
+Read the one a request needs; each holds sections moved verbatim from this file (ER-47).
+
+| File | Read it for |
+|:--|:--|
+| [references/filters.md](references/filters.md) | Every `--filter` name per scanner, raw ticker prefixes |
+| [references/risk-limits.md](references/risk-limits.md) | Long-form gate and sizing notes, the preview **Gate** column labels |
+| [references/operations.md](references/operations.md) | Makefile targets, daily workflow, Task Scheduler and `.bat` wrappers |
+| [references/internals.md](references/internals.md) | Routing examples, report output, low-level API, signals, trade logging, calibration, backtesting |
 
 ---
 
@@ -722,7 +335,7 @@ Flags: `--sport`, `--category`, `--confidence`, `--min-edge`, `--after`, `--simu
 1. **Always check status first** before any scan or bet — if daily loss limit is breached, STOP.
 2. **Never execute yourself.** Order-placing commands are the user's to run (`! <command>`); the ER-01 hook blocks them for agents.
 3. **Preview is the default** — every scan shows a table first, orders only placed with `--execute`.
-4. **21 risk gates enforced** — daily loss, position count, open exposure (2b), edge (per-sport), edge ceiling (3.05), market price floor (3.5, R7), price ceiling (3.55), liquidity (3.6), time to event (3.7), composite score, min confidence (4.5), NO-side favorite guard (4.6, R1), NO-side global edge floor (4.6b, R28), prediction-market safety (4.7, R25), live/in-play safety (4.8, L1), duplicate ticker, per-event cap, opposing side (6b), series dedup, max bet size, bet ratio cap. All checked before every order. Plus the resting-order janitor at the top of every live execute run.
+4. **All 21 risk gates** in the AGENTS.md table are checked before every order, plus the resting-order janitor at the top of every live execute run. Gate notes: [references/risk-limits.md](references/risk-limits.md).
 5. **API keys are in `.env`** — never print, log, or expose them.
 6. **R26 row-order lock for `--pick`** — when running `--execute --pick/--ticker`, keep filter args identical to the previous preview so the cached row→ticker mapping replays. If anything differs, the executor prints a bold red banner and rescans (different rows). Pass `--rescan` only when you intend a fresh ranking.
 7. **R8 cross-category dedup is opt-in** — by default ML+Total+Spread on the same game survive as 3 distinct bets (current behavior). To collapse them per sport, set `CROSS_CATEGORY_DEDUP_<SPORT>=true` (e.g. `CROSS_CATEGORY_DEDUP_NBA=true`); when active, the dedup banner names the sports (`Deduped correlated brackets: 12 -> 8 opportunities (cross-category: ['nba'])`). Per-sport `false` overrides the global flag in either direction.

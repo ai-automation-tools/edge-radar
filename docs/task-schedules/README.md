@@ -478,7 +478,7 @@ data/history/kalshi_trades.json · kalshi_settlements.json · shadow_book.json
 
 ## Retired Tasks
 
-None of these are registered any more. Reasons and evidence are in [`CHANGELOG.md`](../CHANGELOG.md) under the date given.
+None of these are registered any more. Reasons and evidence are in [`CHANGELOG.md`](../CHANGELOG.md) under the date given, or in [`changelog/`](../changelog/README.md) for months before 2026-10.
 
 | Task | Retired | Why |
 |:--|:--|:--|
