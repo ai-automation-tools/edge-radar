@@ -3070,6 +3070,27 @@ def print_detail(client: KalshiClient, ticker: str):
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 
+def scan_fingerprint(args, resolved_date, client) -> dict:
+    """R26 scan-cache fingerprint: what decides the row universe, and whose wallet.
+
+    `--unit-size`, `--max-bets`, `--budget`, `--min-bets` are deliberately left
+    out: they reshape sizing/caps, but the cached rows were sized under the
+    original args. ER-35: the profile and subaccount are in, so a preview made
+    under one profile can't be replayed with `--pick` into another wallet.
+    """
+    return {
+        "scanner": "sports",
+        "filter": args.ticker_filter,
+        "category": args.category,
+        "date": resolved_date,
+        "exclude_open": bool(args.exclude_open),
+        "min_edge": float(args.min_edge),
+        "top": int(args.top),
+        "profile": get_config().system.profile,
+        "subaccount": getattr(client, "subaccount", 0),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Kalshi edge detector -- find +EV opportunities")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -3162,19 +3183,7 @@ def main():
 
             resolved_date = resolve_date_arg(args.date)
 
-        # R26 scan-cache fingerprint — args that determine the row universe.
-        # `--unit-size`, `--max-bets`, `--budget`, `--min-bets` deliberately
-        # excluded: those reshape sizing/caps but the rows already in
-        # `cached_rows` were sized under the original args.
-        fingerprint = {
-            "scanner": "sports",
-            "filter": args.ticker_filter,
-            "category": args.category,
-            "date": resolved_date,
-            "exclude_open": bool(args.exclude_open),
-            "min_edge": float(args.min_edge),
-            "top": int(args.top),
-        }
+        fingerprint = scan_fingerprint(args, resolved_date, client)
 
         # ── R26 replay path: when the user follows up a preview with
         #    `--pick`/`--ticker --execute`, replay the cached rows instead
