@@ -19,9 +19,9 @@ Or filter to a single sport:
 python scripts/scan.py sports --filter nba --category total --min-edge 0.03 --top 15 --date today --exclude-open
 ```
 
-3. To execute top picks:
+3. To size top picks (preview only):
 ```bash
-python scripts/scan.py sports --filter nba --category total --min-edge 0.05 --max-bets 5 --unit-size 1 --date today --exclude-open --execute
+python scripts/scan.py sports --filter nba --category total --min-edge 0.05 --max-bets 5 --unit-size 1 --date today --exclude-open
 ```
 
 ## What to look for
@@ -33,3 +33,14 @@ Focus on:
 - **Weather flags**: Outdoor games with wind/rain lean toward unders
 - **Edge 5%+**: Totals with big edges tend to have the best CLV
 - **Same-game stacking**: If you see both an over and under on the same game at different strikes, the model sees the market total as significantly off
+
+## Placing orders
+
+1. Run the sizing command above. It has no `--execute`, so it previews and sizes the rows and places nothing.
+2. Show me the preview table and stop. Place nothing until I reply **go** with the rows I want.
+3. Place exactly those rows, with the same flags plus:
+   ```
+   --execute --pick '<rows>'
+   ```
+   `--pick` replays the cached preview, so the row numbers are the ones I saw.
+4. Show me the run summary (placed / failed / blocked), total cost and updated balance.

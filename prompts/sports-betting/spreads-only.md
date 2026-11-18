@@ -19,9 +19,9 @@ Or filter to a single sport:
 python scripts/scan.py sports --filter nba --category spread --min-edge 0.05 --top 15 --date today --exclude-open
 ```
 
-3. To execute top picks:
+3. To size top picks (preview only):
 ```bash
-python scripts/scan.py sports --filter nba --category spread --min-edge 0.05 --max-bets 5 --unit-size 1 --date today --exclude-open --execute
+python scripts/scan.py sports --filter nba --category spread --min-edge 0.05 --max-bets 5 --unit-size 1 --date today --exclude-open
 ```
 
 ## What to look for
@@ -33,3 +33,14 @@ Focus on:
 - **Alternate spreads**: Large edges on big alternate spreads (e.g., -15.5) can look tempting but have high variance
 - **Sharp money alignment**: If the Pick direction matches sharp money signal, confidence is higher
 - **Team stats**: Check if the team's recent record (L10, home/away) supports the spread direction
+
+## Placing orders
+
+1. Run the sizing command above. It has no `--execute`, so it previews and sizes the rows and places nothing.
+2. Show me the preview table and stop. Place nothing until I reply **go** with the rows I want.
+3. Place exactly those rows, with the same flags plus:
+   ```
+   --execute --pick '<rows>'
+   ```
+   `--pick` replays the cached preview, so the row numbers are the ones I saw.
+4. Show me the run summary (placed / failed / blocked), total cost and updated balance.

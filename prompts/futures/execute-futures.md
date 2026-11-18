@@ -10,8 +10,8 @@ python scripts/kalshi/kalshi_executor.py status
 # Preview first
 python scripts/scan.py futures --filter <sport> --min-edge 0.01 --top 20 --exclude-open --save
 
-# Execute with a tight budget cap
-python scripts/scan.py futures --filter <sport> --min-edge 0.01 --max-bets 3 --unit-size 1 --budget 5% --exclude-open --execute
+# Size with a tight budget cap (preview only)
+python scripts/scan.py futures --filter <sport> --min-edge 0.01 --max-bets 3 --unit-size 1 --budget 5% --exclude-open
 ```
 
 Replace `<sport>` with: `nfl-futures`, `nba-futures`, `nhl-futures`, `mlb-futures`, `ncaab-futures`, `golf-futures`. Omit `--filter` to scan all futures at once.
@@ -27,3 +27,14 @@ Output columns: Bet Type, Candidate, Date, Side, Mkt, Fair, Edge, Conf.
 5. After execution: orders placed, fill status, total cost, updated balance, and the settlement horizon (these positions lock up for weeks/months)
 
 If the best edge is under ~0.5%, say so honestly and recommend skipping — daily game betting usually offers better value.
+
+## Placing orders
+
+1. Run the sizing command above. It has no `--execute`, so it previews and sizes the rows and places nothing.
+2. Show me the preview table and stop. Place nothing until I reply **go** with the markets I want.
+3. Place exactly those markets, with the same flags plus:
+   ```
+   --execute --ticker <TICKER> [<TICKER> ...]
+   ```
+   This scanner doesn't cache its preview and a fresh scan can renumber rows, so pick by ticker, not row number.
+4. Show me the run summary (placed / failed / blocked), total cost and updated balance.

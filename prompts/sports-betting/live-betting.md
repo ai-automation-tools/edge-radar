@@ -11,10 +11,10 @@ python scripts/kalshi/kalshi_executor.py status
 python scripts/scan.py sports --filter <sport> --min-edge 0.05 --top 15 --date today --save
 ```
 
-To **execute** on live games, set `ALLOW_LIVE_BETS=true`. For a one-off CLI run, prepend it:
+To bet on live games, set `ALLOW_LIVE_BETS=true`. For a one-off CLI run, prepend it to the sizing run and the placing run:
 
 ```
-ALLOW_LIVE_BETS=true python scripts/scan.py sports --filter <sport> --min-edge 0.05 --max-bets 3 --unit-size 1 --date today --execute
+ALLOW_LIVE_BETS=true python scripts/scan.py sports --filter <sport> --min-edge 0.05 --max-bets 3 --unit-size 1 --date today
 ```
 
 If you set `ALLOW_LIVE_BETS=true` in `.env` instead, **restart any long-running host process** — gate thresholds snapshot at import time.
@@ -33,3 +33,14 @@ Live consensus is filtered to defend against stale lines:
 - For each live edge: Bet, Type, Pick, Edge, Conf, Score, and **how many fresh books** back the consensus
 - Whether the live line looks stale (few fresh books → treat the edge with suspicion)
 - A clear recommendation — live edges should clear a higher bar (5%+, high confidence) than pre-game
+
+## Placing orders
+
+1. Run the sizing command above. It has no `--execute`, so it previews and sizes the rows and places nothing.
+2. Show me the preview table and stop. Place nothing until I reply **go** with the rows I want.
+3. Place exactly those rows, with the same flags (and the same `ALLOW_LIVE_BETS=true` prefix) plus:
+   ```
+   --execute --pick '<rows>'
+   ```
+   `--pick` replays the cached preview, so the row numbers are the ones I saw.
+4. Show me the run summary (placed / failed / blocked), total cost and updated balance.
