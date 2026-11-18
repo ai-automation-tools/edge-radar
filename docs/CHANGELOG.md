@@ -2,11 +2,13 @@
 
 ---
 
-## 2026-11-18 -- Kalshi key rotated (ER-05)
+## 2026-11-18 -- Kalshi key rotated, aX tokens revoked (ER-05, ER-26b)
 
 - The owner rotated the Kalshi API key that had been deployed to a hosted app: a new RSA key
   following `docs/setup/KEY_ROTATION.md`, the old key revoked. `doctor.py` connects on the main and
   longshot profiles. Roadmap ER-05 ticked.
+- ER-26b: the owner revoked the aX platform tokens, and the user-scope `edge-radar-coordination` skill
+  (outside this repo) is retired from every agent CLI.
 
 ---
 
