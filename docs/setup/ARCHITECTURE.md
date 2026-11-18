@@ -12,7 +12,7 @@
 
 ## 🔭 System Overview
 
-Edge-Radar is an automated edge-detection and execution pipeline for Kalshi prediction markets and sports betting. It scans thousands of open markets, cross-references prices against sportsbook consensus odds and external data models, identifies mispriced contracts, applies risk gates and position sizing, and executes limit orders — logging every decision for post-hoc calibration.
+Edge-Radar is an automated edge-detection and execution pipeline for sports and futures contracts on Kalshi, a regulated prediction-market exchange. It scans thousands of open markets, cross-references prices against sportsbook consensus odds and external data models, identifies mispriced contracts, applies risk gates and position sizing, and executes limit orders — logging every decision for post-hoc calibration.
 
 ---
 

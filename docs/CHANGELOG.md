@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-11-18 -- Docs and roadmap checked against the post-audit build
+
+- **ROADMAP** now follows the roadmap standard throughout: every done item ends ` — done YYYY-MM-DD:`
+  with its PR, ER-53 is one line, and a dated "Where we are" note opens the file. The 13 audit items
+  that had shipped without a roadmap line (ER-16, 24, 31, 32, 36, 39, 45, 47, 48, 49, 50, 51, 52) have
+  one; ER-06 is ticked (#413 and ER-49; history kept by the owner's decision). The "not done" notes on
+  ER-13, 19, 27 and 28 say how each closed. The owner actions hidden inside done lines are open items
+  of their own: ER-34 (Polymarket creds), ER-26b (aX tokens) and ER-02b (the `audit-fills` review
+  before S15). The archived pre-cleanup roadmap is linked where it now lives, `docs/changelog/`.
+- **Scope:** the site's description and eyebrow, the `/edge-radar` skill and the README skill table say
+  "sports and futures", not "sports and prediction markets" (the prediction scanners were retired
+  in ER-53); `SCRIPTS_REFERENCE.md` no longer uses `--filter crypto` as an example.
+- **`docs/README.md`** lists every root file (`ROADMAP.md` and `UPSTREAMS.md` were missing) and no
+  longer calls the roadmap open-work-only.
+- **`docs/UPSTREAMS.md`:** the Resend sender's path is `scripts/schedulers/automation/` (ER-27); the
+  Kalshi row records the RSA-only signing (M3) and the 1 req/s balance bucket (K1).
+- **Per-script docs:** `kalshi_executor.md` gains "Placing orders safely" (the per-profile lock,
+  `client_order_id`, the pending file, the journal, balance pacing); `kalshi_settler.md` says what
+  `settle` recovers before it settles.
+
+---
+
 ## 2026-11-18 -- Shadow book stored as monthly JSONL (ER-28 leftover)
 
 - `data/history/shadow_book.json` was one indented JSON array (33 MB, 16.6k rows), rewritten in full

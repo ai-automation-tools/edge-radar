@@ -16,6 +16,10 @@ Polls the Kalshi API for settlements, matches to your trade log, calculates P&L 
 
 Run this after games complete to move trades from "open" to "settled" with realized P&L.
 
+Before settling it recovers anything an execute run could not finish writing: pending order files over
+15 minutes old (booked if Kalshi has the order filled or resting, dropped otherwise; ER-13), then the
+trade journal (BUG-03), then it re-reads open resting and partial orders so late fills count (BUG-01).
+
 ---
 
 ## `report` -- Performance Report
