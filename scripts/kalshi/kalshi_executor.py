@@ -47,6 +47,7 @@ from trade_log import (
 
 from dotenv import load_dotenv
 from rich.console import Console
+from rich import box
 from rich.table import Table
 from rich import print as rprint
 
@@ -2913,53 +2914,10 @@ def execute_pipeline(
                     f"  Budget cap: [green]${pre_budget_cost:.2f} within ${budget_dollars:.2f} limit[/green]"  # noqa: E501
                 )
 
-    from ticker_display import (
-        parse_game_datetime,
-        format_bet_label,
-        format_pick_label,
-        sport_from_ticker,
-    )
-
     dry_run = get_config().system.dry_run
     banner = mode_banner(execute, client)
-    table = Table(title=f"{banner} -- {len(to_execute)} orders", show_lines=True)
-    cat_labels = {
-        "game": "ML",
-        "spread": "Spread",
-        "total": "Total",
-        "player_prop": "Prop",
-        "esports": "Esports",
-    }
-
-    table.add_column("#", justify="right", style="dim")
-    table.add_column("Sport", style="yellow")
-    table.add_column("Bet", style="cyan", max_width=45)
-    table.add_column("Type", style="magenta")
-    table.add_column("Pick", style="bold white", max_width=22)
-    table.add_column("When", style="dim")
-    table.add_column("Qty", justify="right")
-    table.add_column("Price", justify="right")
-    table.add_column("Cost", justify="right", style="green")
-    table.add_column("Edge", justify="right", style="bold green")
-
-    total_cost = 0
-    for i, s in enumerate(to_execute, 1):
-        total_cost += s.cost_dollars
-        opp = s.opportunity
-
-        table.add_row(
-            str(i),
-            sport_from_ticker(opp.ticker),
-            format_bet_label(opp.ticker, opp.title),
-            cat_labels.get(opp.category, opp.category.title()),
-            format_pick_label(opp.ticker, opp.title, opp.side, opp.category),
-            parse_game_datetime(opp.ticker),
-            str(s.contracts),
-            f"${s.price_cents / 100:.2f}",
-            f"${s.cost_dollars:.2f}",
-            f"+{opp.edge:.1%}",
-        )
-    console.print(table)
+    total_cost = sum(s.cost_dollars for s in to_execute)
+    console.print(preview_table(to_execute, banner))
     rprint(f"  Total cost: [bold]${total_cost:.2f}[/bold] of ${bankroll:.2f} available")
 
     # ── R26: persist the displayed rows so a follow-up `--pick … --execute`
@@ -3068,6 +3026,61 @@ def execute_pipeline(
 # ── Status Command ────────────────────────────────────────────────────────────
 
 
+_BET_TYPE = {
+    "game": "ML",
+    "spread": "Spread",
+    "total": "Total",
+    "player_prop": "Prop",
+    "esports": "Esports",
+}
+
+
+def preview_table(to_execute: list[SizedOrder], banner: str) -> Table:
+    """The order preview: one line per order, fits a 100-column log (ER-52).
+
+    The bet type rides in the Bet column rather than its own; long Bet and Pick
+    labels end in an ellipsis instead of wrapping onto a second line.
+    """
+    from ticker_display import (
+        parse_game_datetime,
+        format_bet_label,
+        format_pick_label,
+        sport_from_ticker,
+    )
+
+    table = Table(
+        title=f"{banner} -- {len(to_execute)} orders",
+        box=box.SIMPLE_HEAD,
+        pad_edge=False,
+        padding=(0, 1, 0, 0),
+    )
+    table.add_column("#", justify="right", style="dim", min_width=2)
+    table.add_column("Sport", style="yellow", no_wrap=True, min_width=5)
+    table.add_column("Bet", style="cyan", no_wrap=True, overflow="ellipsis", max_width=28)
+    table.add_column("Pick", style="bold white", no_wrap=True, overflow="ellipsis", max_width=14)
+    table.add_column("When", style="dim", no_wrap=True, min_width=13)
+    table.add_column("Qty", justify="right", no_wrap=True, min_width=3)
+    table.add_column("Price", justify="right", no_wrap=True, min_width=5)
+    table.add_column("Cost", justify="right", style="green", no_wrap=True, min_width=6)
+    table.add_column("Edge", justify="right", style="bold green", no_wrap=True, min_width=6)
+
+    for i, s in enumerate(to_execute, 1):
+        opp = s.opportunity
+        kind = _BET_TYPE.get(opp.category, opp.category.title())
+        table.add_row(
+            str(i),
+            sport_from_ticker(opp.ticker),
+            f"[magenta]{kind}[/magenta] {format_bet_label(opp.ticker, opp.title)}",
+            format_pick_label(opp.ticker, opp.title, opp.side, opp.category),
+            parse_game_datetime(opp.ticker),
+            str(s.contracts),
+            f"${s.price_cents / 100:.2f}",
+            f"${s.cost_dollars:.2f}",
+            f"+{opp.edge:.1%}",
+        )
+    return table
+
+
 def show_status(client: KalshiClient, save: bool = False):
     """Show current portfolio status, positions, and today's activity."""
     from ticker_display import parse_game_datetime, parse_matchup, parse_pick_team
@@ -3090,7 +3103,7 @@ def show_status(client: KalshiClient, save: bool = False):
         from ticker_display import bet_type_from_ticker
 
         table = Table(title="Open Positions", show_lines=True)
-        table.add_column("Bet", style="cyan", max_width=32)
+        table.add_column("Bet", style="cyan", max_width=28)
         table.add_column("Type", style="magenta")
         table.add_column("When", style="dim")
         table.add_column("Pick", justify="center")

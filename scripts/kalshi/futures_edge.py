@@ -248,6 +248,10 @@ def devig_nway(outcomes: list[dict]) -> dict[str, float]:
     """
     De-vig N-way outright market by normalizing implied probabilities.
 
+    Proportional: it spreads the overround evenly, so longshots keep too much
+    of it and their fair values come out high (ER-42). ROADMAP B5 tracks
+    switching to power or Shin de-vig, A/B'd in the shadow book first.
+
     Args:
         outcomes: list of {"name": "Team A", "price": 3.5, ...}
 

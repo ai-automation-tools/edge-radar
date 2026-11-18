@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-11-18 -- De-vig docstrings and a narrower order preview (ER-42, ER-52)
+
+- **De-vig** `devig_two_way()` said "power method"; it is proportional, and now says so.
+  `devig_nway()` notes that proportional de-vig leaves longshot fair values high. The switch to
+  power or Shin de-vig stays open as ROADMAP B5, to be A/B'd in the shadow book first.
+- **Order preview** `preview_table()` fits a 100-column log with one line per order: no row rules,
+  the bet type folded into the Bet column, and long Bet and Pick labels cut with an ellipsis instead
+  of wrapping. `tests/test_preview_table.py` renders it at 100 columns.
+
+---
+
 ## 2026-11-18 -- Dead and fragile code (ER-45)
 
 - **Removed** `app/domain/`, a re-export layer only its own tests imported, and the readers for

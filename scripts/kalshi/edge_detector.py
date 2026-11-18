@@ -563,7 +563,7 @@ def implied_prob(decimal_odds: float) -> float:
 
 
 def devig_two_way(prob_a: float, prob_b: float) -> tuple[float, float]:
-    """Remove vig from two-outcome market (power method)."""
+    """Remove vig from a two-outcome market, proportionally (ROADMAP B5: power/Shin)."""
     total = prob_a + prob_b
     if total == 0:
         return 0.5, 0.5
