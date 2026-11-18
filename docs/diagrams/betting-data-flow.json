@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "d45b877fcdcbbed139847926c7e6f4e1826f9d5c"
+      "revision": "3e483825a658d04ad64755811ac64bdae051ffd5"
     }
   },
   "stages": [
@@ -323,8 +323,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_settler.py",
-          "line": 348,
-          "end_line": 665
+          "line": 377,
+          "end_line": 699
         }
       ]
     },
@@ -338,8 +338,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_settler.py",
-          "line": 212,
-          "end_line": 272
+          "line": 241,
+          "end_line": 301
         }
       ]
     }

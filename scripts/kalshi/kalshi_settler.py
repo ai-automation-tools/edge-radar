@@ -143,6 +143,21 @@ def trade_fees(trade: dict) -> float:
 # ── Settlement Logic ──────────────────────────────────────────────────────────
 
 
+def _yes_payout(result: str, settlement: dict) -> float | None:
+    """Dollars one YES contract paid, or None when the settlement doesn't say.
+
+    Settlements carry `value` (cents); the market-status fallback carries the
+    market's `settlement_value_dollars`.
+    """
+    if result in ("yes", "no"):
+        return 1.0 if result == "yes" else 0.0
+    if settlement.get("value") is not None:
+        return float(settlement["value"]) / 100
+    if settlement.get("settlement_value_dollars") is not None:
+        return float(settlement["settlement_value_dollars"])
+    return None
+
+
 def calculate_pnl(trade: dict, settlement: dict) -> dict:
     """
     Calculate realized P&L for a settled trade.
@@ -166,8 +181,22 @@ def calculate_pnl(trade: dict, settlement: dict) -> dict:
     # its aggregate revenue to each double-counted the position's payout (review
     # #8). Deriving revenue from each trade's own filled contracts is additive
     # and, for a single trade, identical to the aggregate (contracts x $1.00).
-    won_bet = (side == "yes" and result == "yes") or (side == "no" and result == "no")
-    revenue_dollars = round(contracts * 1.00, 4) if won_bet else 0.0
+    #
+    # ER-15: only yes/no is a win or a loss. `scalar` settles each YES contract
+    # at `value` cents (NO gets the rest); anything else (void, blank) is booked
+    # as a refund of cost, not a total loss. Neither is a prediction outcome, so
+    # `won` is None and the calibration readers skip the row.
+    yes_payout = _yes_payout(result, settlement)
+    if yes_payout is None:
+        won_bet = None
+        revenue_dollars = cost
+        log.warning(
+            "%s settled %r with no payout value; booked as a refund", trade.get("ticker"), result
+        )
+    else:
+        won_bet = side == result if result in ("yes", "no") else None
+        payout = yes_payout if side == "yes" else 1.0 - yes_payout
+        revenue_dollars = round(contracts * payout, 4)
 
     net_pnl = revenue_dollars - cost - fees
 
@@ -577,6 +606,7 @@ def settle_trades(client: KalshiClient) -> dict:
                         "ticker": ticker,
                         "market_result": result,
                         "revenue": 0,  # will be calculated
+                        "settlement_value_dollars": market.get("settlement_value_dollars"),
                         "settled_time": market.get("close_time", ""),
                     }
                     rprint(f"  [dim]Market {ticker} is {status}, result={result}[/dim]")
@@ -650,7 +680,11 @@ def settle_trades(client: KalshiClient) -> dict:
 
             settled_count += 1
 
-            won_str = "[green]WON[/green]" if pnl["won"] else "[red]LOST[/red]"
+            won_str = (
+                f"[yellow]{(pnl['result'] or 'void').upper()}[/yellow]"
+                if pnl["won"] is None
+                else "[green]WON[/green]" if pnl["won"] else "[red]LOST[/red]"
+            )
             rprint(
                 f"  {won_str} {ticker} "
                 f"({trade['side'].upper()}) "
@@ -714,7 +748,7 @@ def _settlement_to_record(s: dict) -> dict:
 
     contracts = yes_count if side == "yes" else no_count
     cost = yes_cost if side == "yes" else no_cost
-    won = (side == "yes" and result == "yes") or (side == "no" and result == "no")
+    won = side == result if result in ("yes", "no") else None  # ER-15
     net_pnl = revenue - cost - fees
 
     return {
@@ -838,7 +872,7 @@ def generate_report(detail: bool = False, save: bool = False, days: int | None =
 
     # ── Settlement Summary ───────────────────────────────────────────────────
     wins = [r for r in settled_records if r["won"]]
-    losses = [r for r in settled_records if not r["won"]]
+    losses = [r for r in settled_records if r["won"] is False]
 
     total_settled = len(settled_records)
     total_pnl = sum(r["net_pnl"] for r in settled_records)
@@ -987,7 +1021,7 @@ def generate_report(detail: bool = False, save: bool = False, days: int | None =
 
         for i, r in enumerate(sorted(settled_records, key=lambda x: x.get("settled_time", "")), 1):
             pnl_color = "green" if r["net_pnl"] >= 0 else "red"
-            won_str = "W" if r["won"] else "L"
+            won_str = "-" if r["won"] is None else "W" if r["won"] else "L"
             ticker = r["ticker"]
             bet_label = format_bet_label(ticker, r.get("title", ticker))
             btype = bet_type_from_ticker(ticker)

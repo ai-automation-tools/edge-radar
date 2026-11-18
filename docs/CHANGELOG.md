@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-11-17 -- Void and scalar settlements (ER-15)
+
+- **Fix** `calculate_pnl` paid $1.00 on a matching yes/no and $0 on anything else, so a void on a
+  $2.00 stake booked -$2.07 and a scalar settlement lost the whole stake. Now `scalar` pays the
+  settlement's `value` per YES contract (NO gets the rest; the market-status fallback carries
+  `settlement_value_dollars`), and any other result is booked as a refund with a warning.
+- **Fix** Those rows get `won: None`. `calibration_study` and the daily summary's Brier skip them;
+  the settler report shows `-` instead of W/L. `model_calibration.py` and `risk_check.py` still read
+  `None` as a loss: both predate black/flake8 and any edit reformats all of them.
+- The one existing scalar row (July, booked from the API's real revenue) is untouched.
+
+---
+
 ## 2026-11-17 -- LIVE / DRY RUN labels and placed-not-requested reports (ER-12)
 
 - **Fix** Execution reports and emails listed every order the run *meant* to place, even when the
