@@ -293,7 +293,7 @@ Standing rules — do not reverse them without new settled evidence.
   failure the retired fork hit on a stale prefix. Both are aliases now, the fallback
   prints a NOTE, and a test asserts every sport with a `MIN_EDGE_THRESHOLD_<SPORT>`
   floor is reachable by a filter of that name. **Fix filter bugs in code, not in the
-  `.bat`** — schedulers are gitignored and do not survive a clone.
+  `.bat`** — the wrapper only passes flags; the logic lives in the code.
   The tracked definition of each scheduled job is its Cronsole template in
   `scripts/schedulers/automation/build_cronsole_registry.py`; change a job's flags there and in
   the `.bat`, then rerun it (`site/registry/` is generated, never hand-edited).

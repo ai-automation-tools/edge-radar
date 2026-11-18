@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-11-17 -- Scheduled wrappers and the email sender are tracked (ER-27)
+
+- **Ops** The `.bat` wrappers the scheduled tasks run, five of which place orders, were gitignored,
+  so a change to a live task's flags left no history. The 15 the tasks and the installer use, plus
+  `run-hidden.vbs` and its guard, are now tracked where the tasks already point. Old and one-off
+  wrappers stay ignored. `.gitattributes` gives `.bat` files CRLF.
+- **Fix** The execute wrappers' headers said "Unit size $0.50" and "9 risk gates" while the
+  command ran `--unit-size 1` against 21. The headers now point at the command line, which is the
+  only copy of the flags.
+- **Email** The one send path, `scripts/custom/Python/send_report_email.py`, was untracked, carried
+  a personal default recipient and imported a helper from outside the repo. Its replacement,
+  `scripts/schedulers/automation/send_report_email.py`, calls Resend's REST API directly and reads
+  `NOTIFY_EMAIL`, `RESEND_FROM`, `RESEND_REPLY_TO` and `RESEND_API_KEY` through
+  `app.config.EmailConfig`, with no defaults: an unset recipient or sender fails the send.
+  `--check` probes the key and domain without sending. `render_report_email.py` uses it.
+- **Tests** `tests/test_scheduler_wrappers.py` checks the wrappers are tracked, use `%~dp0`, carry
+  no drive paths and are CRLF, and covers the sender. `test_cronsole_registry`'s flag comparison
+  used to skip without the `.bat` files; it now runs everywhere and stops at the ER-07 log
+  redirect, which had broken it on the owner's machine.
+
+---
+
 ## 2026-11-17 -- Dependabot no longer bumps the Python locks (ER-20 follow-up)
 
 - **Fix** ER-20 moved Python updates to Dependabot's `uv` ecosystem. Its first PR (#389) re-locked

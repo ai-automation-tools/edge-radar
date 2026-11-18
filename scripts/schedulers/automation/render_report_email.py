@@ -23,8 +23,8 @@ where no report is the normal zero-opportunity case and the email is
 proof-of-life led by the log's execution outcome. (No preset uses one since the
 Polymarket preset was removed 2026-09-29.)
 
-Sends through scripts/custom/Python/send_report_email.py, which stays the one
-send path (Resend key resolution + delivery stamp live there).
+Sends through send_report_email.py in this folder, the one send path (Resend
+settings from app.config.EmailConfig, plus the delivery stamp).
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ from pathlib import Path
 from markdown_it import MarkdownIt
 
 REPO = Path(__file__).resolve().parents[3]
-SENDER = REPO / "scripts" / "custom" / "Python" / "send_report_email.py"
+SENDER = Path(__file__).with_name("send_report_email.py")
 SPORTS = "reports/Sports/schedulers"
 
 # name -> (report folder, glob, subject, tag, email log, scan log or None)
