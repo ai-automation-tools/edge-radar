@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-11-18 -- Retire dead AI tooling (ER-26)
+
+- **Removed** the `footballbin-predictions`, `kalshi-markets`, `document-writer` and
+  `market-mechanics-betting` skills under `.claude/skills/`, the `kalshi-bettor` and
+  `documentation-expert` agents, and the AGENTS.md roster of five agents that were never defined.
+  `.claude/agents/` is no longer git-ignored.
+- **Moved** the Kelly, scoring-rule and betting-theory notes to
+  `skills/betting-logic-review/references/`, linked from that skill.
+- **Renamed** `/repo-review` to `/edge-radar-repo-review` (it collided with a user-scope skill).
+- **Docs** `docs/setup/mcp-servers.md` is now half a page: no MCP server is needed, and none may
+  place orders. The edge-radar skill no longer says NFL is off (it runs a pilot floor). `CLAUDE.md`
+  and `/sync-docs` use Claude Code's project auto-memory instead of two retired memory folders.
+
+---
+
 ## 2026-11-18 -- Docs match the code (ER-29)
 
 - **Docs** every risk-gate count says 21 (ARCHITECTURE said 18, the executor doc 16, the skill fifteen),

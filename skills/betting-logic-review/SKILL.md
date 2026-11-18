@@ -28,13 +28,16 @@ other. Findings summarised in chat but never written to that file do not count
 as delivered.
 
 That folder is the running audit history; `2026-07-14-repo-review.md` (structural,
-from `/repo-review`) and `2026-08-25-betting-logic-review.md` (the first pass of
+from `/edge-radar-repo-review`) and `2026-08-25-betting-logic-review.md` (the first pass of
 this skill) are already there. **Read the most recent betting-logic report before
 starting** — it tells you what was already found, what has since been fixed, and
 what was explicitly ruled not-broken, so you spend the pass on new ground.
 
 The full report format is at the bottom of this file. Write it with the Write
 tool; do not commit or push.
+
+Background on the math, if a finding needs it: [Kelly sizing](references/kelly-criterion.md),
+[scoring rules](references/scoring-rules.md) and [betting theory](references/betting-theory.md).
 
 ## Ground rules
 

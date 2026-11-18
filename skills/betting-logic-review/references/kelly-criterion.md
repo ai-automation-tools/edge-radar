@@ -487,7 +487,7 @@ Resolution: 2024-11-05
 
 ## Return to Main Skill
 
-[← Back to Market Mechanics & Betting](../SKILL.md)
+[← Back to Betting-Logic Review](../SKILL.md)
 
 **Related resources**:
 - [Betting Theory Fundamentals](betting-theory.md)

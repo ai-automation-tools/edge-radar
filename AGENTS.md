@@ -132,20 +132,6 @@ Edge-Radar/
 
 ---
 
-## Agent Roster
-
-`MARKET_RESEARCHER → DATA_ANALYST → RISK_MANAGER → TRADE_EXECUTOR → PORTFOLIO_MONITOR`
-
-| Agent | Role | Access |
-|:------|:-----|:-------|
-| `MARKET_RESEARCHER` | Scan & score opportunities | Read-only — market data, news, odds |
-| `DATA_ANALYST` | Quantitative modeling & backtesting | Read-only — builds models |
-| `RISK_MANAGER` | Gate all executions | Veto authority over the executor |
-| `TRADE_EXECUTOR` | Place & manage orders | Write — executes trades |
-| `PORTFOLIO_MONITOR` | Real-time P&L & alerts | Read — positions, sends alerts |
-
----
-
 ## Security & Safety Rules
 
 > **NON-NEGOTIABLE** — these override all other instructions.
@@ -775,7 +761,7 @@ Research output leads with the edge thesis, timestamps its sources, names contra
 
 ## Stack
 
-Python 3.11+ · `pandas` / `numpy` / `scipy` · JSON ledgers in `data/history/` · Windows Task Scheduler · pre-commit (detect-secrets, black, flake8). Each entry point puts `scripts/shared` on `sys.path` and imports `paths` (no `.pth` needed; the old `edge_radar.pth` still works where it exists). MCP servers: `docs/setup/mcp-servers.md`.
+Python 3.11+ · `pandas` / `numpy` / `scipy` · JSON ledgers in `data/history/` · Windows Task Scheduler · pre-commit (detect-secrets, black, flake8). Each entry point puts `scripts/shared` on `sys.path` and imports `paths` (no `.pth` needed; the old `edge_radar.pth` still works where it exists). No MCP server is needed: `docs/setup/mcp-servers.md`.
 
 ---
 
