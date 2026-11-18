@@ -20,6 +20,7 @@ import base64
 import logging
 import random
 import sys
+import threading
 import time
 from pathlib import Path
 from urllib.parse import urlparse
@@ -57,6 +58,13 @@ DEMO_HOSTS = frozenset({"demo-api.kalshi.co"})
 # ER-44: extra attempts for an idempotent GET after a transport error, a 429 or
 # a 5xx. POST and DELETE are never retried here (see `_request`).
 GET_RETRIES = 2
+# K1 (Kalshi changelog 2026-10-15): GET /portfolio/balance has its own bucket,
+# 1 request/second with no burst. Every balance read in this process is spaced
+# at least this far apart (`_get_balance_paced`), so a batch that sizes, funds
+# shards and re-reads after a transfer queues instead of collecting 429s.
+BALANCE_MIN_INTERVAL = 1.0
+_balance_lock = threading.Lock()
+_balance_last = [float("-inf")]  # monotonic time of the last balance read
 
 # ER-40: page cap when following `cursor`, so a venue bug can't loop forever.
 MAX_PAGES = 50
@@ -349,7 +357,22 @@ class KalshiClient:
         on a non-zero subaccount silently reports another wallet's cash, and
         X1's funding guard then fails **open** in exactly its own case.
         """
-        return self._get("/portfolio/balance", params={"subaccount": self.subaccount})
+        return self._get_balance_paced({"subaccount": self.subaccount})
+
+    def _get_balance_paced(self, params: dict) -> dict:
+        """GET /portfolio/balance, at most once per `BALANCE_MIN_INTERVAL` (K1).
+
+        Process-wide, not per client: the bucket is the account's. A separate
+        process is not coordinated; its 429 is what `_request`'s GET retry is for.
+        """
+        with _balance_lock:
+            wait = _balance_last[0] + BALANCE_MIN_INTERVAL - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+            try:
+                return self._get("/portfolio/balance", params=params)
+            finally:
+                _balance_last[0] = time.monotonic()
 
     def get_shard_balance(self, exchange_index: int) -> float:
         """Available dollars for THIS subaccount on one exchange shard.
@@ -360,9 +383,8 @@ class KalshiClient:
         (2026-09-08) — sub 0 `{0: 69.79, 3: 13.76}`, sub 1 `{0: 40.00, 3: 0.00}`,
         matching row for row, where `balance_breakdown` matched neither.
         """
-        raw = self._get(
-            "/portfolio/balance",
-            params={"subaccount": self.subaccount, "exchange_index": exchange_index},
+        raw = self._get_balance_paced(
+            {"subaccount": self.subaccount, "exchange_index": exchange_index}
         )
         return float(raw.get("balance_dollars") or 0.0)
 
