@@ -74,7 +74,7 @@ def test_reduced_motion_and_tokens(page: Path) -> None:
     assert "JetBrains+Mono" in html and "Inter:wght" in html
 
 
-# ── Source bar: required on every *.ai-automation-tools.dev site, absent on the ops deck ──
+# ── Source bar: on every site built from this public repo (ER-24 added the ops deck) ──
 
 
 def test_public_page_carries_the_org_source_bar(public: str) -> None:
@@ -89,9 +89,28 @@ def test_public_page_carries_the_org_source_bar(public: str) -> None:
     assert "Source on GitHub" in public
 
 
-def test_ops_deck_has_no_source_bar(ops: str) -> None:
-    assert "src-bar" not in ops and "View source" not in ops
+def test_ops_deck_carries_the_source_bar_and_no_posture(ops: str) -> None:
+    """ER-24: the deck is served from a public repo, so it states no live/dry posture,
+    no Task Scheduler path and no copy-to-run trigger, and it links to the public
+    explainer instead of copying it."""
+    assert ops.index('<div class="src-bar">') < ops.index('<header class="topbar">')
+    assert "View source" in ops
     assert 'name="robots" content="noindex"' in ops
+    for leak in (
+        "DRY_RUN=false",
+        "schtasks",
+        "Start-ScheduledTask",
+        "Edge-Radar-MikesAILab",
+        ">live<",
+    ):
+        assert leak not in ops, leak
+    assert 'id="how"' not in ops and 'id="pipeline"' not in ops
+    assert "https://edge-radar.ai-automation-tools.dev/#how" in ops
+
+
+def test_ops_timeline_markers_have_a_24px_hit_area(ops: str) -> None:
+    rule = re.search(r"^    \.tl \.mk::before \{[^}]*\}", ops, re.M)
+    assert rule and "inset: -6px" in rule.group(0)  # 12px dot + 2 x 6px
 
 
 # ── Numbers the pages quote ──────────────────────────────────────────────────
@@ -125,9 +144,8 @@ def test_public_gate_grid_matches_claude_md(public: str) -> None:
     assert f"{len(expected)} risk gates" in public
 
 
-@pytest.mark.parametrize("page", [PUBLIC, OPS], ids=["public", "ops"])
-def test_pipeline_has_seven_steps(page: Path) -> None:
-    html = page.read_text(encoding="utf-8")
+def test_pipeline_has_seven_steps() -> None:
+    html = PUBLIC.read_text(encoding="utf-8")
     assert len(re.findall(r'<div class="step">', html)) == 7
     assert "7 pipeline stages" in html
 

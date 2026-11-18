@@ -81,7 +81,7 @@ Every gate runs before any trade executes. The reject gates are one ordered list
 
 | # | Gate | Type |
 |:-:|:-----|:-----|
-| 1 | Daily loss limit not breached | Reject |
+| 1 | Daily loss limit not breached; the day is `DAILY_LOSS_TZ`'s (America/New_York, ER-16) | Reject |
 | 2 | Open position count under max | Reject |
 | 2b | Total open exposure < `MAX_OPEN_EXPOSURE_PCT` and per-sport < `MAX_SEGMENT_EXPOSURE_PCT`, both as fractions of equity (S4) | Reject **+ Cap** |
 | 3 | Edge >= minimum threshold (per-sport or global) **+ exchange fee** (F1) | Reject |

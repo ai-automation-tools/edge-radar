@@ -86,7 +86,7 @@ the shared-balance risk in Option A only applies once `DRY_RUN=false`). `scan --
 nba-futures` and `scan sports --filter mlb --date today` both ran end-to-end with real output
 (Section 5, first item). **Dry-run evidence window now runs itself**: two scheduled tasks
 installed under a new `\Edge-Radar-Longshot\` Task Scheduler folder (`Longshot-Scan` 08:00 daily,
-`Email-Longshot-Scan` 08:20 daily, reports to `mikeschecht+longshot@gmail.com`) — separate folder
+`Email-Longshot-Scan` 08:20 daily, reports to a `+longshot` plus-address of the operator's inbox) — separate folder
 and separate email address from main Edge-Radar's fleet, both verified live. **🔴 NEXT UP:** let
 the window accumulate (nothing to do here but wait/check in), then the still-open Gate 6
 `MAX_PER_EVENT` diversification question (Section 4).</sub>
@@ -380,10 +380,10 @@ lands on, size small and prove it in dry-run/live-small before trusting it with 
         while this fork is only accumulating evidence, not yet time-sensitive. **Set back to daily
         once live/validated** — edit `TASK_PROFILES` in `install_windows_task.py` and re-run
         `install all`.
-      - **Email routed separately from main**: `mikeschecht+longshot@gmail.com` (Gmail
-        plus-address) with sender display name `Edge-Radar-Longshot <fleet@send.mikesailab.com>`
+      - **Email routed separately from main**: a Gmail plus-address of the
+        operator's inbox with sender display name `Edge-Radar-Longshot <fleet@send.mikesailab.com>`
         (same verified domain, distinct name). Gmail label **`Edge Radar Longshot`** created and a
-        filter wired (`to:mikeschecht+longshot@gmail.com` -> add that label, archive out of
+        filter wired (`to:<that plus-address>` -> add that label, archive out of
         inbox) — mirrors main's existing `Edge Radar` filter pattern
         (`from:send.mikesailab.com subject:"edge radar"` -> same actions).
       - **Confirmed + fixed a real overlap (2026-09-04):** the original subject
