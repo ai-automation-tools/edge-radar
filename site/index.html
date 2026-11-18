@@ -128,7 +128,7 @@
     h1 em { font-style: normal; color: transparent; background: linear-gradient(90deg, #6ee7b7, #34d399 55%, #38bdf8); -webkit-background-clip: text; background-clip: text; }
     .lede { margin: 20px 0 0; max-width: 54ch; font-size: 16.5px; color: var(--fg-3); }
     .lede b { color: var(--fg-2); font-weight: 500; }
-    .fine { margin: 14px 0 0; max-width: 54ch; font-size: 13px; color: var(--fg-4); }
+    .fine { margin: 14px 0 0; max-width: 54ch; font-size: 13px; color: var(--fg-3); }
     .cta { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px; }
     .btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: var(--r-md); font-size: 14px; font-weight: 600; border: 1px solid transparent; cursor: pointer; font-family: inherit; transition: transform .2s var(--ease), background .2s, border-color .2s, box-shadow .2s; }
     .btn:active { transform: translateY(1px); }
@@ -392,7 +392,7 @@
     footer .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
     footer .row a:hover { color: var(--fg-2); }
     footer .right { margin-left: auto; display: flex; flex-wrap: wrap; gap: 18px; }
-    footer .fine { margin-top: 14px; font-size: 12px; color: var(--fg-5); max-width: none; }
+    footer .fine { margin-top: 14px; font-size: 12px; color: var(--fg-3); max-width: none; }
 
     /* ── Command palette ────────────────────── */
     .pal-bg { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); display: none; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px; }
@@ -591,7 +591,7 @@
         Edge-Radar compares Kalshi's price against an independent fair value built from sportsbook consensus and public data feeds.
         A bet fires only when the gap <b>clears the exchange fee and every risk gate</b>, and it is sized by fractional Kelly.
       </p>
-      <p class="fine">Not financial advice. The repository documents its losing segments as carefully as its winning ones, and the model's own calibration study says the market is usually right.</p>
+      <p class="fine">Not financial advice. The repository documents its losing segments as carefully as its winning ones, and the model's own calibration study says the market is usually right. <a href="#risk">Risk and eligibility</a>.</p>
       <div class="cta">
         <a class="btn btn-primary" href="#how">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="10" r="3.5"/><path d="M10 10l5-5"/></svg>
@@ -910,6 +910,7 @@
         <a href="#" data-ail-consent="manage">Cookie settings</a>
       </div>
     </div>
+    <p class="fine" id="risk"><b>Risk and eligibility.</b> You can lose the whole stake on every bet. Results quoted here come from one operator&#39;s small sample and are not a forecast. You are responsible for meeting Kalshi&#39;s age and location rules. If betting stops being fun, US help is at 1-800-GAMBLER. Edge-Radar is not affiliated with Kalshi or The Odds API. Not financial or legal advice.</p>
     <p class="fine">Edge-Radar is a research tool. The sample markets on this page are illustrative and the gate lab uses the repository's code defaults, not a live book. Nothing here is a recommendation to trade.</p>
   </div>
 </footer>
@@ -1155,8 +1156,8 @@
     { id: '3.7',  name: 'Lead time (S5)',          type: 'reject',     tags: 'market fails-open', d: 'Game markets only: days to the event at most <code>MAX_DAYS_TO_EVENT_FOR_GAME_MARKETS</code>. Futures exempt.', m: 'Caps lead time, not sports. The runaway NFL book was bought 25–112 days out and nothing settled for months while exposure stacked.', fo: true },
     { id: '4',    name: 'Composite score',         type: 'reject',     tags: 'market', d: 'Composite at or above <code>MIN_COMPOSITE_SCORE</code>.', m: 'Every composite scales edge as <code>min(edge / 0.01, 10)</code>. An earlier <code>edge × 20</code> made the futures gate structurally unreachable.' },
     { id: '4.5',  name: 'Confidence',              type: 'reject',     tags: 'market', d: 'Confidence tier at or above <code>MIN_CONFIDENCE</code>.', m: 'Bumps are one-way, down only. At equal claimed edge, <code>high</code> underperformed <code>medium</code>, so the composite caps it to the medium weight.' },
-    { id: '4.6',  name: 'Cheap NO (R1)',           type: 'reject',     tags: 'no-side', d: 'A NO priced below <code>NO_SIDE_FAVORITE_THRESHOLD</code> needs edge at least <code>NO_SIDE_MIN_EDGE</code> <b>and</b> high confidence.', m: 'Over 380 settled bets NO ran −7.7% ROI against YES at +22.4%, and YES beat NO within every shared price band.' },
-    { id: '4.6b', name: 'NO floor (R28)',          type: 'reject',     tags: 'no-side', d: 'Every NO bet: effective floor is <code>max(per-sport floor, NO_SIDE_MIN_EDGE_GLOBAL)</code>.', m: 'Damped rather than banned: the 35–50c NO pocket is the one profitable band and is deliberately left alone.' },
+    { id: '4.6',  name: 'Cheap NO (R1)',           type: 'reject',     tags: 'no-side', d: 'A NO priced below <code>NO_SIDE_FAVORITE_THRESHOLD</code> needs edge at least <code>NO_SIDE_MIN_EDGE</code> <b>and</b> high confidence.', m: 'Over 380 settled bets NO ran −7.7% ROI against YES at +22.4%, and YES beat NO within every shared price band (one operator&#39;s sample, not a forecast).' },
+    { id: '4.6b', name: 'NO floor (R28)',          type: 'reject',     tags: 'no-side', d: 'Every NO bet: effective floor is <code>max(per-sport floor, NO_SIDE_MIN_EDGE_GLOBAL)</code>.', m: 'Damped rather than banned: the 35–50c NO pocket is the one profitable band in one operator&#39;s sample, and is deliberately left alone.' },
     { id: '4.7',  name: 'Prediction categories (R25)', type: 'reject', tags: 'market', d: 'Crypto, weather, S&amp;P, mentions, companies and politics are off unless <code>ALLOW_PREDICTION_BETS=true</code>.', m: 'The scanners still run; the gate is what stops money.' },
     { id: '4.8',  name: 'In-progress games (L1 · S23)', type: 'reject', tags: 'market fails-open', d: 'Off unless <code>ALLOW_LIVE_BETS=true</code>. Start time comes from the Odds API, never the ticker.', m: 'The ticker only carries a time on moneyline series, so a ticker-based check saw nothing on spreads or totals and let 10 college football orders through after kickoff. <b>Fails open</b> when nothing can name a start time, which is why the digest also reports post-kickoff orders.', fo: true },
     { id: '5',    name: 'Already holding',         type: 'reject',     tags: 'portfolio', d: 'Not already holding this market.', m: 'Compares tickers. Gate 6b is the one that compares direction.' },

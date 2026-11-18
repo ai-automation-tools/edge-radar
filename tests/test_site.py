@@ -179,3 +179,40 @@ def test_ops_schedule_times_match_readme(ops: str) -> None:
         assert (
             readme_times.get(task) == twelve
         ), f"{task}: page {twelve} vs README {readme_times.get(task)}"
+
+
+# ── ER-10: risk and eligibility notice ──────────────────────────────────────
+
+_RISK_PHRASES = (
+    "Risk and eligibility.",
+    "lose the whole stake",
+    "not a forecast",
+    "age and",
+    "1-800-GAMBLER",
+    "not affiliated with",
+)
+
+
+@pytest.mark.parametrize("path", [PUBLIC, README], ids=["site", "readme"])
+def test_risk_and_eligibility_block(path: Path) -> None:
+    text = path.read_text(encoding="utf-8").replace("&#39;", "'")
+    missing = [p for p in _RISK_PHRASES if p not in text]
+    assert not missing, f"{path.name} lost its risk notice: {missing}"
+
+
+def _luminance(hex_colour: str) -> float:
+    rgb = [int(hex_colour[i : i + 2], 16) / 255 for i in (1, 3, 5)]
+    lin = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
+    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+
+def test_disclaimer_text_meets_contrast(public: str) -> None:
+    for rule in (".fine {", "footer .fine {"):
+        assert re.search(re.escape(rule) + r"[^}]*color: var\(--fg-3\)", public), rule
+    # Dark tokens come first, light (`.light`) second.
+    fgs = re.findall(r"--fg-3: (#[0-9a-f]{6});", public)
+    bgs = re.findall(r"--bg: (#[0-9a-f]{6});", public)
+    assert len(fgs) >= 2 and len(bgs) >= 2
+    for fg, bg in zip(fgs[:2], bgs[:2]):
+        hi, lo = sorted((_luminance(fg), _luminance(bg)), reverse=True)
+        assert (hi + 0.05) / (lo + 0.05) >= 4.5, (fg, bg)

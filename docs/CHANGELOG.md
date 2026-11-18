@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-11-17 -- Risk and eligibility notice (ER-10)
+
+- **Docs** The README and the public site carried only "Not financial advice". Both now have a
+  "Risk and eligibility" block: you can lose the whole stake, quoted results are one operator's
+  small sample and not a forecast, Kalshi's age and location rules are the user's responsibility,
+  US help at 1-800-GAMBLER, and no affiliation with Kalshi or The Odds API. On the site it sits
+  in the footer, linked from the hero.
+- **UX** The site's disclaimer text used `--fg-4` / `--fg-5` (4.19:1 and 2.62:1 on the dark
+  background). It now uses `--fg-3`, which clears 4.5:1 in both themes.
+- **Docs** The two gate cards that quote ROI from the ~380-bet sample now say so.
+- `tests/test_site.py` fails if the block goes missing from either page or the contrast drops.
+
+---
+
 ## 2026-11-17 -- Idempotent orders, resting-aware gates, one execute run per profile (ER-13)
 
 - **Fix** Orders went out without a `client_order_id`, so an order whose response was lost (a
