@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-11-17 -- Cache replay runs the position and live-game gates (ER-03)
+
+- **Fix** BUG-04: replaying a cached preview with `--pick` / `--ticker` re-checked Gates 5, 6, 6b,
+  7 and 2b but not Gate 2 (max open positions) or Gate 4.8 (game started). Within the 600 s cache
+  TTL a replay could exceed `MAX_OPEN_POSITIONS` or place an in-play bet with
+  `ALLOW_LIVE_BETS=false`. The replay loop now drops those rows, and clamps a row's contracts to
+  the current `MAX_BET_SIZE` if it was lowered since the preview.
+- **Fix** On replay, `--pick` / `--ticker` were resolved against the re-gated list, so a dropped
+  row shifted the numbers and `--pick 3` could place a bet other than preview row 3. The pick now
+  runs on the cached menu first and only the picked rows are re-gated. Pinned by
+  `tests/test_replay_gates.py`.
+
+---
+
 ## 2026-11-17 -- The ledger records every real fill (ER-02, X2)
 
 - **Fix** BUG-01: an order that filled after the create response settled at $0, because nothing

@@ -28,7 +28,7 @@ import argparse
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path  # noqa: F401
-from dataclasses import dataclass, asdict  # noqa: F401
+from dataclasses import dataclass, asdict, replace  # noqa: F401
 
 # Shared imports
 import paths  # noqa: F401 -- path constants -- configures sys.path
@@ -2582,9 +2582,10 @@ def execute_pipeline(
         #    portfolio-STATE-dependent gates can go stale inside the cache TTL:
         #    between the preview and the replay you may have opened one of these
         #    tickers, filled the per-event cap, or bet the matchup. Re-check
-        #    gates 5 (duplicate ticker), 6 (per-event cap) and 7 (series dedup)
-        #    against *current* state so a replay can't re-bet a market you now
-        #    hold. Sizing is NOT recomputed — only these guards.
+        #    gates 2 (max positions), 4.8 (game started), 5 (duplicate ticker),
+        #    6 (per-event cap), 6b, 7 (series dedup) and 2b against *current*
+        #    state so a replay can't re-bet a market you now hold. Sizing is NOT
+        #    recomputed, only clamped down to the current MAX_BET_SIZE (ER-03).
         age_str = f"{cache_age_seconds}s" if cache_age_seconds is not None else "unknown"
         rprint(
             f"\n[bold cyan]Replaying cached preview "
@@ -2592,12 +2593,40 @@ def execute_pipeline(
         )
         rprint("[dim]Pass --rescan to force a fresh scan instead.[/dim]")
 
+        # ER-03: resolve --pick/--ticker against the menu the user previewed,
+        # BEFORE re-gating. Picking after it indexed the re-gated list, so any
+        # dropped row shifted the numbers and `--pick 3` could place a bet other
+        # than preview row 3; Gate 2 would also count rows never picked.
+        if pick_rows is not None or pick_tickers is not None:
+            menu_total = len(cached_rows)
+            if pick_rows is not None:
+                cached_rows = [cached_rows[i] for i in _parse_pick_rows(pick_rows, menu_total)]
+            if pick_tickers is not None:
+                pick_set = {t.upper() for t in pick_tickers}
+                cached_rows = [s for s in cached_rows if s.opportunity.ticker.upper() in pick_set]
+            pick_rows = pick_tickers = None  # applied; the later filter must not re-index
+            rprint(f"[bold]Picked {len(cached_rows)} of {menu_total} preview rows[/bold]")
+            if not cached_rows:
+                rprint("[yellow]No orders matched your --pick or --ticker selection.[/yellow]")
+                return []
+
         to_execute = []
         replay_dropped: list[tuple[str, str]] = []
         for s in cached_rows:
             tkr = s.opportunity.ticker
             evt = _event_key(tkr)
             mkey = matchup_key(tkr)
+            # ER-03: Gate 2 and Gate 4.8 are portfolio/clock state too. Without
+            # them a replay inside the cache TTL could exceed MAX_OPEN_POSITIONS
+            # or place an in-play bet with ALLOW_LIVE_BETS=false.
+            if positions_at_cap(open_count + len(to_execute)):
+                replay_dropped.append(
+                    (tkr, f"max open positions {MAX_OPEN_POSITIONS} reached (gate 2)")
+                )
+                continue
+            if not ALLOW_LIVE_BETS and _game_has_started(s.opportunity):
+                replay_dropped.append((tkr, "game in progress, live betting disabled (gate 4.8)"))
+                continue
             if tkr in open_tickers:
                 replay_dropped.append((tkr, "already holding this market (gate 5)"))
                 continue
@@ -2626,6 +2655,18 @@ def execute_pipeline(
             if exp_reject:
                 replay_dropped.append((tkr, f"{exp_reject} (gate 2b)"))
                 continue
+            # ER-03: MAX_BET_SIZE may have been lowered since the preview.
+            # Clamp like size_order does; contracts change, row order does not.
+            if s.cost_dollars > MAX_BET_SIZE:
+                n = max(1, int(MAX_BET_SIZE / s.opportunity.market_price))
+                cost = n * s.opportunity.market_price
+                s = replace(
+                    s,
+                    contracts=n,
+                    cost_dollars=cost,
+                    bankroll_pct=cost / bankroll if bankroll > 0 else 0,
+                    risk_approval="APPROVED_CAPPED_MAX_BET",
+                )
             to_execute.append(s)
             # Track within this batch so two cached rows on the same event/matchup
             # don't both slip through.
