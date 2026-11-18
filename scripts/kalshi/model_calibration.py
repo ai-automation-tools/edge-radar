@@ -22,17 +22,19 @@ Usage:
 import argparse
 import json
 import math
-import sys
 from datetime import datetime, timedelta, timezone
+import sys
 from pathlib import Path
 
-import paths  # noqa: F401
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
+import paths  # noqa: F401,E402
 from ticker_display import bet_type_from_ticker, sport_from_ticker
 from logging_setup import setup_logging
 
 from dotenv import load_dotenv
 from rich.console import Console
-from rich.table import Table
 from rich import print as rprint
 
 load_dotenv()
@@ -74,12 +76,14 @@ _PREFIX_TO_SPORT_KEY = {
     "KXUFC": "mma",
 }
 
+
 def get_sport_key(ticker: str) -> str | None:
     """Resolve the internal sport key from ticker prefix."""
     for prefix, key in _PREFIX_TO_SPORT_KEY.items():
         if ticker.startswith(prefix):
             return key
     return None
+
 
 # ── C8 calibration tuning constants ──────────────────────────────────────────
 # Deliberately conservative (see C8-followup, 2026-06-23 review). The earlier
@@ -88,15 +92,16 @@ def get_sport_key(ticker: str) -> str | None:
 # ±20–50% on noise (it widened NBA totals +39% and clamped soccer margin to the
 # -20% floor). These guards require a real, statistically-significant signal and
 # cap how far a single monthly run can move.
-_MIN_CALIB_SAMPLES = 20          # need a real sample before touching live pricing
-_CALIB_SIGNIFICANCE_Z = 1.5      # ~87%: |gap| must exceed this many standard errors
-_CALIB_ADJUST_COEFF = 1.0        # gentle: a +15pp gap -> ~1.15x, not 1.225x
-_CALIB_MULT_FLOOR = 0.85         # cap a single run's move to [-15%, +25%]
+_MIN_CALIB_SAMPLES = 20  # need a real sample before touching live pricing
+_CALIB_SIGNIFICANCE_Z = 1.5  # ~87%: |gap| must exceed this many standard errors
+_CALIB_ADJUST_COEFF = 1.0  # gentle: a +15pp gap -> ~1.15x, not 1.225x
+_CALIB_MULT_FLOOR = 0.85  # cap a single run's move to [-15%, +25%]
 _CALIB_MULT_CEIL = 1.25
 
 
-def _calibrate_one_stdev(settled: list[dict], sport_key: str, base_stdev: float,
-                         category: str) -> float:
+def _calibrate_one_stdev(
+    settled: list[dict], sport_key: str, base_stdev: float, category: str
+) -> float:
     """Return a calibrated stdev for one sport/market, or base_stdev unchanged
     when there is no statistically meaningful overconfidence signal.
 
@@ -128,15 +133,21 @@ def _calibrate_one_stdev(settled: list[dict], sport_key: str, base_stdev: float,
     until 2026-07-31 (see `scripts/schedulers/maintenance/calibration.bat`).
     """
     group = [
-        t for t in settled
+        t
+        for t in settled
         if get_sport_key(t.get("ticker", "")) == sport_key
         and t.get("category") == category
         and t.get("_has_fair_value")
     ]
     n = len(group)
     if n < _MIN_CALIB_SAMPLES:
-        log.info("Calibration skip %s/%s: only %d settled bets with fair_value (need %d).",
-                 sport_key, category, n, _MIN_CALIB_SAMPLES)
+        log.info(
+            "Calibration skip %s/%s: only %d settled bets with fair_value (need %d).",
+            sport_key,
+            category,
+            n,
+            _MIN_CALIB_SAMPLES,
+        )
         return base_stdev
 
     pred_avg = sum(t["fair_value"] for t in group) / n
@@ -144,14 +155,29 @@ def _calibrate_one_stdev(settled: list[dict], sport_key: str, base_stdev: float,
     gap = pred_avg - real_avg
     se = math.sqrt(real_avg * (1.0 - real_avg) / n) if 0.0 < real_avg < 1.0 else 0.0
     if se == 0.0 or abs(gap) < _CALIB_SIGNIFICANCE_Z * se:
-        log.info("Calibration hold %s/%s: gap %+.1f%% within noise (n=%d, se=%.3f).",
-                 sport_key, category, gap * 100, n, se)
+        log.info(
+            "Calibration hold %s/%s: gap %+.1f%% within noise (n=%d, se=%.3f).",
+            sport_key,
+            category,
+            gap * 100,
+            n,
+            se,
+        )
         return base_stdev
 
     multiplier = max(_CALIB_MULT_FLOOR, min(_CALIB_MULT_CEIL, 1.0 + gap * _CALIB_ADJUST_COEFF))
     new_stdev = round(base_stdev * multiplier, 3)
-    log.info("Calibrate %s/%s: base=%.2f gap=%+.1f%% (n=%d, se=%.3f) -> %.2f (x%.3f).",
-             sport_key, category, base_stdev, gap * 100, n, se, new_stdev, multiplier)
+    log.info(
+        "Calibrate %s/%s: base=%.2f gap=%+.1f%% (n=%d, se=%.3f) -> %.2f (x%.3f).",
+        sport_key,
+        category,
+        base_stdev,
+        gap * 100,
+        n,
+        se,
+        new_stdev,
+        multiplier,
+    )
     return new_stdev
 
 
@@ -163,9 +189,11 @@ def _calibrate_one_stdev(settled: list[dict], sport_key: str, base_stdev: float,
 SCHEDULED_CALIBRATION_DAYS = 30
 
 
-def calibration_drift(settled: list[dict] | None = None,
-                      cache_path: Path | None = None,
-                      days: int | None = SCHEDULED_CALIBRATION_DAYS) -> dict:
+def calibration_drift(
+    settled: list[dict] | None = None,
+    cache_path: Path | None = None,
+    days: int | None = SCHEDULED_CALIBRATION_DAYS,
+) -> dict:
     """Compare the cached stdevs against what the calibrator would produce NOW.
 
     This is the pre-wager health check, and it deliberately does **not** rely on
@@ -187,10 +215,8 @@ def calibration_drift(settled: list[dict] | None = None,
     (a list of {sport, category, cached, expected, n}). Cheap: pure local JSON
     plus arithmetic, no network.
     """
-    path = cache_path or (Path(paths.PROJECT_ROOT) / "data" / "cache"
-                          / "calibration_stdevs.json")
-    out = {"ok": True, "cache_missing": False, "cache_age_days": None,
-           "drifted": [], "error": None}
+    path = cache_path or (Path(paths.PROJECT_ROOT) / "data" / "cache" / "calibration_stdevs.json")
+    out = {"ok": True, "cache_missing": False, "cache_age_days": None, "drifted": [], "error": None}
 
     if not path.exists():
         out.update(ok=False, cache_missing=True)
@@ -205,7 +231,8 @@ def calibration_drift(settled: list[dict] | None = None,
     updated = _parse_iso(cached.get("updated_at"))
     if updated:
         out["cache_age_days"] = round(
-            (datetime.now(timezone.utc) - updated).total_seconds() / 86400, 2)
+            (datetime.now(timezone.utc) - updated).total_seconds() / 86400, 2
+        )
 
     if settled is None:
         settled = [t for t in _load_settled_trades() if t.get("closed_at")]
@@ -214,9 +241,10 @@ def calibration_drift(settled: list[dict] | None = None,
             # the list to save_calibration_stdevs(), so we audit like-for-like.
             cutoff = datetime.now(timezone.utc) - timedelta(days=days)
             settled = [
-                t for t in settled
-                if (_parse_iso(t.get("closed_at"))
-                    or datetime.min.replace(tzinfo=timezone.utc)) >= cutoff
+                t
+                for t in settled
+                if (_parse_iso(t.get("closed_at")) or datetime.min.replace(tzinfo=timezone.utc))
+                >= cutoff
             ]
 
     for block, baselines, category in (
@@ -228,14 +256,22 @@ def calibration_drift(settled: list[dict] | None = None,
             have = (cached.get(block) or {}).get(sport, base)
             # Tolerance covers the round(_, 3) each value passes through.
             if abs(float(have) - float(expected)) > 0.002:
-                n = sum(1 for t in settled
-                        if get_sport_key(t.get("ticker", "")) == sport
-                        and t.get("category") == category
-                        and t.get("_has_fair_value"))
-                out["drifted"].append({
-                    "sport": sport, "category": category,
-                    "cached": float(have), "expected": float(expected), "n": n,
-                })
+                n = sum(
+                    1
+                    for t in settled
+                    if get_sport_key(t.get("ticker", "")) == sport
+                    and t.get("category") == category
+                    and t.get("_has_fair_value")
+                )
+                out["drifted"].append(
+                    {
+                        "sport": sport,
+                        "category": category,
+                        "cached": float(have),
+                        "expected": float(expected),
+                        "n": n,
+                    }
+                )
 
     out["ok"] = not out["drifted"] and not out["cache_missing"]
     return out
@@ -246,8 +282,10 @@ def format_drift_warning(health: dict) -> list[str]:
     if health.get("ok"):
         return []
     if health.get("cache_missing"):
-        return ["Calibration has never run: data/cache/calibration_stdevs.json "
-                "is missing. Pricing is on hardcoded defaults."]
+        return [
+            "Calibration has never run: data/cache/calibration_stdevs.json "
+            "is missing. Pricing is on hardcoded defaults."
+        ]
     if health.get("error"):
         return [f"Calibration cache problem: {health['error']}"]
     lines = [
@@ -258,13 +296,17 @@ def format_drift_warning(health: dict) -> list[str]:
     for d in health["drifted"]:
         lines.append(
             f"  {d['sport']}/{d['category']}: pricing uses {d['cached']}, "
-            f"current data says {d['expected']} (n={d['n']} settled)")
+            f"current data says {d['expected']} (n={d['n']} settled)"
+        )
     lines.append("Run: python scripts/kalshi/model_calibration.py --days 30 --save")
     return lines
 
 
 def save_calibration_stdevs(settled: list[dict]):
-    """Calculate and write calibrated sport standard deviations to data/cache/calibration_stdevs.json."""
+    """Calculate and write calibrated sport standard deviations.
+
+    Output: data/cache/calibration_stdevs.json.
+    """
     calibrated_margin = {
         sport_key: _calibrate_one_stdev(settled, sport_key, base_stdev, "spread")
         for sport_key, base_stdev in CURRENT_MARGIN_STDEV.items()
@@ -278,9 +320,9 @@ def save_calibration_stdevs(settled: list[dict]):
         "version": 1,
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "margin_stdev": calibrated_margin,
-        "total_stdev": calibrated_total
+        "total_stdev": calibrated_total,
     }
-    
+
     cache_dir = Path(paths.PROJECT_ROOT) / "data" / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_file = cache_dir / "calibration_stdevs.json"
@@ -295,12 +337,18 @@ def save_calibration_stdevs(settled: list[dict]):
     tmp_file.replace(cache_file)
     rprint(f"[green]Calibrated standard deviations written to {cache_file}[/green]")
 
+
 # Map sport display names back to sport keys
 _SPORT_DISPLAY_TO_KEY = {
-    "NBA": "basketball_nba", "NCAAB": "basketball_ncaab",
-    "NFL": "americanfootball_nfl", "NCAAF": "americanfootball_ncaaf",
-    "MLB": "baseball_mlb", "NHL": "icehockey_nhl",
-    "Soccer": "soccer", "MLS": "soccer", "UFC": "mma",
+    "NBA": "basketball_nba",
+    "NCAAB": "basketball_ncaab",
+    "NFL": "americanfootball_nfl",
+    "NCAAF": "americanfootball_ncaaf",
+    "MLB": "baseball_mlb",
+    "NHL": "icehockey_nhl",
+    "Soccer": "soccer",
+    "MLS": "soccer",
+    "UFC": "mma",
 }
 
 
@@ -340,24 +388,27 @@ def _load_settled_trades() -> list[dict]:
         edge_val = float(edge_est) if edge_est is not None else 0.0
         fv = s.get("fair_value")
         fv_val = float(fv) if fv is not None else 0.5
-        trades.append({
-            **s,
-            "cost_dollars": s.get("cost", 0.0),
-            "settlement_won": bool(s.get("won")),
-            "closed_at": s.get("settled_at"),
-            "category": _BET_TYPE_TO_CATEGORY.get(bet_type, bet_type.lower() or "other"),
-            "edge_estimated": edge_val,
-            "fair_value": fv_val,
-            # Track whether fair_value was actually recorded. Older settlements
-            # predate the field; defaulting them to 0.5 (above) is fine for the
-            # Brier/bucket displays but must NOT contaminate stdev calibration,
-            # which excludes records where this is False.
-            "_has_fair_value": fv is not None,
-        })
+        trades.append(
+            {
+                **s,
+                "cost_dollars": s.get("cost", 0.0),
+                "settlement_won": bool(s.get("won")),
+                "closed_at": s.get("settled_at"),
+                "category": _BET_TYPE_TO_CATEGORY.get(bet_type, bet_type.lower() or "other"),
+                "edge_estimated": edge_val,
+                "fair_value": fv_val,
+                # Track whether fair_value was actually recorded. Older settlements
+                # predate the field; defaulting them to 0.5 (above) is fine for the
+                # Brier/bucket displays but must NOT contaminate stdev calibration,
+                # which excludes records where this is False.
+                "_has_fair_value": fv is not None,
+            }
+        )
     return trades
 
 
 # ── Analysis Helpers ─────────────────────────────────────────────────────────
+
 
 def _brier_score(trades: list[dict]) -> float:
     """Brier score: mean squared error of predicted probability vs outcome.
@@ -391,13 +442,15 @@ def _calibration_buckets(trades: list[dict]) -> list[dict]:
             continue
         predicted_avg = sum(t.get("fair_value", 0) for t in in_bucket) / len(in_bucket)
         realized_avg = sum(1 for t in in_bucket if t.get("settlement_won")) / len(in_bucket)
-        buckets.append({
-            "range": f"{lo:.0%}-{hi:.0%}",
-            "count": len(in_bucket),
-            "predicted": round(predicted_avg, 3),
-            "realized": round(realized_avg, 3),
-            "gap": round(predicted_avg - realized_avg, 3),
-        })
+        buckets.append(
+            {
+                "range": f"{lo:.0%}-{hi:.0%}",
+                "count": len(in_bucket),
+                "predicted": round(predicted_avg, 3),
+                "realized": round(realized_avg, 3),
+                "gap": round(predicted_avg - realized_avg, 3),
+            }
+        )
     return buckets
 
 
@@ -419,15 +472,17 @@ def _edge_bucket_stats(trades: list[dict]) -> list[dict]:
         pnl = sum(t.get("net_pnl", 0) for t in in_bucket)
         wagered = sum(t.get("cost_dollars", 0) for t in in_bucket)
         avg_edge = sum(t.get("edge_estimated", 0) for t in in_bucket) / len(in_bucket)
-        results.append({
-            "bucket": name,
-            "count": len(in_bucket),
-            "wins": wins,
-            "wr": round(wins / len(in_bucket), 3),
-            "pnl": round(pnl, 2),
-            "roi": round(pnl / wagered, 3) if wagered > 0 else 0,
-            "avg_edge": round(avg_edge, 3),
-        })
+        results.append(
+            {
+                "bucket": name,
+                "count": len(in_bucket),
+                "wins": wins,
+                "wr": round(wins / len(in_bucket), 3),
+                "pnl": round(pnl, 2),
+                "roi": round(pnl / wagered, 3) if wagered > 0 else 0,
+                "avg_edge": round(avg_edge, 3),
+            }
+        )
     return results
 
 
@@ -445,20 +500,23 @@ def _dimension_stats(trades: list[dict], key_fn, label: str) -> list[dict]:
         wagered = sum(t.get("cost_dollars", 0) for t in group)
         avg_edge = sum(t.get("edge_estimated", 0) for t in group) / len(group)
         brier = _brier_score(group)
-        results.append({
-            "name": name,
-            "count": len(group),
-            "wins": wins,
-            "wr": round(wins / len(group), 3),
-            "pnl": round(pnl, 2),
-            "roi": round(pnl / wagered, 3) if wagered > 0 else 0,
-            "avg_edge": round(avg_edge, 3),
-            "brier": round(brier, 4),
-        })
+        results.append(
+            {
+                "name": name,
+                "count": len(group),
+                "wins": wins,
+                "wr": round(wins / len(group), 3),
+                "pnl": round(pnl, 2),
+                "roi": round(pnl / wagered, 3) if wagered > 0 else 0,
+                "avg_edge": round(avg_edge, 3),
+                "brier": round(brier, 4),
+            }
+        )
     return results
 
 
 # ── Recommendation Engine ────────────────────────────────────────────────────
+
 
 def _generate_recommendations(
     settled: list[dict],
@@ -481,30 +539,31 @@ def _generate_recommendations(
         hi = conf_map["high"]
         med = conf_map["medium"]
         if hi["wr"] < med["wr"] and hi["count"] >= 10 and med["count"] >= 10:
-            diff = med["wr"] - hi["wr"]
-            recs.append({
-                "priority": 1,
-                "area": "Confidence Signals",
-                "finding": (
-                    f"High confidence ({hi['wr']:.0%} WR, ${hi['pnl']:+.2f}) "
-                    f"underperforms medium ({med['wr']:.0%} WR, ${med['pnl']:+.2f}). "
-                    f"R13 (2026-04-24) already made the team-stats/rest/sharp-money "
-                    f"bumps one-way (drop on contradicts, no-op on supports), so the "
-                    f"bolt-on bumps are no longer inflating this tier — the base "
-                    f"'high' rule itself is the remaining suspect."
-                ),
-                "action": (
-                    "Bump removal already shipped as R13 — do NOT re-recommend it. "
-                    "The base 'high' tier is now set directly by the >=8 sharp-books + "
-                    "tight-consensus rule in edge_detector.py. Investigate that rule: "
-                    "Option A: tighten it (require more sharp books or a tighter "
-                    "consensus band before granting 'high'). "
-                    "Option B: down-rank base-'high' to 'medium' for Kelly sizing so "
-                    "the inflated tier no longer draws larger stakes. "
-                    "Option C: confirm the gap persists across two more 30-day windows "
-                    "before changing anything (small-sample inversions are common)."
-                ),
-            })
+            recs.append(
+                {
+                    "priority": 1,
+                    "area": "Confidence Signals",
+                    "finding": (
+                        f"High confidence ({hi['wr']:.0%} WR, ${hi['pnl']:+.2f}) "
+                        f"underperforms medium ({med['wr']:.0%} WR, ${med['pnl']:+.2f}). "
+                        f"R13 (2026-04-24) already made the team-stats/rest/sharp-money "
+                        f"bumps one-way (drop on contradicts, no-op on supports), so the "
+                        f"bolt-on bumps are no longer inflating this tier — the base "
+                        f"'high' rule itself is the remaining suspect."
+                    ),
+                    "action": (
+                        "Bump removal already shipped as R13 — do NOT re-recommend it. "
+                        "The base 'high' tier is now set directly by the >=8 sharp-books + "
+                        "tight-consensus rule in edge_detector.py. Investigate that rule: "
+                        "Option A: tighten it (require more sharp books or a tighter "
+                        "consensus band before granting 'high'). "
+                        "Option B: down-rank base-'high' to 'medium' for Kelly sizing so "
+                        "the inflated tier no longer draws larger stakes. "
+                        "Option C: confirm the gap persists across two more 30-day windows "
+                        "before changing anything (small-sample inversions are common)."
+                    ),
+                }
+            )
 
     # 2. Category calibration
     for cat in by_category:
@@ -513,16 +572,19 @@ def _generate_recommendations(
         # If claimed edge is way above realized ROI, model is overestimating
         if cat["avg_edge"] > 0.15 and cat["roi"] < 0.05:
             severity = "severely " if cat["avg_edge"] > 0.25 else ""
-            recs.append({
-                "priority": 1 if cat["roi"] < 0 else 2,
-                "area": f"{cat['name']} Model",
-                "finding": (
-                    f"{cat['name']} claims {cat['avg_edge']:.0%} avg edge but "
-                    f"realizes {cat['roi']:+.0%} ROI ({cat['wr']:.0%} WR over {cat['count']} trades). "
-                    f"Model is {severity}overestimating edge."
-                ),
-                "action": _stdev_recommendation(cat["name"], cat["avg_edge"], cat["wr"]),
-            })
+            recs.append(
+                {
+                    "priority": 1 if cat["roi"] < 0 else 2,
+                    "area": f"{cat['name']} Model",
+                    "finding": (
+                        f"{cat['name']} claims {cat['avg_edge']:.0%} avg edge but "
+                        f"realizes {cat['roi']:+.0%} ROI ({cat['wr']:.0%} WR over {cat['count']} "
+                        "trades). "
+                        f"Model is {severity}overestimating edge."
+                    ),
+                    "action": _stdev_recommendation(cat["name"], cat["avg_edge"], cat["wr"]),
+                }
+            )
 
     # 3. Calibration curve gaps
     for bucket in calibration:
@@ -531,57 +593,68 @@ def _generate_recommendations(
         gap = bucket["gap"]
         if abs(gap) > 0.10:
             direction = "overconfident" if gap > 0 else "underconfident"
-            recs.append({
-                "priority": 2,
-                "area": "Calibration",
-                "finding": (
-                    f"Predicted {bucket['range']} bucket: model says {bucket['predicted']:.0%}, "
-                    f"realized {bucket['realized']:.0%} ({bucket['count']} trades). "
-                    f"Model is {direction} by {abs(gap):.0%}."
-                ),
-                "action": (
-                    f"{'Increase' if gap > 0 else 'Decrease'} stdev parameters for markets "
-                    f"in this probability range to pull predictions toward 50%."
-                ),
-            })
+            recs.append(
+                {
+                    "priority": 2,
+                    "area": "Calibration",
+                    "finding": (
+                        f"Predicted {bucket['range']} bucket: model says "
+                        f"{bucket['predicted']:.0%}, "
+                        f"realized {bucket['realized']:.0%} ({bucket['count']} trades). "
+                        f"Model is {direction} by {abs(gap):.0%}."
+                    ),
+                    "action": (
+                        f"{'Increase' if gap > 0 else 'Decrease'} stdev parameters for markets "
+                        f"in this probability range to pull predictions toward 50%."
+                    ),
+                }
+            )
 
     # 4. Edge bucket analysis — are high-edge bets actually better?
     if len(by_edge) >= 2:
         best_bucket = max(by_edge, key=lambda b: b["roi"])
         worst_bucket = min(by_edge, key=lambda b: b["roi"])
         if worst_bucket["avg_edge"] > best_bucket["avg_edge"] and worst_bucket["count"] >= 10:
-            recs.append({
-                "priority": 2,
-                "area": "Edge Estimation",
-                "finding": (
-                    f"Highest-edge bucket ({worst_bucket['bucket']}, avg {worst_bucket['avg_edge']:.0%}) "
-                    f"has worst ROI ({worst_bucket['roi']:+.0%}), while {best_bucket['bucket']} "
-                    f"(avg {best_bucket['avg_edge']:.0%}) has best ROI ({best_bucket['roi']:+.0%}). "
-                    f"Large edges are systematically overestimated."
-                ),
-                "action": (
-                    "Consider capping maximum trusted edge at 15-20% (soft cap via composite score "
-                    "penalty for extreme edges), or increase stdevs to compress edge estimates."
-                ),
-            })
+            recs.append(
+                {
+                    "priority": 2,
+                    "area": "Edge Estimation",
+                    "finding": (
+                        f"Highest-edge bucket ({worst_bucket['bucket']}, avg "
+                        f"{worst_bucket['avg_edge']:.0%}) "
+                        f"has worst ROI ({worst_bucket['roi']:+.0%}), while "
+                        f"{best_bucket['bucket']} "
+                        f"(avg {best_bucket['avg_edge']:.0%}) has best ROI "
+                        f"({best_bucket['roi']:+.0%}). "
+                        f"Large edges are systematically overestimated."
+                    ),
+                    "action": (
+                        "Consider capping maximum trusted edge at 15-20% (soft cap via composite "
+                        "score "
+                        "penalty for extreme edges), or increase stdevs to compress edge estimates."
+                    ),
+                }
+            )
 
     # 5. Sport-specific issues
     for sport in by_sport:
         if sport["count"] < 10:
             continue
         if sport["roi"] < -0.10:
-            recs.append({
-                "priority": 2,
-                "area": f"{sport['name']} Performance",
-                "finding": (
-                    f"{sport['name']}: {sport['count']} trades, {sport['wr']:.0%} WR, "
-                    f"{sport['roi']:+.0%} ROI. Losing sport."
-                ),
-                "action": (
-                    f"Review {sport['name']} stdev parameters. Consider raising minimum edge "
-                    f"threshold for this sport or reducing its weight in composite score."
-                ),
-            })
+            recs.append(
+                {
+                    "priority": 2,
+                    "area": f"{sport['name']} Performance",
+                    "finding": (
+                        f"{sport['name']}: {sport['count']} trades, {sport['wr']:.0%} WR, "
+                        f"{sport['roi']:+.0%} ROI. Losing sport."
+                    ),
+                    "action": (
+                        f"Review {sport['name']} stdev parameters. Consider raising minimum edge "
+                        f"threshold for this sport or reducing its weight in composite score."
+                    ),
+                }
+            )
 
     # 6. YES/NO side asymmetry — analogous trigger to the R1 NO-side guard
     if by_side:
@@ -594,38 +667,47 @@ def _generate_recommendations(
             # Flag when one side is winning ≥15pts more often AND the loser has negative ROI
             if abs(wr_gap) >= 0.15 and (yes["roi"] < 0 or no["roi"] < 0):
                 worse, better = (yes, no) if wr_gap > 0 else (no, yes)
-                recs.append({
-                    "priority": 1,
-                    "area": "Side Asymmetry (YES vs NO)",
-                    "finding": (
-                        f"{better['name']} side: {better['count']} bets, {better['wr']:.0%} WR, "
-                        f"{better['roi']:+.0%} ROI. {worse['name']} side: {worse['count']} bets, "
-                        f"{worse['wr']:.0%} WR, {worse['roi']:+.0%} ROI. "
-                        f"{abs(wr_gap):.0%}-pt WR gap, {abs(roi_gap):.0%}-pt ROI gap."
-                    ),
-                    "action": (
-                        f"Investigate why {worse['name']}-side selection is unprofitable. "
-                        f"Consider adding a {worse['name']}-side gate analogous to R1's NO-side guard "
-                        f"(elevated edge/confidence floor for {worse['name']} bets), or audit the model "
-                        f"for systematic bias toward overpriced {worse['name']} contracts."
-                    ),
-                })
+                recs.append(
+                    {
+                        "priority": 1,
+                        "area": "Side Asymmetry (YES vs NO)",
+                        "finding": (
+                            f"{better['name']} side: {better['count']} bets, {better['wr']:.0%} "
+                            "WR, "
+                            f"{better['roi']:+.0%} ROI. {worse['name']} side: {worse['count']} "
+                            "bets, "
+                            f"{worse['wr']:.0%} WR, {worse['roi']:+.0%} ROI. "
+                            f"{abs(wr_gap):.0%}-pt WR gap, {abs(roi_gap):.0%}-pt ROI gap."
+                        ),
+                        "action": (
+                            f"Investigate why {worse['name']}-side selection is unprofitable. "
+                            f"Consider adding a {worse['name']}-side gate analogous to R1's "
+                            "NO-side guard "
+                            f"(elevated edge/confidence floor for {worse['name']} bets), or audit "
+                            "the model "
+                            f"for systematic bias toward overpriced {worse['name']} contracts."
+                        ),
+                    }
+                )
 
     # 7. Brier score baseline check
     overall_brier = _brier_score(settled)
     if overall_brier > 0.25:
-        recs.append({
-            "priority": 1,
-            "area": "Overall Calibration",
-            "finding": (
-                f"Overall Brier score {overall_brier:.4f} is worse than coin-flip baseline (0.2500). "
-                f"The model's probability estimates are adding noise, not signal."
-            ),
-            "action": (
-                "This suggests stdevs are too low (probabilities too extreme). "
-                "Increase all stdev parameters by 10-20% as a starting point."
-            ),
-        })
+        recs.append(
+            {
+                "priority": 1,
+                "area": "Overall Calibration",
+                "finding": (
+                    f"Overall Brier score {overall_brier:.4f} is worse than coin-flip baseline "
+                    "(0.2500). "
+                    f"The model's probability estimates are adding noise, not signal."
+                ),
+                "action": (
+                    "This suggests stdevs are too low (probabilities too extreme). "
+                    "Increase all stdev parameters by 10-20% as a starting point."
+                ),
+            }
+        )
 
     # Sort by priority
     recs.sort(key=lambda r: r["priority"])
@@ -663,6 +745,7 @@ def _stdev_recommendation(category: str, avg_edge: float, win_rate: float) -> st
 
 # ── Report Generation ────────────────────────────────────────────────────────
 
+
 def _parse_iso(ts: str | None) -> datetime | None:
     """Parse an ISO timestamp, tolerating trailing 'Z'."""
     if not ts:
@@ -680,12 +763,17 @@ def generate_calibration_report(days: int | None = None, save: bool = False):
     if days is not None:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         settled = [
-            t for t in settled
-            if (_parse_iso(t.get("closed_at")) or datetime.min.replace(tzinfo=timezone.utc)) >= cutoff
+            t
+            for t in settled
+            if (_parse_iso(t.get("closed_at")) or datetime.min.replace(tzinfo=timezone.utc))
+            >= cutoff
         ]
 
     if len(settled) < 10:
-        rprint(f"[yellow]Only {len(settled)} settled trades — need at least 10 for calibration.[/yellow]")
+        rprint(
+            f"[yellow]Only {len(settled)} settled trades — need at least 10 for "
+            "calibration.[/yellow]"
+        )
         return
 
     period = f"last {days} days" if days else "all time"
@@ -697,7 +785,7 @@ def generate_calibration_report(days: int | None = None, save: bool = False):
     rprint(f"  Settled trades: {len(settled)}")
 
     md.append(f"# Model Calibration Report ({period})")
-    md.append(f"")
+    md.append("")
     md.append(f"*Generated: {generated_at} | {len(settled)} settled trades*")
 
     # ── Overall metrics
@@ -708,41 +796,55 @@ def generate_calibration_report(days: int | None = None, save: bool = False):
     avg_edge = sum(t.get("edge_estimated", 0) for t in settled) / len(settled)
     brier = _brier_score(settled)
 
-    rprint(f"\n[bold]Overall[/bold]")
+    rprint("\n[bold]Overall[/bold]")
     rprint(f"  Win rate:     {wins}/{len(settled)} ({wins/len(settled):.0%})")
     rprint(f"  ROI:          {roi:+.1%}")
     rprint(f"  Avg est edge: {avg_edge:.1%}")
-    rprint(f"  Brier score:  {brier:.4f} ({'better' if brier < 0.25 else 'worse'} than coin flip 0.2500)")
+    rprint(
+        f"  Brier score:  {brier:.4f} ({'better' if brier < 0.25 else 'worse'} than coin flip "
+        "0.2500)"
+    )
 
-    md.append(f"")
-    md.append(f"## Overall")
-    md.append(f"")
-    md.append(f"| Metric | Value |")
-    md.append(f"|--------|-------|")
+    md.append("")
+    md.append("## Overall")
+    md.append("")
+    md.append("| Metric | Value |")
+    md.append("|--------|-------|")
     md.append(f"| Win rate | {wins}/{len(settled)} ({wins/len(settled):.0%}) |")
     md.append(f"| ROI | {roi:+.1%} |")
     md.append(f"| Avg estimated edge | {avg_edge:.1%} |")
-    md.append(f"| Brier score | {brier:.4f} ({'better' if brier < 0.25 else 'worse'} than 0.2500 baseline) |")
+    md.append(
+        f"| Brier score | {brier:.4f} ({'better' if brier < 0.25 else 'worse'} than 0.2500 "
+        "baseline) |"
+    )
 
     # ── Calibration curve
     calibration = _calibration_buckets(settled)
     if calibration:
-        rprint(f"\n[bold]Calibration Curve[/bold]")
+        rprint("\n[bold]Calibration Curve[/bold]")
         rprint(f"  {'Predicted':>12} {'Count':>6} {'Predicted':>10} {'Realized':>10} {'Gap':>8}")
-        md.append(f"")
-        md.append(f"## Calibration Curve")
-        md.append(f"")
-        md.append(f"| Predicted Range | Count | Predicted | Realized | Gap |")
-        md.append(f"|-----------------|-------|-----------|----------|-----|")
+        md.append("")
+        md.append("## Calibration Curve")
+        md.append("")
+        md.append("| Predicted Range | Count | Predicted | Realized | Gap |")
+        md.append("|-----------------|-------|-----------|----------|-----|")
         for b in calibration:
             gap_color = "red" if abs(b["gap"]) > 0.10 else "dim"
-            rprint(f"  {b['range']:>12} {b['count']:>6} {b['predicted']:>10.0%} {b['realized']:>10.0%} [{gap_color}]{b['gap']:>+8.0%}[/{gap_color}]")
-            md.append(f"| {b['range']} | {b['count']} | {b['predicted']:.0%} | {b['realized']:.0%} | {b['gap']:+.0%} |")
+            rprint(
+                f"  {b['range']:>12} {b['count']:>6} {b['predicted']:>10.0%} "
+                f"{b['realized']:>10.0%} [{gap_color}]{b['gap']:>+8.0%}[/{gap_color}]"
+            )
+            md.append(
+                f"| {b['range']} | {b['count']} | {b['predicted']:.0%} | {b['realized']:.0%} | "
+                f"{b['gap']:+.0%} |"
+            )
 
     # ── By category
     cat_labels = {"game": "ML", "spread": "Spread", "total": "Total", "player_prop": "Prop"}
     by_category = _dimension_stats(
-        settled, lambda t: cat_labels.get(t.get("category", ""), t.get("category", "Other")), "Category"
+        settled,
+        lambda t: cat_labels.get(t.get("category", ""), t.get("category", "Other")),
+        "Category",
     )
     _print_dimension_table("By Category", by_category, md)
 
@@ -759,27 +861,29 @@ def generate_calibration_report(days: int | None = None, save: bool = False):
     _print_dimension_table("By Sport", by_sport, md)
 
     # ── By side (YES vs NO)
-    by_side = _dimension_stats(
-        settled, lambda t: (t.get("side") or "unknown").upper(), "Side"
-    )
+    by_side = _dimension_stats(settled, lambda t: (t.get("side") or "unknown").upper(), "Side")
     _print_dimension_table("By Side", by_side, md)
 
     # ── By edge bucket
     by_edge = _edge_bucket_stats(settled)
     if by_edge:
-        rprint(f"\n[bold]By Edge Bucket[/bold]")
-        md.append(f"")
-        md.append(f"## By Edge Bucket")
-        md.append(f"")
-        md.append(f"| Bucket | Trades | WR | P&L | ROI | Avg Edge |")
-        md.append(f"|--------|--------|----|-----|-----|----------|")
+        rprint("\n[bold]By Edge Bucket[/bold]")
+        md.append("")
+        md.append("## By Edge Bucket")
+        md.append("")
+        md.append("| Bucket | Trades | WR | P&L | ROI | Avg Edge |")
+        md.append("|--------|--------|----|-----|-----|----------|")
         for b in by_edge:
             pnl_color = "green" if b["pnl"] >= 0 else "red"
             rprint(
                 f"  {b['bucket']:>8}: {b['count']:>3} trades, {b['wr']:.0%} WR, "
-                f"[{pnl_color}]${b['pnl']:+.2f}[/{pnl_color}], ROI {b['roi']:+.0%}, avg edge {b['avg_edge']:.0%}"
+                f"[{pnl_color}]${b['pnl']:+.2f}[/{pnl_color}], ROI {b['roi']:+.0%}, avg edge "
+                f"{b['avg_edge']:.0%}"
             )
-            md.append(f"| {b['bucket']} | {b['count']} | {b['wr']:.0%} | ${b['pnl']:+.2f} | {b['roi']:+.0%} | {b['avg_edge']:.0%} |")
+            md.append(
+                f"| {b['bucket']} | {b['count']} | {b['wr']:.0%} | ${b['pnl']:+.2f} | "
+                f"{b['roi']:+.0%} | {b['avg_edge']:.0%} |"
+            )
 
     # ── Confidence x Category cross-tab
     _print_cross_tab(settled, md)
@@ -792,9 +896,9 @@ def generate_calibration_report(days: int | None = None, save: bool = False):
         rprint(f"\n[bold]{'='*60}[/bold]")
         rprint(f"[bold]RECOMMENDATIONS ({len(recs)})[/bold]")
         rprint(f"[bold]{'='*60}[/bold]")
-        md.append(f"")
-        md.append(f"## Recommendations")
-        md.append(f"")
+        md.append("")
+        md.append("## Recommendations")
+        md.append("")
 
         for i, r in enumerate(recs, 1):
             priority_label = {1: "HIGH", 2: "MEDIUM", 3: "LOW"}[r["priority"]]
@@ -804,39 +908,39 @@ def generate_calibration_report(days: int | None = None, save: bool = False):
             rprint(f"  [bold]Action:[/bold] {r['action']}")
 
             md.append(f"### {i}. [{priority_label}] {r['area']}")
-            md.append(f"")
+            md.append("")
             md.append(f"**Finding:** {r['finding']}")
-            md.append(f"")
+            md.append("")
             md.append(f"**Action:** {r['action']}")
-            md.append(f"")
+            md.append("")
     else:
-        rprint(f"\n[green]No calibration issues detected.[/green]")
-        md.append(f"")
-        md.append(f"## Recommendations")
-        md.append(f"")
-        md.append(f"No calibration issues detected.")
+        rprint("\n[green]No calibration issues detected.[/green]")
+        md.append("")
+        md.append("## Recommendations")
+        md.append("")
+        md.append("No calibration issues detected.")
 
     # ── Current model parameters (for reference)
-    md.append(f"")
-    md.append(f"## Current Model Parameters")
-    md.append(f"")
-    md.append(f"### Spread Stdev (SPORT_MARGIN_STDEV)")
-    md.append(f"")
-    md.append(f"| Sport | Current |")
-    md.append(f"|-------|---------|")
+    md.append("")
+    md.append("## Current Model Parameters")
+    md.append("")
+    md.append("### Spread Stdev (SPORT_MARGIN_STDEV)")
+    md.append("")
+    md.append("| Sport | Current |")
+    md.append("|-------|---------|")
     for sport, val in sorted(CURRENT_MARGIN_STDEV.items()):
         md.append(f"| {sport} | {val} |")
-    md.append(f"")
-    md.append(f"### Total Stdev (SPORT_TOTAL_STDEV)")
-    md.append(f"")
-    md.append(f"| Sport | Current |")
-    md.append(f"|-------|---------|")
+    md.append("")
+    md.append("### Total Stdev (SPORT_TOTAL_STDEV)")
+    md.append("")
+    md.append("| Sport | Current |")
+    md.append("|-------|---------|")
     for sport, val in sorted(CURRENT_TOTAL_STDEV.items()):
         md.append(f"| {sport} | {val} |")
 
-    md.append(f"")
-    md.append(f"---")
-    md.append(f"*Generated by Edge-Radar model_calibration.py*")
+    md.append("")
+    md.append("---")
+    md.append("*Generated by Edge-Radar model_calibration.py*")
 
     if save:
         report_dir = Path(paths.PROJECT_ROOT) / "reports" / "Calibration"
@@ -860,9 +964,9 @@ def _print_dimension_table(title: str, data: list[dict], md: list[str]):
     if not data:
         return
     rprint(f"\n[bold]{title}[/bold]")
-    md.append(f"")
+    md.append("")
     md.append(f"## {title}")
-    md.append(f"")
+    md.append("")
     md.append(f"| {title} | Trades | WR | P&L | ROI | Avg Edge | Brier |")
     md.append(f"|{'-'*len(title)}--|--------|----|----|-----|----------|-------|")
 
@@ -880,7 +984,7 @@ def _print_dimension_table(title: str, data: list[dict], md: list[str]):
         )
 
     if any(d["brier"] > 0.25 for d in data):
-        rprint(f"  [dim]* Brier > 0.2500 = worse than coin flip[/dim]")
+        rprint("  [dim]* Brier > 0.2500 = worse than coin flip[/dim]")
 
 
 def _print_cross_tab(settled: list[dict], md: list[str]):
@@ -899,12 +1003,12 @@ def _print_cross_tab(settled: list[dict], md: list[str]):
     if not groups:
         return
 
-    rprint(f"\n[bold]Confidence x Category[/bold]")
-    md.append(f"")
-    md.append(f"## Confidence x Category")
-    md.append(f"")
-    md.append(f"| Confidence | Category | Trades | WR | P&L | ROI |")
-    md.append(f"|------------|----------|--------|----|-----|-----|")
+    rprint("\n[bold]Confidence x Category[/bold]")
+    md.append("")
+    md.append("## Confidence x Category")
+    md.append("")
+    md.append("| Confidence | Category | Trades | WR | P&L | ROI |")
+    md.append("|------------|----------|--------|----|-----|-----|")
 
     for conf in confs:
         for cat in cats:
@@ -921,12 +1025,11 @@ def _print_cross_tab(settled: list[dict], md: list[str]):
                 f"  {conf:>8} x {cat:<8}: {len(group):>3} trades, {wr:.0%} WR, "
                 f"[{pnl_color}]${pnl:+.2f}[/{pnl_color}], ROI {roi:+.0%}"
             )
-            md.append(
-                f"| {conf} | {cat} | {len(group)} | {wr:.0%} | ${pnl:+.2f} | {roi:+.0%} |"
-            )
+            md.append(f"| {conf} | {cat} | {len(group)} | {wr:.0%} | ${pnl:+.2f} | {roi:+.0%} |")
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
+
 
 def main():
     parser = argparse.ArgumentParser(description="Model calibration and feedback loop")

@@ -9,17 +9,19 @@ Usage:
     python scripts/kalshi/risk_check.py --report limits       # Risk limit status
     python scripts/kalshi/risk_check.py --report watchlist    # Pending opportunities
     python scripts/kalshi/risk_check.py --report reconciliation  # Trade-log ↔ settlement audit
-    python scripts/kalshi/risk_check.py --gate                # Returns exit code 1 if limits breached
+    python scripts/kalshi/risk_check.py --gate                # Exit code 1 if limits breached
 """
 
 import sys
 import json
 import argparse
-import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-import paths  # noqa: F401 -- path constants
+# Put scripts/shared on sys.path so `import paths` works without the venv .pth (fresh clone).
+if (_SHARED := str(Path(__file__).resolve().parents[1] / "shared")) not in sys.path:
+    sys.path.insert(0, _SHARED)
+import paths  # noqa: F401,E402 -- path constants
 
 from dotenv import load_dotenv
 from rich.console import Console
@@ -30,10 +32,13 @@ from rich import print as rprint
 from kalshi_client import KalshiClient
 from kalshi_executor import daily_loss_breached, positions_at_cap
 from trade_log import (
-    load_trade_log, load_settlement_log, get_today_pnl, get_filled_cost,
+    load_trade_log,
+    load_settlement_log,
+    get_today_pnl,
+    get_filled_cost,
     settlement_revenue_dollars,
 )
-from ticker_display import parse_game_datetime, parse_matchup, parse_pick_team, TEAM_NAMES
+from ticker_display import parse_game_datetime, parse_matchup, parse_pick_team
 from logging_setup import setup_logging
 from app.config import get_config
 
@@ -44,12 +49,12 @@ log = setup_logging("risk_check")
 
 # ── Risk Limits (from app.config) ─────────────────────────────────────────────
 _cfg = get_config()
-MAX_BET_SIZE        = _cfg.risk.max_bet_size
-MAX_DAILY_LOSS      = _cfg.risk.max_daily_loss
-MAX_OPEN_POSITIONS  = _cfg.risk.max_open_positions
-MAX_OPEN_EXPOSURE_PCT     = _cfg.risk.max_open_exposure_pct
-MAX_SEGMENT_EXPOSURE_PCT  = _cfg.risk.max_segment_exposure_pct
-DRY_RUN             = _cfg.system.dry_run
+MAX_BET_SIZE = _cfg.risk.max_bet_size
+MAX_DAILY_LOSS = _cfg.risk.max_daily_loss
+MAX_OPEN_POSITIONS = _cfg.risk.max_open_positions
+MAX_OPEN_EXPOSURE_PCT = _cfg.risk.max_open_exposure_pct
+MAX_SEGMENT_EXPOSURE_PCT = _cfg.risk.max_segment_exposure_pct
+DRY_RUN = _cfg.system.dry_run
 
 # ── Watchlist path ────────────────────────────────────────────────────────────
 WATCHLIST_PATH = paths.SPORTS_OPPORTUNITIES_PATH
@@ -57,6 +62,7 @@ PREDICTION_WATCHLIST = paths.PREDICTION_OPPORTUNITIES_PATH
 
 
 # ── Data Fetchers ─────────────────────────────────────────────────────────────
+
 
 def fetch_positions(client: KalshiClient) -> list[dict]:
     """Fetch live open positions from Kalshi API."""
@@ -103,6 +109,7 @@ def load_watchlist() -> list[dict]:
 
 # ── Risk Calculations ─────────────────────────────────────────────────────────
 
+
 def get_daily_limit_pct(daily_pnl: float) -> float:
     if MAX_DAILY_LOSS == 0:
         return 0
@@ -118,19 +125,23 @@ def is_daily_limit_breached(daily_pnl: float) -> bool:
 
 # ── Display Functions ─────────────────────────────────────────────────────────
 
+
 def print_risk_header(client: KalshiClient):
     mode = "DEMO" if client.is_demo else "LIVE"
-    mode_tag = f"[red bold]{mode}[/red bold]" if not DRY_RUN else f"[green bold]DRY RUN ({mode})[/green bold]"
+    mode_tag = (
+        f"[red bold]{mode}[/red bold]"
+        if not DRY_RUN
+        else f"[green bold]DRY RUN ({mode})[/green bold]"
+    )
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    console.print(Panel(
-        f"[bold]Edge-Radar Risk Dashboard[/bold]  {mode_tag}\n[dim]{ts}[/dim]",
-        expand=False
-    ))
+    console.print(
+        Panel(f"[bold]Edge-Radar Risk Dashboard[/bold]  {mode_tag}\n[dim]{ts}[/dim]", expand=False)
+    )
 
 
-def print_limits_status(daily_pnl: float, open_count: int,
-                        positions: list[dict] | None = None,
-                        equity: float = 0.0):
+def print_limits_status(
+    daily_pnl: float, open_count: int, positions: list[dict] | None = None, equity: float = 0.0
+):
     """Risk-limit dashboard.
 
     S4 (2026-08-26): the exposure rows are the only ones that answer "how much
@@ -169,7 +180,7 @@ def print_limits_status(daily_pnl: float, open_count: int,
         f"${pnl_used:.2f}",
         f"${MAX_DAILY_LOSS:.2f}",
         f"{limit_pct:.1f}%",
-        status
+        status,
     )
     pos_pct = open_count / MAX_OPEN_POSITIONS * 100 if MAX_OPEN_POSITIONS > 0 else 0
     table.add_row(
@@ -177,19 +188,14 @@ def print_limits_status(daily_pnl: float, open_count: int,
         str(open_count),
         str(MAX_OPEN_POSITIONS),
         f"{pos_pct:.0f}%",
-        "[green]OK[/green]" if open_count < MAX_OPEN_POSITIONS else "[red]AT LIMIT[/red]"
+        "[green]OK[/green]" if open_count < MAX_OPEN_POSITIONS else "[red]AT LIMIT[/red]",
     )
-    table.add_row(
-        "Max Bet Size",
-        "—",
-        f"${MAX_BET_SIZE:.0f}",
-        "—",
-        "[green]OK[/green]"
-    )
+    table.add_row("Max Bet Size", "—", f"${MAX_BET_SIZE:.0f}", "—", "[green]OK[/green]")
 
     # ── S4 / Gate 2b: cumulative exposure, denominated in equity.
     if positions is not None and equity > 0:
         from kalshi_executor import exposure_from_positions
+
         open_exposure, by_segment = exposure_from_positions(positions)
 
         if MAX_OPEN_EXPOSURE_PCT > 0:
@@ -199,12 +205,14 @@ def print_limits_status(daily_pnl: float, open_count: int,
                 f"${open_exposure:,.2f}",
                 f"${MAX_OPEN_EXPOSURE_PCT * equity:,.2f}",
                 f"{pct / MAX_OPEN_EXPOSURE_PCT * 100:.0f}%",
-                "[green]OK[/green]" if pct < MAX_OPEN_EXPOSURE_PCT
-                else "[red]AT LIMIT[/red]",
+                "[green]OK[/green]" if pct < MAX_OPEN_EXPOSURE_PCT else "[red]AT LIMIT[/red]",
             )
         else:
             table.add_row(
-                "Open Exposure (gate 2b)", f"${open_exposure:,.2f}", "—", "—",
+                "Open Exposure (gate 2b)",
+                f"${open_exposure:,.2f}",
+                "—",
+                "—",
                 "[yellow]NO CAP SET[/yellow]",
             )
 
@@ -219,13 +227,19 @@ def print_limits_status(daily_pnl: float, open_count: int,
                     f"${seg_at_risk:,.2f}",
                     f"${MAX_SEGMENT_EXPOSURE_PCT * equity:,.2f}",
                     f"{seg_pct / MAX_SEGMENT_EXPOSURE_PCT * 100:.0f}%",
-                    "[green]OK[/green]" if seg_pct < MAX_SEGMENT_EXPOSURE_PCT
-                    else "[red]AT LIMIT[/red]",
+                    (
+                        "[green]OK[/green]"
+                        if seg_pct < MAX_SEGMENT_EXPOSURE_PCT
+                        else "[red]AT LIMIT[/red]"
+                    ),
                 )
             else:
                 table.add_row(
-                    f"Largest Segment ({seg})", f"${seg_at_risk:,.2f}", "—",
-                    f"{seg_pct:.0%} of equity", "[yellow]NO CAP SET[/yellow]",
+                    f"Largest Segment ({seg})",
+                    f"${seg_at_risk:,.2f}",
+                    "—",
+                    f"{seg_pct:.0%} of equity",
+                    "[yellow]NO CAP SET[/yellow]",
                 )
 
     console.print(table)
@@ -294,7 +308,10 @@ def print_open_positions(positions: list[dict]):
     pnl_style = "green" if total_pnl >= 0 else "red"
     table.add_row(
         f"[bold]TOTAL[/bold] [dim](fees: ${total_fees:.2f})[/dim]",
-        "", "", "", "",
+        "",
+        "",
+        "",
+        "",
         f"[bold]${total_exposure:.2f}[/bold]",
         f"[bold {pnl_style}]${total_pnl:+.2f}[/bold {pnl_style}]",
     )
@@ -347,8 +364,14 @@ def print_pnl_summary(today_trades: list[dict], daily_pnl: float):
     if today_trades:
         best = max(today_trades, key=lambda t: t.get("net_pnl", 0))
         worst = min(today_trades, key=lambda t: t.get("net_pnl", 0))
-        table.add_row("Best Trade", f"[green]${best.get('net_pnl', 0):+.2f}[/green]  {best.get('ticker', '')[:25]}")
-        table.add_row("Worst Trade", f"[red]${worst.get('net_pnl', 0):+.2f}[/red]  {worst.get('ticker', '')[:25]}")
+        table.add_row(
+            "Best Trade",
+            f"[green]${best.get('net_pnl', 0):+.2f}[/green]  {best.get('ticker', '')[:25]}",
+        )
+        table.add_row(
+            "Worst Trade",
+            f"[red]${worst.get('net_pnl', 0):+.2f}[/red]  {worst.get('ticker', '')[:25]}",
+        )
 
     console.print(table)
 
@@ -384,8 +407,16 @@ def print_watchlist(opps: list[dict]):
 # Pre-R5 settlements have these as null/missing — useful for measuring how much
 # of the historical cohort is missing trade-side context.
 _R5_FIELDS = (
-    "composite_score", "risk_approval", "bankroll_pct", "edge_source",
-    "fill_status", "category", "title", "unit_size", "closing_price", "clv",
+    "composite_score",
+    "risk_approval",
+    "bankroll_pct",
+    "edge_source",
+    "fill_status",
+    "category",
+    "title",
+    "unit_size",
+    "closing_price",
+    "clv",
     "order_id",
 )
 
@@ -416,8 +447,10 @@ def print_reconciliation():
     summary.add_row("Joined on trade_id", f"[green]{len(overlap)}[/green]")
     coverage = (len(overlap) / len(settlements) * 100) if settlements else 0
     summary.add_row("Settlement join coverage", f"{coverage:.1f}%")
-    summary.add_row("Orphaned settlements (no trade-log match)",
-                    f"[red]{len(orphaned_settlements)}[/red]" if orphaned_settlements else "0")
+    summary.add_row(
+        "Orphaned settlements (no trade-log match)",
+        f"[red]{len(orphaned_settlements)}[/red]" if orphaned_settlements else "0",
+    )
     summary.add_row("Open trades (not yet settled)", str(len(open_trades)))
     console.print(summary)
 
@@ -443,10 +476,7 @@ def print_reconciliation():
         coverage_table.add_column("%", justify="right")
 
         for field in _R5_FIELDS:
-            populated = sum(
-                1 for s in settlements
-                if s.get(field) not in (None, "", 0)
-            )
+            populated = sum(1 for s in settlements if s.get(field) not in (None, "", 0))
             pct = populated / len(settlements) * 100
             color = "green" if pct >= 80 else "yellow" if pct >= 20 else "red"
             coverage_table.add_row(
@@ -457,16 +487,15 @@ def print_reconciliation():
         console.print(coverage_table)
 
         if any(
-            sum(1 for s in settlements if s.get(f) not in (None, "", 0)) == 0
-            for f in _R5_FIELDS
+            sum(1 for s in settlements if s.get(f) not in (None, "", 0)) == 0 for f in _R5_FIELDS
         ):
             rprint(
-                "\n[dim]Fields at 0% are pre-R5 -- see "
-                "data/history/README.md for context.[/dim]"
+                "\n[dim]Fields at 0% are pre-R5 -- see " "data/history/README.md for context.[/dim]"
             )
 
 
 # ── Gate Mode ─────────────────────────────────────────────────────────────────
+
 
 def run_gate_check(client: KalshiClient) -> int:
     """
@@ -497,15 +526,21 @@ def run_gate_check(client: KalshiClient) -> int:
 
 # ── CLI ────────────────────────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(description="Live portfolio risk dashboard (Kalshi API)")
-    parser.add_argument("--report", default="all",
-                        choices=["all", "positions", "pnl", "limits", "watchlist", "reconciliation"],
-                        help="Report type to display")
-    parser.add_argument("--gate", action="store_true",
-                        help="Gate mode: exit 1 if limits breached (for automation)")
-    parser.add_argument("--save", action="store_true",
-                        help="Save dashboard as markdown to reports/Accounts/Kalshi/")
+    parser.add_argument(
+        "--report",
+        default="all",
+        choices=["all", "positions", "pnl", "limits", "watchlist", "reconciliation"],
+        help="Report type to display",
+    )
+    parser.add_argument(
+        "--gate", action="store_true", help="Gate mode: exit 1 if limits breached (for automation)"
+    )
+    parser.add_argument(
+        "--save", action="store_true", help="Save dashboard as markdown to reports/Accounts/Kalshi/"
+    )
     args = parser.parse_args()
 
     # Reconciliation report doesn't need live API data — short-circuit.
@@ -532,7 +567,9 @@ def main():
     if report in ("all", "limits"):
         print_balance(bal)
         print_limits_status(
-            daily_pnl, len(positions), positions,
+            daily_pnl,
+            len(positions),
+            positions,
             equity=bal["balance"] + bal["portfolio_value"],
         )
 
@@ -548,16 +585,20 @@ def main():
 
     if report == "all":
         if is_daily_limit_breached(daily_pnl):
-            console.print(Panel(
-                "[red bold]HARD STOP ACTIVE — No new positions permitted today[/red bold]",
-                expand=False
-            ))
+            console.print(
+                Panel(
+                    "[red bold]HARD STOP ACTIVE — No new positions permitted today[/red bold]",
+                    expand=False,
+                )
+            )
         else:
             limit_pct = get_daily_limit_pct(daily_pnl)
-            console.print(Panel(
-                f"[green]Trading permitted — Daily limit at {limit_pct:.1f}%[/green]",
-                expand=False
-            ))
+            console.print(
+                Panel(
+                    f"[green]Trading permitted — Daily limit at {limit_pct:.1f}%[/green]",
+                    expand=False,
+                )
+            )
 
     # Save markdown report
     if args.save:
@@ -573,20 +614,23 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
     breached = is_daily_limit_breached(daily_pnl)
 
     md = []
-    md.append(f"# Risk Dashboard")
-    md.append(f"")
+    md.append("# Risk Dashboard")
+    md.append("")
     md.append(f"*{now.strftime('%A, %B %d, %Y')} | {now.strftime('%I:%M %p UTC')} | {env}*")
-    md.append(f"")
+    md.append("")
 
     # Balance & limits
-    md.append(f"## Account")
-    md.append(f"")
-    md.append(f"| Metric | Value |")
-    md.append(f"|--------|-------|")
+    md.append("## Account")
+    md.append("")
+    md.append("| Metric | Value |")
+    md.append("|--------|-------|")
     md.append(f"| Cash Balance | ${bal['balance']:,.2f} |")
     md.append(f"| Portfolio Value | ${bal['portfolio_value']:,.2f} |")
     md.append(f"| Open Positions | {len(positions)}/{MAX_OPEN_POSITIONS} |")
-    md.append(f"| Daily Loss Used | ${abs(min(daily_pnl, 0)):.2f} / ${MAX_DAILY_LOSS:.2f} ({limit_pct:.1f}%) |")
+    md.append(
+        f"| Daily Loss Used | ${abs(min(daily_pnl, 0)):.2f} / ${MAX_DAILY_LOSS:.2f} "
+        f"({limit_pct:.1f}%) |"
+    )
     status = "HARD STOP" if breached else "Normal" if limit_pct < 50 else "Caution"
     md.append(f"| Status | **{status}** |")
 
@@ -594,11 +638,11 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
     if positions:
         total_exp = 0.0
         total_pnl_pos = 0.0
-        md.append(f"")
+        md.append("")
         md.append(f"## Open Positions ({len(positions)})")
-        md.append(f"")
-        md.append(f"| Bet | When | Pick | Qty | Cost | P&L |")
-        md.append(f"|-----|------|------|-----|------|-----|")
+        md.append("")
+        md.append("| Bet | When | Pick | Qty | Cost | P&L |")
+        md.append("|-----|------|------|-----|------|-----|")
         for p in positions:
             ticker = p.get("ticker", "")
             pnl = float(p.get("realized_pnl_dollars", "0"))
@@ -652,14 +696,20 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
             net_pnl = revenue - cost - fees
 
             if cost > 0 or revenue > 0:
-                settled_records.append({
-                    "ticker": s.get("ticker", ""),
-                    "side": side, "cost": cost, "revenue": revenue,
-                    "fees": fees, "net_pnl": round(net_pnl, 4),
-                    "won": won, "result": result,
-                    "contracts": int(yes_count if side == "yes" else no_count),
-                    "settled_time": s.get("settled_time", ""),
-                })
+                settled_records.append(
+                    {
+                        "ticker": s.get("ticker", ""),
+                        "side": side,
+                        "cost": cost,
+                        "revenue": revenue,
+                        "fees": fees,
+                        "net_pnl": round(net_pnl, 4),
+                        "won": won,
+                        "result": result,
+                        "contracts": int(yes_count if side == "yes" else no_count),
+                        "settled_time": s.get("settled_time", ""),
+                    }
+                )
 
         # Settlement summary
         if settled_records:
@@ -674,12 +724,11 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
             s_avg_win = sum(r["net_pnl"] for r in s_wins) / len(s_wins) if s_wins else 0
             s_avg_loss = sum(r["net_pnl"] for r in s_losses) / len(s_losses) if s_losses else 0
 
-            pnl_sign = "+" if s_pnl >= 0 else ""
-            md.append(f"")
+            md.append("")
             md.append(f"## Settlement Summary (Last 7 Days — {len(settled_records)} bets)")
-            md.append(f"")
-            md.append(f"| Metric | Value |")
-            md.append(f"|--------|-------|")
+            md.append("")
+            md.append("| Metric | Value |")
+            md.append("|--------|-------|")
             md.append(f"| Record | **{len(s_wins)}W - {len(s_losses)}L ({s_wr:.0%})** |")
             md.append(f"| Net P&L | **${s_pnl:+.2f}** |")
             md.append(f"| Total wagered | ${s_wagered:.2f} |")
@@ -692,12 +741,21 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
             if s_wins and s_losses:
                 loss_total = abs(sum(r["net_pnl"] for r in s_losses))
                 if loss_total > 0:
-                    md.append(f"| Profit factor | {abs(sum(r['net_pnl'] for r in s_wins)) / loss_total:.2f} |")
+                    md.append(
+                        "| Profit factor | "
+                        f"{abs(sum(r['net_pnl'] for r in s_wins)) / loss_total:.2f} |"
+                    )
 
             best = max(settled_records, key=lambda r: r["net_pnl"])
             worst = min(settled_records, key=lambda r: r["net_pnl"])
-            md.append(f"| Best trade | ${best['net_pnl']:+.2f} — {format_bet_label(best['ticker'], best['ticker'])[:30]} |")
-            md.append(f"| Worst trade | ${worst['net_pnl']:+.2f} — {format_bet_label(worst['ticker'], worst['ticker'])[:30]} |")
+            md.append(
+                f"| Best trade | ${best['net_pnl']:+.2f} — "
+                f"{format_bet_label(best['ticker'], best['ticker'])[:30]} |"
+            )
+            md.append(
+                f"| Worst trade | ${worst['net_pnl']:+.2f} — "
+                f"{format_bet_label(worst['ticker'], worst['ticker'])[:30]} |"
+            )
 
             # By sport breakdown
             sport_groups: dict[str, list] = {}
@@ -705,18 +763,22 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
                 sport = sport_from_ticker(r["ticker"]) or "Other"
                 sport_groups.setdefault(sport, []).append(r)
             if sport_groups:
-                md.append(f"")
-                md.append(f"### By Sport")
-                md.append(f"")
-                md.append(f"| Sport | Bets | Win Rate | P&L | ROI |")
-                md.append(f"|-------|------|----------|-----|-----|")
-                for name, recs in sorted(sport_groups.items(), key=lambda x: -sum(r["net_pnl"] for r in x[1])):
+                md.append("")
+                md.append("### By Sport")
+                md.append("")
+                md.append("| Sport | Bets | Win Rate | P&L | ROI |")
+                md.append("|-------|------|----------|-----|-----|")
+                for name, recs in sorted(
+                    sport_groups.items(), key=lambda x: -sum(r["net_pnl"] for r in x[1])
+                ):
                     n = len(recs)
                     w = sum(1 for r in recs if r["won"])
                     pnl = sum(r["net_pnl"] for r in recs)
                     wag = sum(r["cost"] for r in recs)
                     roi_v = pnl / wag if wag > 0 else 0
-                    md.append(f"| {name} | {n} | {w}/{n} ({w/n:.0%}) | ${pnl:+.2f} | {roi_v:+.0%} |")
+                    md.append(
+                        f"| {name} | {n} | {w}/{n} ({w/n:.0%}) | ${pnl:+.2f} | {roi_v:+.0%} |"
+                    )
 
             # By type breakdown
             type_groups: dict[str, list] = {}
@@ -724,26 +786,32 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
                 btype = bet_type_from_ticker(r["ticker"])
                 type_groups.setdefault(btype, []).append(r)
             if type_groups:
-                md.append(f"")
-                md.append(f"### By Type")
-                md.append(f"")
-                md.append(f"| Type | Bets | Win Rate | P&L | ROI |")
-                md.append(f"|------|------|----------|-----|-----|")
-                for name, recs in sorted(type_groups.items(), key=lambda x: -sum(r["net_pnl"] for r in x[1])):
+                md.append("")
+                md.append("### By Type")
+                md.append("")
+                md.append("| Type | Bets | Win Rate | P&L | ROI |")
+                md.append("|------|------|----------|-----|-----|")
+                for name, recs in sorted(
+                    type_groups.items(), key=lambda x: -sum(r["net_pnl"] for r in x[1])
+                ):
                     n = len(recs)
                     w = sum(1 for r in recs if r["won"])
                     pnl = sum(r["net_pnl"] for r in recs)
                     wag = sum(r["cost"] for r in recs)
                     roi_v = pnl / wag if wag > 0 else 0
-                    md.append(f"| {name} | {n} | {w}/{n} ({w/n:.0%}) | ${pnl:+.2f} | {roi_v:+.0%} |")
+                    md.append(
+                        f"| {name} | {n} | {w}/{n} ({w/n:.0%}) | ${pnl:+.2f} | {roi_v:+.0%} |"
+                    )
 
             # Recent settlement detail (last 15)
-            recent_sorted = sorted(settled_records, key=lambda x: x.get("settled_time", ""), reverse=True)[:15]
-            md.append(f"")
-            md.append(f"### Recent Settlements (latest 15)")
-            md.append(f"")
-            md.append(f"| Bet | Type | Side | Result | Qty | Cost | Revenue | P&L |")
-            md.append(f"|-----|------|------|--------|-----|------|---------|-----|")
+            recent_sorted = sorted(
+                settled_records, key=lambda x: x.get("settled_time", ""), reverse=True
+            )[:15]
+            md.append("")
+            md.append("### Recent Settlements (latest 15)")
+            md.append("")
+            md.append("| Bet | Type | Side | Result | Qty | Cost | Revenue | P&L |")
+            md.append("|-----|------|------|--------|-----|------|---------|-----|")
             for r in recent_sorted:
                 won_str = "W" if r["won"] else "L"
                 md.append(
@@ -761,22 +829,25 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
 
     # Resting orders
     if resting:
-        md.append(f"")
+        md.append("")
         md.append(f"## Resting Orders ({len(resting)})")
-        md.append(f"")
-        md.append(f"| Ticker | Side | Remaining | Price |")
-        md.append(f"|--------|------|-----------|-------|")
+        md.append("")
+        md.append("| Ticker | Side | Remaining | Price |")
+        md.append("|--------|------|-----------|-------|")
         for o in resting:
             price = o.get("yes_price_dollars") or o.get("no_price_dollars") or "?"
-            md.append(f"| {o.get('ticker', '')[:35]} | {o.get('side', '').upper()} | {o.get('remaining_count_fp', '?')} | ${price} |")
+            md.append(
+                f"| {o.get('ticker', '')[:35]} | {o.get('side', '').upper()} | "
+                f"{o.get('remaining_count_fp', '?')} | ${price} |"
+            )
 
     # Watchlist
     if watchlist:
-        md.append(f"")
+        md.append("")
         md.append(f"## Watchlist ({len(watchlist)} opportunities)")
-        md.append(f"")
-        md.append(f"| Ticker | Side | Edge | Score | Conf |")
-        md.append(f"|--------|------|------|-------|------|")
+        md.append("")
+        md.append("| Ticker | Side | Edge | Score | Conf |")
+        md.append("|--------|------|------|-------|------|")
         for o in sorted(watchlist, key=lambda x: x.get("composite_score", 0), reverse=True)[:10]:
             md.append(
                 f"| {o.get('ticker', '')[:30]} | {o.get('side', '').upper()} "
@@ -784,9 +855,9 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
                 f"| {o.get('confidence', '')[:3].upper()} |"
             )
 
-    md.append(f"")
-    md.append(f"---")
-    md.append(f"*Generated by Edge-Radar*")
+    md.append("")
+    md.append("---")
+    md.append("*Generated by Edge-Radar*")
 
     report_dir = Path(__file__).resolve().parent.parent.parent / "reports" / "Accounts" / "Kalshi"
     report_dir.mkdir(parents=True, exist_ok=True)
