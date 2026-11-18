@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "f02ac43467593f0c194aaa152bed11f4634e44e0"
+      "revision": "d45b877fcdcbbed139847926c7e6f4e1826f9d5c"
     }
   },
   "stages": [
