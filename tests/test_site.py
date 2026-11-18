@@ -44,6 +44,27 @@ def test_no_tailwind_cdn_and_consent_loads(page: Path) -> None:
     assert 'href="https://ai-automation-tools.dev/cookies.html"' in html
 
 
+def test_public_headers_allow_every_external_origin(public: str) -> None:
+    """ER-23: site/vercel.json sends a CSP; every origin the page loads from must be in it."""
+    import json
+
+    rules = json.loads((ROOT / "site" / "vercel.json").read_text(encoding="utf-8"))["headers"]
+    hdrs = {h["key"]: h["value"] for h in rules[0]["headers"]}
+    assert rules[0]["source"] == "/(.*)"
+    assert hdrs["X-Content-Type-Options"] == "nosniff"
+    csp = dict(d.strip().split(" ", 1) for d in hdrs["Content-Security-Policy"].split(";"))
+    assert csp["frame-ancestors"] == "'self'" and csp["object-src"] == "'none'"
+    sheets = [
+        t for t in re.findall(r"<link\b[^>]*>", public, re.I) if 'rel="stylesheet"' in t.lower()
+    ]
+    for tags, directive in (
+        (re.findall(r"<script\b[^>]*>", public, re.I), "script-src"),
+        (sheets, "style-src"),
+    ):
+        for url in re.findall(r'(?:src|href)="(https://[^"/]+)', " ".join(tags), re.I):
+            assert url in csp[directive], f"{url} missing from {directive}"
+
+
 @pytest.mark.parametrize("page", [PUBLIC, OPS], ids=["public", "ops"])
 def test_reduced_motion_and_tokens(page: Path) -> None:
     html = page.read_text(encoding="utf-8")

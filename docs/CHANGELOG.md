@@ -11,6 +11,17 @@
 
 ---
 
+## 2026-11-18 -- Security headers on the public site (ER-23)
+
+- **Site** new `site/vercel.json`: a Content-Security-Policy limited to the page's own origin, the org
+  consent script and Google Fonts, with `frame-ancestors 'self'` and `object-src 'none'`; `nosniff`,
+  `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy` and `Permissions-Policy` on every path; the favicon
+  and the betting diagram cache for a day instead of revalidating on every load.
+- **Tests** `tests/test_site.py` checks the headers and fails when the page loads a script or
+  stylesheet from an origin the CSP doesn't allow.
+
+---
+
 ## 2026-11-17 -- Roadmap catches up with the audit fixes
 
 - **Docs** `docs/ROADMAP.md` now lists every audit item merged so far, including ER-18, ER-20, ER-21,
