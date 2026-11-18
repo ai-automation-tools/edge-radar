@@ -279,7 +279,7 @@ Want the **complete** pipeline — emails, midday/late runs, weekly calibration/
 | **[Architecture](docs/setup/ARCHITECTURE.md)** | Pipeline, edge models, risk gates, data flow, and project structure |
 | **[MLB Filtering](docs/kalshi/kalshi-sports-betting/MLB_FILTERING_GUIDE.md)** | 10 filter categories for MLB picks |
 | **[Roadmap](docs/ROADMAP.md)** | Open enhancement work |
-| **[Changelog](docs/CHANGELOG.md)** | Full project history |
+| **[Changelog](docs/CHANGELOG.md)** | Project history; months before 2026-10 in [docs/changelog/](docs/changelog/README.md) |
 
 ---
 

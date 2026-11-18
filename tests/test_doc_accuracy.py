@@ -16,9 +16,8 @@ def _tracked_md() -> list[Path]:
     out = subprocess.run(
         ["git", "ls-files", "*.md"], cwd=ROOT, capture_output=True, text=True, check=True
     ).stdout
-    return [
-        ROOT / f for f in out.split() if f != "docs/CHANGELOG.md"
-    ]  # history may cite removed files
+    history = ("docs/CHANGELOG.md", "docs/changelog/")  # history may cite removed files
+    return [ROOT / f for f in out.split() if not f.startswith(history)]
 
 
 def _exists_exact(p: Path) -> bool:

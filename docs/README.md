@@ -13,7 +13,7 @@ Welcome to the central documentation index for **Edge-Radar**. This index organi
 
 ## 🗺️ Documentation Directory
 
-Only `README.md` and `CHANGELOG.md` live at the root of `docs/`. Everything else is grouped into the subfolders below.
+Only `README.md`, `CHANGELOG.md` and `RULES-RATIONALE.md` live at the root of `docs/`. Everything else is grouped into the subfolders below.
 
 ### 🚀 Setup & Architecture — [`setup/`](./setup/)
 *   [SETUP_GUIDE.md](./setup/SETUP_GUIDE.md) — Step-by-step instructions to configure API keys, venv, and RSA private credentials.
@@ -46,8 +46,9 @@ Only `README.md` and `CHANGELOG.md` live at the root of `docs/`. Everything else
 *   [betting-strategy-review-2026-08-26.md](./enhancements/betting-strategy-review-2026-08-26.md) — Full review of the settled record (402 bets), the defects found (CLV never computed, no cumulative-exposure gate, taker-only fee drag), and a four-phase action plan: stop waste → install CLV measurement → remove trading cost → scale only on evidence.
 
 ### 📈 Roadmap & Changelog
-*   [ROADMAP.md](./ROADMAP.md) — Open work only, in priority order. Shipped items, findings and the pre-2026-09-29 roadmap live in [CHANGELOG.md](./CHANGELOG.md).
-*   [CHANGELOG.md](./CHANGELOG.md) — Project commit and feature changelog history.
+*   [ROADMAP.md](./ROADMAP.md) — Open work only, in priority order. Shipped items and findings live in the changelog.
+*   [CHANGELOG.md](./CHANGELOG.md) — Project history since 2026-10. Older months, and the pre-2026-09-29 roadmap, are in [changelog/](./changelog/README.md).
+*   [RULES-RATIONALE.md](./RULES-RATIONALE.md) — The evidence behind each rule in `AGENTS.md`: incidents, settled-bet numbers, reasoning.
 
 > Periodic performance audits live under `docs/my-documents/` (git-ignored, local-only). Their conclusions are folded into the ROADMAP findings log, which is the tracked, canonical record.
 

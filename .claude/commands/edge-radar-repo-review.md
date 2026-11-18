@@ -26,7 +26,7 @@ If $ARGUMENTS specifies a focus area (e.g., `schedulers`, `risk gates`, `tests`)
 
 **Workflow:**
 
-- Start by reading `AGENTS.md`, `docs/ROADMAP.md`, `README.md`, and `docs/CHANGELOG.md` to ground yourself in current project state.
+- Start by reading `AGENTS.md`, `docs/RULES-RATIONALE.md`, `docs/ROADMAP.md`, `README.md`, and `docs/CHANGELOG.md` to ground yourself in current project state.
 - Use parallel `Glob`/`Grep`/`Read` calls to cover ground efficiently.
 - Spot-check claims by reading the actual source — don't trust docs alone.
 - Cross-reference: env vars in `.env.example` vs. `os.getenv` calls vs. `app/config.py` vs. `AGENTS.md` risk-limits table.
