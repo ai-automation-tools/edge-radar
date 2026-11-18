@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-18 -- Kalshi key rotated (ER-05)
+
+- The owner rotated the Kalshi API key that had been deployed to a hosted app: a new RSA key
+  following `docs/setup/KEY_ROTATION.md`, the old key revoked. `doctor.py` connects on the main and
+  longshot profiles. Roadmap ER-05 ticked.
+
+---
+
 ## 2026-11-18 -- Docs and roadmap checked against the post-audit build
 
 - **ROADMAP** now follows the roadmap standard throughout: every done item ends ` — done YYYY-MM-DD:`
