@@ -9,6 +9,8 @@ positions to produce a short markdown report covering:
   * Today's pending events (open positions whose game datetime is today)
   * Optional live Kalshi balance line
   * 7-day rolling context (WR, $ P&L, Brier)
+  * Ops health, first (ER-50): scheduled tasks, newest settlement, ledger backup,
+    report freshness, data/log size -- see scripts/shared/ops_health.py
 
 Empty-day behavior: the report is still produced (proof-of-life pattern).
 
@@ -464,6 +466,7 @@ def render_report(
     failed_orders: list[dict] | None = None,
     post_kickoff: list[dict] | None = None,
     one_sided: list[dict] | None = None,
+    ops: str | None = None,
 ) -> str:
     today = _format_today_pst(now)
     overall, by_sport = aggregate_yesterday(settlements_yesterday)
@@ -474,6 +477,12 @@ def render_report(
     lines.append("")
     lines.append(f"**Window:** {_format_window_label(now, hours)} (rolling {hours}h)")
     lines.append("")
+
+    # ── Ops health (ER-50) ────────────────────────────────────────────────────
+    # Before the numbers: a disabled or failing execute task means today's
+    # numbers are missing a run, not that the market was quiet.
+    if ops:
+        lines.append(ops)
 
     # ── Rejected orders ───────────────────────────────────────────────────────
     # First, above everything: a venue that won't accept orders makes every
@@ -679,6 +688,7 @@ def build_report(
     settlements: list[dict] | None = None,
     trades: list[dict] | None = None,
     balance: float | None = None,
+    ops: str | None = None,
 ) -> str:
     """Public entry that pure-renders a report.  All I/O is parameterized for tests."""
     all_settlements = settlements if settlements is not None else load_settlement_log()
@@ -700,6 +710,7 @@ def build_report(
         failed_orders=failed,
         post_kickoff=late,
         one_sided=load_one_sided_series(all_settlements, now),
+        ops=ops,
     )
 
 
@@ -715,7 +726,18 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--out", type=Path, default=None, help="Explicit output path (overrides --save default)"
     )
     ap.add_argument("--no-bankroll", action="store_true", help="Skip live Kalshi balance fetch")
+    ap.add_argument("--no-ops", action="store_true", help="Skip the ops-health section")
     return ap.parse_args(argv)
+
+
+def _ops_section(now: datetime) -> str:
+    """The ops-health table, or a one-line note if it couldn't be built."""
+    try:
+        import ops_health
+
+        return ops_health.render(ops_health.collect(now, load_settlement_log()))
+    except Exception as e:  # noqa: BLE001 - never lose the summary over its health table
+        return f"## Ops health\n\n**WARN** ops check failed: {type(e).__name__}: {e}\n"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -723,7 +745,8 @@ def main(argv: list[str] | None = None) -> int:
     now = datetime.now(timezone.utc)
     balance = None if args.no_bankroll else _fetch_balance()
 
-    report = build_report(now, args.hours, balance=balance)
+    ops = None if args.no_ops else _ops_section(now)
+    report = build_report(now, args.hours, balance=balance, ops=ops)
 
     out_path: Path | None = args.out
     if args.save and not out_path:

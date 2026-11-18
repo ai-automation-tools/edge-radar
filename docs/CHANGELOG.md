@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-11-18 -- Ops health in the Daily-Summary (ER-50)
+
+- **New** `scripts/shared/ops_health.py`, read-only. It lists every scheduled task under an
+  `Edge-Radar` Task Scheduler folder with its state, last run, last result and next run, then adds
+  the newest settlement, the newest ledger backup (found through the Reconcile task's
+  `backup_ledger.py --dest`), the newest report per scheduler preset, and the size of `data/` and `logs/`.
+  - A disabled or failing execute task is FAIL. Any other disabled task, a task that never ran, one
+    that missed its start, a settlement older than 3 days or a backup older than 2 days is WARN; a
+    backup older than 7 days or missing is FAIL.
+- **Daily-Summary** opens with the table under a `**Status: OK|WARN|FAIL**` line, which the email
+  renderer already turns into the subject and banner colour, so a broken execute task reads
+  `Edge-Radar | Daily Summary | FAIL` in the inbox. `--no-ops` skips it; an error building it becomes
+  a WARN line instead of a lost summary.
+- **`doctor.py --ops`** prints the same table and exits 1 on any FAIL.
+- Tests: `tests/test_ops_health.py`, including the email subject for a disabled execute task.
+
+---
+
 ## 2026-11-18 -- Keep local images ignored
 
 - **`.gitignore`** ignores `.claude/images/` again. ER-51 removed the tracked files there and the old

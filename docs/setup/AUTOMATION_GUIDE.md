@@ -270,6 +270,9 @@ Change a template there, never in `site/registry/`.
 ### Task runs but no bets are placed
 - Check `DRY_RUN` in `.env` — must be `false`
 - Check `MIN_COMPOSITE_SCORE` — if set too high, opportunities are filtered out
+- Run `python scripts/doctor.py --ops` for every task's state, last run, last result and next run,
+  the newest settlement and ledger backup, and data/log size (read-only; exits 1 on any FAIL). The
+  same table heads each morning's Daily-Summary email.
 - Run `python scripts/doctor.py` to verify API connectivity
 
 ### Task fails to run
