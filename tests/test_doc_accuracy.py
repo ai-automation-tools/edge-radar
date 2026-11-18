@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -20,6 +21,12 @@ def _tracked_md() -> list[Path]:
     ]  # history may cite removed files
 
 
+def _exists_exact(p: Path) -> bool:
+    """Exists with this exact case: Windows ignores case, Linux CI does not."""
+    p = Path(os.path.normpath(p))
+    return p.exists() and (p.name in ("", ".", "..") or p.name in os.listdir(p.parent))
+
+
 def _gate_ids() -> list[str]:
     text = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
     block = text[text.index("### Execution gates") : text.index("### Sizing rules")]
@@ -34,7 +41,7 @@ def test_relative_links_resolve():
         for m in link.finditer(text):
             url = (m.group(1) or m.group(2)).split("#")[0]
             if url and not re.match(r"^[a-z][a-z0-9+.-]*:", url, re.I) and not url.startswith("<"):
-                if not (md.parent / url).exists():
+                if not _exists_exact(md.parent / url):
                     broken.append(f"{md.relative_to(ROOT)}: {url}")
     assert not broken
 
