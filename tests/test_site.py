@@ -237,3 +237,40 @@ def test_disclaimer_text_meets_contrast(public: str) -> None:
     for fg, bg in zip(fgs[:2], bgs[:2]):
         hi, lo = sorted((_luminance(fg), _luminance(bg)), reverse=True)
         assert (hi + 0.05) / (lo + 0.05) >= 4.5, (fg, bg)
+
+
+# ── ER-30: accessibility of the public page ─────────────────────────────────
+
+
+@pytest.mark.parametrize("page", [PUBLIC, OPS], ids=["public", "ops"])
+def test_no_text_in_fg5_and_fg4_meets_aa(page: Path) -> None:
+    html = page.read_text(encoding="utf-8")
+    assert (
+        "color: var(--fg-5)" not in html
+    ), "--fg-5 is for dots and rules; text uses --fg-4 or above"
+    fg4 = re.findall(r"--fg-4: (#[0-9a-f]{6});", html)
+    bgs = re.findall(r"--bg: (#[0-9a-f]{6});", html)
+    for fg, bg in zip(fg4, bgs):
+        hi, lo = sorted((_luminance(fg), _luminance(bg)), reverse=True)
+        assert (hi + 0.05) / (lo + 0.05) >= 4.5, (fg, bg)
+
+
+def test_public_page_widgets_use_native_semantics(public: str) -> None:
+    # palette: a native modal dialog with a combobox and listbox, not a hand-rolled overlay
+    assert '<dialog class="pal" id="pal"' in public and "pal.showModal()" in public
+    assert 'role="dialog"' not in public and "aria-modal" not in public
+    assert 'role="combobox"' in public and 'role="listbox"' in public
+    # the tablist holds only tabs, and the panel is labelled by the selected one
+    tablist = re.search(r'role="tablist"[^>]*>(.*?)\n\s*</div>', public, re.S).group(1)
+    tags = re.findall(r"<(\w+)\b", tablist)
+    assert tags.count("button") == 4 and set(tags) == {"button", "i"}, tags  # <i> is each tab's dot
+    assert tablist.count('role="tab"') == 4
+    assert 'role="tabpanel"' in public
+    # visible focus on the sliders; no listitem outside a list; no label wrapping buttons
+    assert re.search(r"input\[type=range\] \{[^}]*outline: none", public) is None
+    assert "input[type=range]:focus-visible" in public
+    assert 'role="listitem"' not in public
+    assert not re.search(r"<label>(?:(?!</label>).)*<button", public, re.S)
+    # motion: a pause control, and the diagram's motion choice is never overwritten
+    assert 'id="motionBtn"' in public and "IntersectionObserver" in public
+    assert "localStorage.getItem('archify-motion') === null" in public
