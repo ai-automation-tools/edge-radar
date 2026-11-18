@@ -97,7 +97,9 @@ def test_tops_up_the_shard_then_places(monkeypatch):
     tl = []
     results = _place_order_batch(c, [_sized(0, cost=5.0)], tl)
 
-    assert c.transfers == [(4.0, 0, 3)], "moves exactly the shortfall"
+    # ER-41: cost $5.00 + taker fee $0.18 (10 @ 50c) + 1c headroom = $5.19 needed;
+    # the shard holds $1.00, so $4.19 moves. Exactly the cost left the fee unfunded.
+    assert c.transfers == [(4.19, 0, 3)], "moves the shortfall including fee headroom"
     assert c.orders == ["KXMLBGAME-26AUG27T0-A"]
     assert len(results) == 1
 
