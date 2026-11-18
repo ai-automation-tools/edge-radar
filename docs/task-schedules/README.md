@@ -273,7 +273,7 @@ You need two kinds of files — `.bat` wrappers and `schtasks` registrations. Yo
 | `<YOUR_SENDER>` | Verified-domain address reports come **from** (`.env` → `RESEND_FROM`) | `Edge-Radar <fleet@send.yourdomain.com>` |
 | `<FOLDER>` | Your Task Scheduler folder | `\Edge-Radar\` |
 
-`RESEND_API_KEY` lives in the **OS environment**, not `.env` (`setx RESEND_API_KEY "re_..."`), so Task Scheduler picks up a rotated key on the next launch. A User-scoped variable is invisible to `SYSTEM`, which is why these tasks run as your own user.
+`RESEND_API_KEY` goes in `.env` with the other secrets. Every task reads `.env` on launch, so a rotated key takes effect on the next run with no other change. An OS environment variable of the same name still works and wins over `.env`; if you keep one there, make it a User variable and run the tasks as your own user, since `SYSTEM` cannot see it.
 
 > **Time zone:** Task Scheduler fires on your machine's local time. Pick times that suit your slate, not these literal values.
 

@@ -34,7 +34,7 @@
   <a href="https://claude.ai/claude-code"><img src="https://img.shields.io/badge/Claude_Code-slash_commands-8B5CF6?style=flat-square" alt="Claude Code slash commands"></a>
 </p>
 
-> **Scans thousands of Kalshi markets, cross-references nine US sportsbooks (Pinnacle joins on live runs) and free data APIs, prices fair value with a normal-CDF model, and executes Kelly-sized limit orders** — every bet cleared through 21 risk gates and logged with fill-accurate accounting for closing-line-value tracking.
+> **Scans thousands of Kalshi markets, cross-references nine US sportsbooks (Pinnacle joins on live runs) and free data APIs, prices fair value with a normal-CDF model, and executes Kelly-sized limit orders** — every bet cleared through 22 risk gates and logged with fill-accurate accounting for closing-line-value tracking.
 
 > [!WARNING]
 > **Risk and eligibility.** You can lose the whole stake on every bet. Results quoted here come from one operator's small sample and are not a forecast. You are responsible for meeting Kalshi's age and location rules. If betting stops being fun, US help is at 1-800-GAMBLER. Edge-Radar is not affiliated with Kalshi or The Odds API. Not financial or legal advice.

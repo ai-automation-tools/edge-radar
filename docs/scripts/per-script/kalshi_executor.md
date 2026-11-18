@@ -47,7 +47,7 @@ When any scanner is called with `--execute`, it imports `execute_pipeline()` fro
 7. **Execution** (if `--execute` is passed) -- places limit orders via Kalshi API
 8. **Trade logging** -- records each trade to `data/history/`
 
-### Risk Gates (21 gates)
+### Risk Gates (22 gates)
 
 Gates 1-7 reject. Gates 8-9 downsize and approve. **Gate 2b does both** — it rejects when a
 ceiling is already breached and trims the order otherwise.
@@ -55,6 +55,7 @@ ceiling is already breached and trims the order otherwise.
 | # | Gate | Rule |
 |---|------|------|
 | 1 | Daily loss limit | Today's losses (calendar day in `DAILY_LOSS_TZ`, default America/New_York) must be under `MAX_DAILY_LOSS` ($250 default) |
+| 1b | Bankroll | The balance must be above $0; a failed or zero balance read rejects every order (ER-43) |
 | 2 | Max open positions | Must be under `MAX_OPEN_POSITIONS` (50) |
 | 2b | **Cumulative exposure (S4, 2026-08-26)** | Total open at-risk must be under `MAX_OPEN_EXPOSURE_PCT` of equity, and the row's own sport under `MAX_SEGMENT_EXPOSURE_PCT` (live 0.50 / 0.33; both ship at 0 = off). **The only gate that measures a standing total** — gate 2 counts rows, gate 6 binds one event, gates 8/9 and `--budget` bind a single batch, and all of them passed while 26 NFL positions reached 31% of bankroll over three months. Denominated in **equity** (cash + position value), not cash. Rejects at/over a ceiling; otherwise trims the order to the smaller remaining headroom (`APPROVED_CAPPED_EXPOSURE`). Fails open on unknown equity. |
 | 3 | Edge threshold | Must meet the per-sport floor or `MIN_EDGE_THRESHOLD` global (3% default; MLB/NBA/NCAAB 4% [2026-06-14, lowered from 0.06]). **The exchange fee is added to the floor** (F1, 2026-08-25), so the effective bar is ~4.8% at 50c. A floor >= 1.0 is unreachable and means the sport is **off** — the rejection reads `sport_disabled`. |

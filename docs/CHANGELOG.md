@@ -19,6 +19,18 @@
 
 ---
 
+## 2026-11-18 -- Gate 1b in the docs; `RESEND_API_KEY` belongs in `.env`
+
+- **Gate 1b** (no bankroll, ER-43) has run in `GATES` since the ER-43 fix but was missing from every
+  gate table. It is now listed in `AGENTS.md`, `ARCHITECTURE.md`, `kalshi_executor.md` and the public
+  gate grid, and every count says **22 risk gates** (README, site, ops deck, skill).
+- **`RESEND_API_KEY`:** `.env.example` and the task-schedules README no longer advise
+  `setx`. The key goes in `.env` like every other secret; an OS variable of the same name still
+  works and wins, because `load_dotenv` does not override. No code change.
+- Markdown-it-py re-locked to 4.3.0 (#416, supersedes Dependabot #366).
+
+---
+
 ## 2026-11-18 -- Futures power de-vig behind a flag, A/B'd in the shadow book (ER-42 / B5)
 
 - **`devig_power()`** in `futures_edge.py`: finds the `k` with `sum(p_i ** k) == 1`, which takes more of
