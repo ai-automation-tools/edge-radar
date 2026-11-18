@@ -323,8 +323,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_settler.py",
-          "line": 348,
-          "end_line": 665
+          "line": 377,
+          "end_line": 699
         }
       ]
     },
@@ -338,8 +338,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_settler.py",
-          "line": 212,
-          "end_line": 272
+          "line": 241,
+          "end_line": 301
         }
       ]
     }
