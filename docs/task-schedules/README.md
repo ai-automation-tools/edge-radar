@@ -471,7 +471,7 @@ reports/
     └── betting_analysis_YYYY-MM-DD_7d.md  ← #14  Sun 11:45 PM
 
 logs/   email_*.log · clv_capture.log · shadow_book.log · account_graph_refresh.log
-data/history/kalshi_trades.json · kalshi_settlements.json · shadow_book.json
+data/history/kalshi_trades.json · kalshi_settlements.json · shadow_book/YYYY-MM.jsonl
 ```
 
 ---

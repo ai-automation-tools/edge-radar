@@ -54,3 +54,16 @@ def test_corrupt_source_is_still_kept_but_flagged(tmp_path, monkeypatch):
     _seed(tmp_path, monkeypatch, trades='[{"trade_id": ')
     out, bad = bl.backup(tmp_path / "dest", 30)
     assert out.exists() and bad == ["kalshi_trades.json"]
+
+
+def test_monthly_shadow_files_are_zipped_under_their_folder(tmp_path, monkeypatch):
+    _seed(tmp_path, monkeypatch)
+    hist = tmp_path / "data" / "history"
+    (hist / "shadow_book.json").unlink()
+    (hist / "shadow_book").mkdir()
+    (hist / "shadow_book" / "2026-11.jsonl").write_text('{"ticker": "A"}\n')
+    (hist / "shadow_book" / "2026-10.jsonl").write_text("{broken\n")
+    out, bad = bl.backup(tmp_path / "dest", 30)
+    names = zipfile.ZipFile(out).namelist()
+    assert "shadow_book/2026-11.jsonl" in names and "shadow_book/2026-10.jsonl" in names
+    assert bad == ["shadow_book/2026-10.jsonl"]
