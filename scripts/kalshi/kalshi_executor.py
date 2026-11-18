@@ -3215,7 +3215,8 @@ def main():
     )
 
     args = parser.parse_args()
-    if args.execute:  # B7: sharp `eu` books only where money is placed
+    # `status` has no --execute; reading it unguarded crashed every status call.
+    if getattr(args, "execute", False):  # B7: sharp `eu` books only where money is placed
         import odds_cache
         from app.config import get_config
 

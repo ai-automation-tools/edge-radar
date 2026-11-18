@@ -16,7 +16,7 @@
 
 **Task Scheduler folder:** `\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\` &nbsp;·&nbsp; **Times:** PT (ET in parentheses) &nbsp;·&nbsp; **History:** every add, change and retirement is in [`docs/CHANGELOG.md`](../CHANGELOG.md).
 
-Task Scheduler is the only active scheduling mechanism. Every action launches through `scripts/schedulers/run-hidden.vbs` (no console flash; exit code passed through; a scheduler stop kills the whole process tree via `run-hidden-guard.ps1`). `install_windows_task.py status --task-folder '<folder>'` lists every task in a folder, including ones it didn't install.
+Task Scheduler is the only active scheduling mechanism. Every action launches through `scripts/schedulers/run-hidden.vbs` (no console flash; passes through the exit code of whatever it launches, so a `.bat` must end with `exit /b`; a scheduler stop kills the whole process tree via `run-hidden-guard.ps1`). `install_windows_task.py status --task-folder '<folder>'` lists every task in a folder, including ones it didn't install.
 
 ---
 
@@ -266,13 +266,25 @@ REM WARNING: places live orders when DRY_RUN=false in .env.
 REM Self-locate the repo root (adjust ..\..\.. to your folder depth):
 cd /d "%~dp0..\..\.."
 
+REM UTF-8 so rich's box characters don't crash a redirected cp1252 stdout:
+set PYTHONIOENCODING=utf-8
+set LOG=logs\scan_same_day.log
+
 .venv\Scripts\python.exe scripts\kalshi\kalshi_executor.py status
+echo ===== %date% %time% >> %LOG%
 .venv\Scripts\python.exe scripts\scan.py sports ^
   --unit-size 1 --max-bets 5 --min-bets 1 --budget 12%% ^
   --date today --exclude-open --save ^
-  --report-dir "reports\Sports\schedulers\same-day-executions" --execute
+  --report-dir "reports\Sports\schedulers\same-day-executions" --execute >> %LOG% 2>&1
+set RC=%ERRORLEVEL%
+echo exit code %RC% >> %LOG%
 .venv\Scripts\python.exe scripts\kalshi\kalshi_executor.py status
+exit /b %RC%
 ```
+
+The `=====` banner and `exit code N` line are what the email action reads (ER-07): `LOG` must be the
+preset's entry in `SCAN_LOGS` in `render_report_email.py` (`scan_same_day`, `scan_same_day_late`,
+`scan_nodatefilter_midday`, `scan_next_day`, `scan_weekly_futures`).
 
 `%%` is required: a literal `%` must be doubled inside a `.bat`. The owner's variants differ only in `--date` and `--report-dir`:
 
@@ -319,7 +331,10 @@ cd /d "%~dp0..\..\.."
 | `weekly-analysis` | `Weekly-Analysis` | `Edge-Radar \| Weekly Performance Analysis` | `logs/email_weekly_analysis.log` |
 
 - **Which report:** the newest file in the preset's folder modified within `--max-age-hours` (default 3) — not today's name, because filenames carry the UTC date.
-- **No fresh report:** exits 2 and sends nothing. A stale email is worse than none.
+- **Failed execute run (ER-07):** for the five execute presets, a non-zero `exit code` in the scan log or no
+  fresh report sends `[FAILED] <subject>` with the log's last run and exits **1**. Every execute run writes a
+  report, even with zero bets, so a missing one means the scan died.
+- **No fresh report, other presets:** exits 2 and sends nothing. A stale email is worse than none.
 - **Preview:** `render_report_email.py same-day --dry-run out.html`. **Probe Resend without spending quota:** `send_report_email.py --check`.
 - Every successful send stamps `logs/last_email_sent.json`, so a broken mail path is detectable on its own.
 
@@ -389,7 +404,8 @@ MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Automation-Tools-Org-LocalApps\Edge-Ra
 | Symptom | Meaning |
 |:--|:--|
 | `LastTaskResult` non-zero on a two-action task | Either action. Read the scan's report/log **and** the `logs/email_*.log` line before deciding which failed |
-| Email action exit **2** | No report modified within 3h — the scan failed before saving, or wrote elsewhere. Nothing sent, by design |
+| Email action exit **1** + `[FAILED]` email | An execute run's scan exited non-zero or wrote no report. The email carries `logs/scan_*.log`'s last run |
+| Email action exit **2** | Non-execute preset: no report modified within 3h. Nothing sent, by design |
 | Send error in the email log | Unverified domain or revoked `RESEND_API_KEY`. `send_report_email.py --check` |
 | `267009` (0x41301) | Still running |
 | `267011` (0x41303) | Never run — or a missed trigger without `StartWhenAvailable` (see above) |

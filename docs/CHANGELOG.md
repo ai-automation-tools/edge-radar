@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-11-17 -- Failed live-execute runs email [FAILED] (ER-07)
+
+- **Fix** OPS-01: a crashed live-execute scan was invisible. Its `.bat` dropped the exit code and its
+  output, and the email action exited 2 without sending. Task Scheduler showed only that code, which
+  also meant "nothing to report". Execute wrappers now append the scan's output and `exit code N` to
+  `logs/scan_<preset>.log` and `exit /b` it. For the five execute presets, `render_report_email.py`
+  sends `[FAILED] <subject>` with the log's last run and exits 1 when the scan exited non-zero or
+  wrote no report.
+- **Fix** `kalshi_executor.py status` (and `make status`) crashed on every call with
+  `AttributeError: 'Namespace' object has no attribute 'execute'` since B7 (2026-11-05). The
+  execute wrappers call it before and after every scan, so this went unseen for the same reason.
+- **Docs** `docs/task-schedules/README.md`: wrapper template, email behaviour, troubleshooting. The
+  claim that the exit code is passed through now says what it needs: `exit /b` in the `.bat`.
+
+---
+
 ## 2026-11-17 -- Cache replay runs the position and live-game gates (ER-03)
 
 - **Fix** BUG-04: replaying a cached preview with `--pick` / `--ticker` re-checked Gates 5, 6, 6b,
