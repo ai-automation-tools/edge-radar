@@ -373,7 +373,7 @@ def _load_settled_trades() -> list[dict]:
 
     Normalizations:
         cost            → cost_dollars
-        won             → settlement_won
+        won             → settlement_won (void/scalar rows, won=None, are skipped)
         settled_at      → closed_at
         (derived)       → category (from ticker via bet_type_from_ticker)
     """
@@ -382,6 +382,8 @@ def _load_settled_trades() -> list[dict]:
     raw = json.loads(SETTLEMENTS_PATH.read_text(encoding="utf-8"))
     trades: list[dict] = []
     for s in raw:
+        if "won" in s and s["won"] is None:
+            continue  # ER-15: scalar/void settlement, no yes/no outcome to calibrate against
         ticker = s.get("ticker", "")
         bet_type = bet_type_from_ticker(ticker) or ""
         edge_est = s.get("edge_estimated")
