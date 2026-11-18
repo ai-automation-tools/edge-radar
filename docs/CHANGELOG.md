@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-11-18 -- Balance reads paced to Kalshi's 1/s bucket (K1, ER-44 leftover)
+
+- Since 2026-10-15 `GET /portfolio/balance` allows 1 request per second with no burst. A batch that
+  sizes, then checks two shard balances per order in `shard_funding`, then re-reads after a transfer
+  could fire several inside a second; a `429` on the post-transfer re-read looks like a transfer that
+  did not land, so the order was skipped.
+- `get_balance()` and `get_shard_balance()` now go through `_get_balance_paced`, which keeps every
+  balance read in the process at least `BALANCE_MIN_INTERVAL` (1 s) apart. Another process is not
+  coordinated; its `429` is retried by the GET backoff from ER-44.
+- Roadmap K1 closed. Tests: `tests/test_balance_pacing.py`.
+
+---
+
 ## 2026-11-18 -- A pending row before every order POST (ER-13 leftover)
 
 - **The gap:** an order whose POST reached Kalshi while the run died (killed task, crash, power) before
