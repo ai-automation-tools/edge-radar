@@ -351,13 +351,13 @@ def get_filled_contracts(trade: dict) -> float:
     ``filled_contracts``, falls back to ``fill_count`` (from the Kalshi API
     response) then ``contracts`` (legacy requested value).
     """
-    if "filled_contracts" in trade:
+    if trade.get("filled_contracts") is not None:  # ER-43: a null field falls through
         return float(trade["filled_contracts"])
     fc = trade.get("fill_count")
     if fc is not None and str(fc) not in ("", "0"):
         return float(fc)
     # Legacy fallback: assume fully filled (pre-X5 records)
-    return float(trade.get("contracts", 0))
+    return float(trade.get("contracts") or 0)
 
 
 def get_filled_cost(trade: dict) -> float:
@@ -367,14 +367,14 @@ def get_filled_cost(trade: dict) -> float:
     cost from ``fill_count * market_price_at_entry`` if available, otherwise
     falls back to ``cost_dollars`` (legacy requested value).
     """
-    if "filled_cost" in trade:
+    if trade.get("filled_cost") is not None:  # ER-43: a null field falls through
         return float(trade["filled_cost"])
     fc = trade.get("fill_count")
     price = trade.get("market_price_at_entry", 0)
     if fc is not None and str(fc) not in ("", "0") and price:
         return round(float(fc) * float(price), 4)
     # Legacy fallback
-    return float(trade.get("cost_dollars", 0))
+    return float(trade.get("cost_dollars") or 0)
 
 
 def settlement_revenue_dollars(raw) -> float:
@@ -385,8 +385,15 @@ def settlement_revenue_dollars(raw) -> float:
     passed through unchanged. Single source of truth so the settler report and
     ``risk_check`` agree — they previously disagreed on the 1-cent case (review
     #9: one used a ``> 1`` guard that mis-read 1¢ as $1.00).
+
+    ER-43: None (or "") is $0, and a digits-only string is cents like an int,
+    so ``"56"`` is $0.56, not $56. A string with a decimal point is dollars.
     """
-    return raw / 100 if isinstance(raw, int) else float(raw)
+    if raw is None or raw == "":
+        return 0.0
+    if isinstance(raw, int) or (isinstance(raw, str) and raw.strip().lstrip("-").isdigit()):
+        return int(raw) / 100
+    return float(raw)
 
 
 def get_open_trade_count(trades: list[dict] | None = None) -> int:

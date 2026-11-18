@@ -60,7 +60,7 @@ from edge_detector import scan_all_markets
 from ticker_display import _detect_sport, days_to_event, is_game_started
 import venue_eligibility as vel
 import shard_funding
-from fees import fee_per_contract
+from fees import fee_per_contract, taker_fee
 from report_writer import outcome_summary
 from app.config import get_config, reset_config
 
@@ -957,6 +957,15 @@ def opposing_position(ticker: str, side: str, held: dict[str, str] | None) -> st
     return None
 
 
+def _funding_need(s: "SizedOrder") -> float:
+    """Cash an order needs on its shard: cost, the taker fee, and a cent (ER-41).
+
+    Moving exactly the cost left the fee unfunded, so the order bounced off the
+    venue's balance check after a transfer that had already happened.
+    """
+    return round(s.cost_dollars + taker_fee(s.contracts, s.opportunity.market_price) + 0.01, 2)
+
+
 def recent_matchups_from_log(
     trade_log: list[dict],
     hours: int | None = None,
@@ -973,8 +982,9 @@ def recent_matchups_from_log(
     15). `dedup_correlated_brackets` handles within-day correlation but can't
     see across days.
 
-    Any entry in the trade log counts as a placed order — dry-run runs don't
-    write to the log, so no extra filtering is needed.
+    ER-37: only real orders count. Failed placements (`status: error`) and
+    dry-run rows are skipped; both are written to the log, and counting them
+    blocked a matchup no money was ever on.
 
     R9 (2026-04-27): when ``per_sport_hours`` is provided, each sport uses its
     own cutoff; ``hours`` is the fallback for sports not in the dict. Motivated
@@ -994,6 +1004,8 @@ def recent_matchups_from_log(
     now_dt = now or datetime.now(timezone.utc)
     keys: set[tuple[str, str]] = set()
     for trade in trade_log:
+        if trade.get("status") in ("error", "dry_run_blocked") or trade.get("dry_run"):
+            continue
         ts = trade.get("timestamp")
         if not ts:
             continue
@@ -1417,6 +1429,12 @@ def size_order(
     # ── Risk Gate 1: Daily loss limit
     if daily_loss_breached(daily_pnl):
         rejection = f"daily_loss_limit_breached (P&L: ${daily_pnl:.2f})"
+
+    # ── ER-43: no cash, no sizing. With bankroll <= 0 the bankroll cap below
+    #   still bought one contract (`max(1, ...)`) and the Hard Stop skipped
+    #   itself, so a failed or zero balance read sized a real order.
+    elif not bankroll > 0:
+        rejection = f"no_bankroll (balance ${bankroll:.2f})"
 
     # ── Risk Gate 2: Max open positions
     elif positions_at_cap(open_positions):
@@ -2108,7 +2126,7 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
                 funded, note = shard_funding.ensure_shard_funded(
                     client,
                     _shard_for(opp.ticker),
-                    s.cost_dollars,
+                    _funding_need(s),
                     enabled=AUTO_SHARD_TRANSFER,
                     source_shard=SHARD_FUNDING_SOURCE,
                     max_transfer=MAX_AUTO_SHARD_TRANSFER,

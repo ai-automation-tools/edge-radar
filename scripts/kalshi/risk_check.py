@@ -32,6 +32,7 @@ from rich import print as rprint
 from kalshi_client import KalshiClient
 from kalshi_executor import daily_loss_breached, positions_at_cap
 from trade_log import (
+    for_profile,
     load_trade_log,
     load_settlement_log,
     get_today_pnl,
@@ -65,8 +66,8 @@ PREDICTION_WATCHLIST = paths.PREDICTION_OPPORTUNITIES_PATH
 
 
 def fetch_positions(client: KalshiClient) -> list[dict]:
-    """Fetch live open positions from Kalshi API."""
-    resp = client.get_positions(limit=100, count_filter="position")
+    """Fetch live open positions from Kalshi API (every page, ER-40)."""
+    resp = client.get_positions(limit=200, count_filter="position")
     return resp.get("market_positions", [])
 
 
@@ -85,8 +86,12 @@ def fetch_resting_orders(client: KalshiClient) -> list[dict]:
 
 
 def get_today_trades() -> tuple[list[dict], float]:
-    """Load trade log and return today's trades + daily P&L."""
-    trade_log = load_trade_log()
+    """This profile's trades today and its daily P&L.
+
+    ER-38: scoped like the executor's Gate 1. The log is shared across profiles,
+    so the unscoped sum let one profile's losses fail another's `--gate`.
+    """
+    trade_log = for_profile(load_trade_log())
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     today_trades = [t for t in trade_log if t.get("timestamp", "").startswith(today)]
     daily_pnl = get_today_pnl(trade_log)
