@@ -30,8 +30,8 @@ reason follows on the line). `small` marks an item a check verifies; `🔒 Needs
 Mike can do. Each item keeps its ID in bold and its effort (XS to L) in italics at the end.
 
 > [!NOTE]
-> **Where we are, 2026-11-18.** The 2026-11-16 audit is closed except for owner action ER-34 and
-> the B5 de-vig switch, which waits on settled futures. Next by order: the money-path defects (B2, M2, K2), then S10 and the S15 checkpoint
+> **Where we are, 2026-11-18.** The 2026-11-16 audit is closed except for the B5 de-vig switch,
+> which waits on settled futures, and the owner's `audit-fills` review before S15 (ER-02b). Next by order: the money-path defects (B2, M2, K2), then S10 and the S15 checkpoint
 > around 2026-12-09.
 
 ## 🧭 Phase 0: Build and live trading (done 2026-03-22)
@@ -96,7 +96,7 @@ One item per PR, titled `fix(ER-xx): …`.
 - [x] **ER-47** (P3) **Agent docs cost ~30k tokens per session.** *(effort M)* — done 2026-11-18 (#410): `AGENTS.md` under 20 KB with the evidence in `docs/RULES-RATIONALE.md`, the skill split into references, the changelog archived by month. Pinned by `tests/test_doc_size.py`.
 - [x] **ER-16** (P2) **Gate 1's day was UTC's, rolling over mid-slate.** *(effort S)* — done 2026-11-18 (#412): the day is `DAILY_LOSS_TZ`'s (America/New_York). Pinned by `tests/test_daily_loss_window.py`.
 - [x] **ER-24** (P2) **The ops deck published live-trading posture from the public repo.** *(effort M)* — done 2026-11-18 (#413): stripped in place; it keeps the schedule view and links the public page. Pinned by `tests/test_site.py`.
-- [ ] **ER-34** (P2) **Revoke the retired Polymarket credentials** and delete their lines from the live `.env`. Done when the venue shows the key revoked and `doctor.py` still passes. *(effort XS)* 🔒 Needs owner
+- [x] **ER-34** (P2) **Revoke the retired Polymarket credentials** and delete their lines from the live `.env`. Done when the venue shows the key revoked and `doctor.py` still passes. *(effort XS)* — done 2026-11-18 by the owner: the key revoked at Polymarket and the `POLYMARKET_*` lines deleted from the live `.env`; `doctor.py` still passes.
 - [x] **ER-26b** **Revoke the aX platform tokens** left from the retired agent roster, and retire the user-scope `edge-radar-coordination` skill (ER-26). *(effort XS)* — done 2026-11-18: tokens revoked by the owner; the skill removed from every agent CLI's user skills folder.
 - [ ] **ER-02b** **Before S15, review `kalshi_settler.py audit-fills`** (read-only) and correct the closed rows it names. *(effort S)* 🔒 Needs owner
 
