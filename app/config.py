@@ -8,9 +8,9 @@ and `validate()` for impossible combinations.
 Scripts should reach config through `get_config()` (memoized) so a
 secrets injected after import time can be picked up via `reset_config()`.
 
-This module deliberately does NOT call `load_dotenv()` — current scripts
-already do that, and double-loading is harmless but noisy. `get_config()`
-reads from `os.environ` at the moment of first access.
+`get_config()` loads the repo-root `.env` itself before its first read
+(ER-45), so a script that imports config before calling `load_dotenv()`
+still sees its settings. Variables already in `os.environ` win.
 """
 
 from __future__ import annotations
@@ -730,10 +730,15 @@ class Config:
 _PROFILE_ENV_VAR = "EDGE_RADAR_PROFILE"
 
 
+def _env_path(suffix: str = "") -> str:
+    """`.env` (or `.env.<suffix>`) at the repo root."""
+    root = os.getenv("PROJECT_ROOT") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(root, f".env.{suffix}" if suffix else ".env")
+
+
 def _profile_overlay_path(name: str) -> "os.PathLike[str] | str":
     """Where `.env.<name>` lives — repo root, beside the base `.env`."""
-    root = os.getenv("PROJECT_ROOT") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(root, f".env.{name}")
+    return _env_path(name)
 
 
 def apply_profile_overlay() -> str:
@@ -780,6 +785,7 @@ def apply_profile_overlay() -> str:
 # ── Memoization ─────────────────────────────────────────────────────────────
 
 _cached: Config | None = None
+_dotenv_loaded = False
 
 
 def get_config() -> Config:
@@ -790,7 +796,16 @@ def get_config() -> Config:
     re-read.
     """
     global _cached
+    global _dotenv_loaded
     if _cached is None:
+        if not _dotenv_loaded:
+            # Once per process, like the scripts' own import-time load_dotenv():
+            # reloading on every reset_config() would restore a var a caller
+            # deliberately removed. Never overrides os.environ.
+            from dotenv import load_dotenv
+
+            load_dotenv(_env_path())
+            _dotenv_loaded = True
         apply_profile_overlay()
         _cached = Config.from_env()
     return _cached

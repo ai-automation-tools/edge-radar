@@ -23,7 +23,7 @@ python scripts/kalshi/edge_detector.py scan [flags]
 | `--min-edge N` | `0.03` | Minimum edge threshold |
 | `--top N` | `20` | Number of top opportunities |
 | `--date DATE` | (none) | Only show games on this date (`today`, `tomorrow`, `YYYY-MM-DD`, `mar31`) |
-| `--save` | off | Save results to `data/watchlists/kalshi_opportunities.json` and a markdown report to `reports/Sports/` |
+| `--save` | off | Save a markdown report to `reports/Sports/` |
 | `--report-dir DIR` | (auto) | Override report output directory for `--save` |
 | `--exclude-open` | off | Skip markets where you already have an open position |
 | `--execute` | off | Place orders through executor pipeline |

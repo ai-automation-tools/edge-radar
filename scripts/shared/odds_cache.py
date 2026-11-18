@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from paths import DATA_DIR
+from trade_log import write_text_atomic
 
 log = logging.getLogger("odds_cache")
 
@@ -177,7 +178,7 @@ def store(sport_key: str, markets: str, events: list) -> None:
     }
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload), encoding="utf-8")
+        write_text_atomic(path, json.dumps(payload))
     except OSError as e:
         log.debug("odds_cache.store failed for %s/%s: %s", sport_key, markets, e)
 
@@ -228,7 +229,7 @@ def store_event(sport_key: str, event_id: str, event: dict) -> None:
     }
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload), encoding="utf-8")
+        write_text_atomic(path, json.dumps(payload))
     except OSError as e:
         log.debug("odds_cache.store_event failed for %s/%s: %s", sport_key, event_id, e)
 

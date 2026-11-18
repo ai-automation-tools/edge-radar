@@ -2,7 +2,7 @@
 
 **Location:** `scripts/kalshi/risk_check.py`
 
-**When to use:** Comprehensive portfolio dashboard with risk limits, position details, P&L, and watchlist. Pulls live data from the Kalshi API. Shows readable matchups, bet types, and game dates. Use `--report positions` for just open bets, or `--gate` in automation to block execution when limits are breached.
+**When to use:** Comprehensive portfolio dashboard with risk limits, position details and P&L. Pulls live data from the Kalshi API. Shows readable matchups, bet types, and game dates. Use `--report positions` for just open bets, or `--gate` in automation to block execution when limits are breached.
 
 For a quick balance/positions check, `kalshi_executor.py status` is faster.
 
@@ -16,7 +16,7 @@ python scripts/kalshi/risk_check.py [flags]
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--report TYPE` | `all` | `all`, `positions`, `pnl`, `limits`, `watchlist` |
+| `--report TYPE` | `all` | `all`, `positions`, `pnl`, `limits`, `reconciliation` |
 | `--gate` | off | Exit code 1 if any risk limit is breached (for automation) |
 | `--save` | off | Save dashboard as markdown to `reports/Accounts/Kalshi/kalshi_dashboard_YYYY-MM-DD.md` |
 
@@ -70,9 +70,6 @@ Either exposure cap left at 0 reports **NO CAP SET** rather than a comfortable-l
 never implemented and whose env var does not exist anywhere in the codebase — the same
 "documented but unenforced" shape as the Gate 3.6 spread rule (L2, unimplemented for five
 months) and the 10%-of-bankroll Hard Stop (B3, still unimplemented).
-
-### `watchlist`
-Current watchlist from the last scan (if saved).
 
 ---
 

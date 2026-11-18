@@ -369,7 +369,7 @@ python scripts/scan.py sports --unit-size 1 --max-bets 5 --budget 10% --date tod
 | `data/history/kalshi_trades.json` | Complete trade log: edge estimate, sizing, fill price, fees, status |
 | `data/history/kalshi_settlements.json` | Settlement history with outcome, realized P&L, edge calibration. Self-describing schema as of R5 (2026-04-27): also carries `composite_score`, `risk_approval`, `bankroll_pct`, `closing_price`, `clv`, `category`, `title`, `unit_size`, `fill_status`. |
 | `data/history/README.md` | Documents the trade-log/settlement schema lifecycle and the pre-R5 historical-orphan cohort. Run `python scripts/kalshi/risk_check.py --report reconciliation` to audit the join health. |
-| `data/watchlists/kalshi_opportunities.json` | Latest scored opportunities from the edge detector |
+| `data/watchlists/futures_opportunities.json` | Latest futures scan, written by `futures_edge.py --save` |
 | `data/positions/open_positions.json` | Snapshot of current open positions |
 | `data/finagent.db` | SQLite database (schema defined in `scripts/sql/init_db.sql`) |
 

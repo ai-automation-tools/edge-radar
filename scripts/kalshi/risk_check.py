@@ -7,13 +7,11 @@ Usage:
     python scripts/kalshi/risk_check.py --report positions    # Open positions only
     python scripts/kalshi/risk_check.py --report pnl          # Today's P&L only
     python scripts/kalshi/risk_check.py --report limits       # Risk limit status
-    python scripts/kalshi/risk_check.py --report watchlist    # Pending opportunities
     python scripts/kalshi/risk_check.py --report reconciliation  # Trade-log ↔ settlement audit
     python scripts/kalshi/risk_check.py --gate                # Exit code 1 if limits breached
 """
 
 import sys
-import json
 import argparse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -57,10 +55,6 @@ MAX_OPEN_EXPOSURE_PCT = _cfg.risk.max_open_exposure_pct
 MAX_SEGMENT_EXPOSURE_PCT = _cfg.risk.max_segment_exposure_pct
 DRY_RUN = _cfg.system.dry_run
 
-# ── Watchlist path ────────────────────────────────────────────────────────────
-WATCHLIST_PATH = paths.SPORTS_OPPORTUNITIES_PATH
-PREDICTION_WATCHLIST = paths.PREDICTION_OPPORTUNITIES_PATH
-
 
 # ── Data Fetchers ─────────────────────────────────────────────────────────────
 
@@ -96,20 +90,6 @@ def get_today_trades() -> tuple[list[dict], float]:
     today_trades = [t for t in trade_log if t.get("timestamp", "").startswith(today)]
     daily_pnl = get_today_pnl(trade_log)
     return today_trades, daily_pnl
-
-
-def load_watchlist() -> list[dict]:
-    """Load saved opportunities from watchlist files."""
-    opps = []
-    for wl_path in [WATCHLIST_PATH, PREDICTION_WATCHLIST]:
-        if wl_path.exists():
-            try:
-                with open(wl_path) as f:
-                    data = json.load(f)
-                opps.extend(data.get("opportunities", []))
-            except (json.JSONDecodeError, KeyError):
-                pass
-    return opps
 
 
 # ── Risk Calculations ─────────────────────────────────────────────────────────
@@ -381,31 +361,6 @@ def print_pnl_summary(today_trades: list[dict], daily_pnl: float):
     console.print(table)
 
 
-def print_watchlist(opps: list[dict]):
-    if not opps:
-        rprint("\n[dim]No saved opportunities in watchlist.[/dim]")
-        return
-
-    table = Table(title=f"Watchlist ({len(opps)} opportunities)", show_lines=True)
-    table.add_column("Ticker", style="cyan", max_width=35)
-    table.add_column("Side")
-    table.add_column("Edge", justify="right", style="green")
-    table.add_column("Fair Value", justify="right")
-    table.add_column("Score", justify="right")
-    table.add_column("Confidence")
-
-    for o in sorted(opps, key=lambda x: x.get("composite_score", 0), reverse=True)[:15]:
-        table.add_row(
-            o.get("ticker", "")[:35],
-            o.get("side", "").upper(),
-            f"+{o.get('edge', 0):.1%}",
-            f"${o.get('fair_value', 0):.2f}",
-            f"{o.get('composite_score', 0):.1f}",
-            o.get("confidence", "")[:3].upper(),
-        )
-    console.print(table)
-
-
 # ── Reconciliation Report ─────────────────────────────────────────────────────
 
 # Settlement-side fields that became part of the schema after R5 (2026-04-27).
@@ -537,7 +492,7 @@ def main():
     parser.add_argument(
         "--report",
         default="all",
-        choices=["all", "positions", "pnl", "limits", "watchlist", "reconciliation"],
+        choices=["all", "positions", "pnl", "limits", "reconciliation"],
         help="Report type to display",
     )
     parser.add_argument(
@@ -563,7 +518,6 @@ def main():
     positions = fetch_positions(client)
     resting = fetch_resting_orders(client)
     today_trades, daily_pnl = get_today_trades()
-    watchlist = load_watchlist()
 
     print_risk_header(client)
 
@@ -585,9 +539,6 @@ def main():
     if report in ("all", "pnl"):
         print_pnl_summary(today_trades, daily_pnl)
 
-    if report in ("all", "watchlist"):
-        print_watchlist(watchlist)
-
     if report == "all":
         if is_daily_limit_breached(daily_pnl):
             console.print(
@@ -607,7 +558,7 @@ def main():
 
     # Save markdown report
     if args.save:
-        _save_dashboard_report(client, bal, positions, resting, today_trades, daily_pnl, watchlist)
+        _save_dashboard_report(client, bal, positions, resting, today_trades, daily_pnl)
 
 
 def _settlement_record(s: dict) -> dict | None:
@@ -648,7 +599,7 @@ def _win_rate(recs: list[dict]) -> str:
     return f"{wins}/{decided} ({wins / decided:.0%})" if decided else "-"
 
 
-def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_pnl, watchlist):
+def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_pnl):
     """Generate and save a markdown risk dashboard report."""
     now = datetime.now(timezone.utc)
     today = now.strftime("%Y-%m-%d")
@@ -850,20 +801,6 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
             md.append(
                 f"| {o.get('ticker', '')[:35]} | {o.get('side', '').upper()} | "
                 f"{o.get('remaining_count_fp', '?')} | ${price} |"
-            )
-
-    # Watchlist
-    if watchlist:
-        md.append("")
-        md.append(f"## Watchlist ({len(watchlist)} opportunities)")
-        md.append("")
-        md.append("| Ticker | Side | Edge | Score | Conf |")
-        md.append("|--------|------|------|-------|------|")
-        for o in sorted(watchlist, key=lambda x: x.get("composite_score", 0), reverse=True)[:10]:
-            md.append(
-                f"| {o.get('ticker', '')[:30]} | {o.get('side', '').upper()} "
-                f"| {o.get('edge', 0):+.1%} | {o.get('composite_score', 0):.1f} "
-                f"| {o.get('confidence', '')[:3].upper()} |"
             )
 
     md.append("")

@@ -12,16 +12,12 @@ Usage:
     # Live execution on demo
     python scripts/kalshi_executor.py run --execute
 
-    # Execute from saved watchlist instead of fresh scan
-    python scripts/kalshi_executor.py run --from-file --execute
-
     # Check current state
     python scripts/kalshi_executor.py status
 """
 
 import sys
 import math
-import json
 import uuid
 import logging  # noqa: F401
 import argparse
@@ -2234,23 +2230,6 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
 # ── Execution Pipeline ────────────────────────────────────────────────────────
 
 
-def load_opportunities_from_file(prediction: bool = False) -> list[Opportunity]:
-    """Load opportunities from saved watchlist file(s).
-
-    Args:
-        prediction: If True, load prediction market opportunities.
-                    If False, load sports opportunities.
-    """
-    file_path = (
-        paths.PREDICTION_OPPORTUNITIES_PATH if prediction else paths.SPORTS_OPPORTUNITIES_PATH
-    )
-    if not file_path.exists():
-        return []
-    with open(file_path) as f:
-        data = json.load(f)
-    return [Opportunity(**{k: v for k, v in o.items()}) for o in data.get("opportunities", [])]
-
-
 def _parse_pick_rows(pick_str: str, total: int) -> list[int]:
     """Parse --pick argument into 0-based indices. Supports '1,3,5' and '1-3'."""
     indices = []
@@ -3253,9 +3232,6 @@ def main():
         "--execute", action="store_true", help="Actually place orders (default: preview only)"
     )
     run_p.add_argument(
-        "--from-file", action="store_true", help="Use saved watchlist instead of fresh scan"
-    )
-    run_p.add_argument(
         "--prediction",
         action="store_true",
         help="Use prediction market scanner (crypto, weather, S&P 500) instead of sports",
@@ -3357,19 +3333,7 @@ def main():
 
     elif args.command == "run":
         # Get opportunities
-        if args.from_file:
-            rprint(
-                f"[bold]Loading {'prediction' if args.prediction else 'sports'} opportunities from file...[/bold]"  # noqa: E501
-            )
-            opportunities = load_opportunities_from_file(prediction=args.prediction)
-            src = (
-                paths.PREDICTION_OPPORTUNITIES_PATH
-                if args.prediction
-                else paths.SPORTS_OPPORTUNITIES_PATH
-            )
-            rprint(f"  Loaded {len(opportunities)} from {src}")
-
-        elif args.prediction:
+        if args.prediction:
             # Use prediction market scanner
             rprint("[bold]Running prediction market scan...[/bold]")
             from prediction_scanner import scan_prediction_markets

@@ -52,7 +52,6 @@ Parse the user's intent from the arguments. The skill supports natural language 
 | `--category CAT` | (none) | Market type: `game`, `spread`, `total`, `player_prop` |
 | `--top N` | `20` | Number of opportunities to show |
 | `--detail` | off | Show per-trade breakdown (for reports) |
-| `--from-file` | off | Load from saved watchlist |
 | `--report-dir PATH` | (none) | Override report output directory (used in batch jobs) |
 | `--rescan` | off | R26 (2026-04-29): force a live rescan even when a fresh scan-cache exists. Default behavior for `--execute --pick/--ticker` is to replay the cached preview so row indices match what you saw — this opts out per-call. |
 
@@ -252,7 +251,6 @@ python scripts/kalshi/risk_check.py
 | `--report positions` | Just open positions |
 | `--report pnl` | Just P&L |
 | `--report limits` | Just risk limit status |
-| `--report watchlist` | Just active watchlist |
 | `--report reconciliation` | R5 (2026-04-27): trade-log ↔ settlement join audit. Counts, `trade_id` overlap %, orphan-window dates, and per-field coverage matrix for the R5 settlement-schema additions. |
 | `--gate` | Exit code 1 if limits breached (for automation) |
 | `--save` | Save dashboard as markdown |
