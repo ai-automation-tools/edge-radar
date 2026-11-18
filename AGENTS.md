@@ -690,7 +690,7 @@ SCAN_CACHE_ENABLED=true
 ## Common Commands
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime + tests and hooks; requirements.txt is runtime only
 
 # Scan (preview only)
 python scripts/scan.py sports --filter mlb,nhl --date today --save
