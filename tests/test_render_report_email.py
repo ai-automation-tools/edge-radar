@@ -60,3 +60,41 @@ def test_weekly_analysis_email_opens_with_audit_flags():
     assert lead.startswith("# Betting Audit") and "**Status: WARN**" in lead
     assert "93% under" in lead and "stdev looks narrow" in lead
     assert "Model vs market" not in lead and "intro" not in lead
+
+
+# ── ER-07: a failed execute run emails [FAILED] instead of exiting 2 silently
+
+
+def _exec_preset(tmp_path, monkeypatch, log_text=None, report=True):
+    monkeypatch.setattr(r, "REPO", tmp_path)
+    folder = tmp_path / r.PRESETS["same-day"][0]
+    folder.mkdir(parents=True)
+    if report:
+        (folder / "2026-11-17_sports_execution.md").write_text("# report")
+    if log_text is not None:
+        log = tmp_path / r.SCAN_LOGS["same-day"]
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text(log_text)
+
+
+def test_clean_execute_run_is_not_a_failure(tmp_path, monkeypatch):
+    _exec_preset(tmp_path, monkeypatch, "===== old\nexit code 1\n===== new\nok\nexit code 0 \n")
+    assert r.failure("same-day", 3) is None
+
+
+def test_nonzero_scan_exit_is_a_failure_even_with_a_report(tmp_path, monkeypatch):
+    _exec_preset(tmp_path, monkeypatch, "===== run\nTraceback ...\nexit code 1 \n")
+    assert r.failure("same-day", 3) == "scan exited 1"
+    page, text = r.build_failure("same-day", "scan exited 1")
+    assert "FAILED" in page and "Traceback" in text
+
+
+def test_missing_report_on_execute_preset_is_a_failure(tmp_path, monkeypatch):
+    _exec_preset(tmp_path, monkeypatch, report=False)
+    assert r.failure("same-day", 3) == "no report newer than 3h"
+    assert "no scan log" in r.build_failure("same-day", "x")[1]
+
+
+def test_non_execute_preset_never_fails(tmp_path, monkeypatch):
+    monkeypatch.setattr(r, "REPO", tmp_path)
+    assert r.failure("daily-summary", 3) is None

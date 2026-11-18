@@ -15,7 +15,10 @@ never "the file named with today's date": report filenames carry the UTC date,
 so a PT evening run (NextDay 20:30, Weekly-Analysis 23:45) writes tomorrow's
 name, and a date match against the local clock misses it.
 
-A missing report exits 2 without sending, except for presets with a scan log,
+An execute preset (SCAN_LOGS) whose report is missing, or whose .bat recorded a
+non-zero scan exit, sends a [FAILED] email with the log tail and exits 1 (ER-07).
+
+Otherwise a missing report exits 2 without sending, except for presets with a scan log,
 where no report is the normal zero-opportunity case and the email is
 proof-of-life led by the log's execution outcome. (No preset uses one since the
 Polymarket preset was removed 2026-09-29.)
@@ -108,6 +111,18 @@ PRESETS = {
     ),
 }
 
+# ER-07: each execute .bat appends its scan output and `exit code N` here. Every
+# execute run writes a report, even with zero bets, so a missing report or a
+# non-zero exit is a failed live run: send [FAILED] and exit 1. Task Scheduler's
+# Last Result is the last action's code, so the old silent exit 2 hid it.
+SCAN_LOGS = {
+    "same-day": "logs/scan_same_day.log",
+    "same-day-late": "logs/scan_same_day_late.log",
+    "nodatefilter-midday": "logs/scan_nodatefilter_midday.log",
+    "next-day": "logs/scan_next_day.log",
+    "weekly-futures": "logs/scan_weekly_futures.log",
+}
+
 # Another report whose headline sections open a preset's email, so one Sunday
 # email carries both (2026-10-27). The full lead report stays on disk.
 LEADS = {
@@ -176,6 +191,65 @@ def log_excerpt(path: Path, lines: int = 40) -> str:
     return "\n".join(kept[-lines:])
 
 
+def last_exit(path: Path, max_age_hours: float) -> int | None:
+    """The exit code the .bat recorded for its last run, or None if the log is
+    missing, stale, or the last run recorded none."""
+    if not path.exists() or path.stat().st_mtime < time.time() - max_age_hours * 3600:
+        return None
+    for ln in reversed(path.read_bytes().decode("utf-8", errors="replace").splitlines()):
+        if ln.startswith("====="):
+            return None
+        if ln.startswith("exit code "):
+            try:
+                return int(ln.split()[2])
+            except (IndexError, ValueError):
+                return None
+    return None
+
+
+def failure(preset: str, max_age_hours: float) -> str | None:
+    """Why an execute preset's run failed, or None if it didn't (or isn't one)."""
+    if preset not in SCAN_LOGS:
+        return None
+    rc = last_exit(REPO / SCAN_LOGS[preset], max_age_hours)
+    if rc:
+        return f"scan exited {rc}"
+    folder, pattern = PRESETS[preset][:2]
+    if find_report(REPO / folder, pattern, max_age_hours) is None:
+        return f"no report newer than {max_age_hours:g}h"
+    return None
+
+
+def build_failure(preset: str, reason: str) -> tuple[str, str]:
+    subject, log = PRESETS[preset][2], REPO / SCAN_LOGS[preset]
+    excerpt = log_excerpt(log) if log.exists() else f"(no scan log at {SCAN_LOGS[preset]})"
+    md_text = f"# FAILED: {subject}\n\n**{reason}**\n\n## Scan log, last run\n\n{excerpt}\n"
+    parts = [
+        f"<h1 style=\"{STYLES['h1']};color:#b91c1c\">FAILED: {html.escape(subject)}</h1>",
+        f"<p style=\"{STYLES['p']}\"><strong>{html.escape(reason)}</strong></p>",
+        f"<h2 style=\"{STYLES['h2']}\">Scan log, last run</h2>",
+        f'<pre style="font-family:{MONO};font-size:12px;background:#f9fafb;'
+        f'border:1px solid #e5e7eb;padding:10px;white-space:pre-wrap">'
+        f"{html.escape(excerpt)}</pre>",
+    ]
+    return wrap(parts, SCAN_LOGS[preset]), md_text
+
+
+def wrap(parts: list[str], source: str) -> str:
+    footer = (
+        f"<strong>Edge-Radar</strong> &middot; automation fleet &middot; "
+        f"{html.escape(source)} &middot; {datetime.now():%Y-%m-%d %H:%M}"
+    )
+    return (
+        f'<!DOCTYPE html><html><body style="font-family:{FONT};max-width:960px;margin:0 auto;'
+        f'padding:20px;background:#fafaf9;color:#1f2937">'
+        f'<div style="background:#fff;padding:24px;border-radius:10px;border:1px solid #e5e7eb;'
+        f'overflow-x:auto">{"".join(parts)}'
+        f'<div style="margin-top:28px;padding-top:12px;border-top:1px solid #e5e7eb;'
+        f'color:#888;font-size:12px">{footer}</div></div></body></html>'
+    )
+
+
 def lead_sections(text: str, headings: tuple[str, ...]) -> str:
     """Title, status line, and the named `## ` sections of a markdown report."""
     lines = text.splitlines()
@@ -218,20 +292,7 @@ def build(preset: str, max_age_hours: float) -> tuple[str, str] | None:
         parts.append(md_to_html(body))
         md_text += body
 
-    source = report.name if report else scan_log
-    footer = (
-        f"<strong>Edge-Radar</strong> &middot; automation fleet &middot; "
-        f"{html.escape(source)} &middot; {datetime.now():%Y-%m-%d %H:%M}"
-    )
-    page = (
-        f'<!DOCTYPE html><html><body style="font-family:{FONT};max-width:960px;margin:0 auto;'
-        f'padding:20px;background:#fafaf9;color:#1f2937">'
-        f'<div style="background:#fff;padding:24px;border-radius:10px;border:1px solid #e5e7eb;'
-        f'overflow-x:auto">{"".join(parts)}'
-        f'<div style="margin-top:28px;padding-top:12px;border-top:1px solid #e5e7eb;'
-        f'color:#888;font-size:12px">{footer}</div></div></body></html>'
-    )
-    return page, md_text
+    return wrap(parts, report.name if report else scan_log), md_text
 
 
 def main() -> int:
@@ -259,11 +320,17 @@ def main() -> int:
             with log.open("a", encoding="utf-8") as fh:
                 fh.write(line + "\n")
 
-    built = build(args.preset, args.max_age_hours)
-    if built is None:
-        note(f"no report newer than {args.max_age_hours}h -- not sending")
-        return 2
-    page, text = built
+    reason = failure(args.preset, args.max_age_hours)
+    if reason:
+        page, text = build_failure(args.preset, reason)
+        subject = f"[FAILED] {subject}"
+        note(f"FAILED run: {reason}")
+    else:
+        built = build(args.preset, args.max_age_hours)
+        if built is None:
+            note(f"no report newer than {args.max_age_hours}h -- not sending")
+            return 2
+        page, text = built
 
     if args.dry_run:
         Path(args.dry_run).write_text(page, encoding="utf-8")
@@ -296,7 +363,7 @@ def main() -> int:
         html_file.unlink(missing_ok=True)
         text_file.unlink(missing_ok=True)
     note(f"send exit {proc.returncode}: {(proc.stdout + proc.stderr).strip()}")
-    return proc.returncode
+    return proc.returncode or (1 if reason else 0)
 
 
 if __name__ == "__main__":
