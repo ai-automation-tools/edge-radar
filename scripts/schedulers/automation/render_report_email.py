@@ -155,7 +155,9 @@ STYLES = {  # inline only -- Gmail/Outlook strip <style> blocks and CSS vars
     "blockquote": "margin:10px 0;padding:6px 12px;border-left:3px solid #0891b2;color:#374151",
 }
 
-_md = MarkdownIt("commonmark").enable("table")
+# html=False (ER-22): the commonmark preset passes raw HTML through, and report text
+# includes Kalshi market titles and model output. Escaped, a stray <tag> shows as text.
+_md = MarkdownIt("commonmark", {"html": False}).enable("table")
 
 
 def md_to_html(text: str) -> str:

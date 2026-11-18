@@ -28,6 +28,13 @@ def test_every_column_and_cell_survives():
     assert 'text-align:right"' in out and "border:1px solid" in out
 
 
+def test_raw_html_in_a_report_is_escaped():
+    """ER-22: market titles and model text reach the email; tags must not render."""
+    out = r.md_to_html("Title <img src=x onerror=1> and <b onmouseover=1>x</b> <TN>\n")
+    assert "<img" not in out and "<b " not in out
+    assert "&lt;img src=x onerror=1&gt;" in out and "&lt;TN&gt;" in out
+
+
 def test_newest_fresh_report_wins_and_stale_is_ignored(tmp_path):
     old, new = tmp_path / "2026-09-01_x.md", tmp_path / "2026-09-02_x.md"
     old.write_text("old")
