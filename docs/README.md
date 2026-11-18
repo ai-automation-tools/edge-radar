@@ -36,11 +36,10 @@ Only `README.md`, `CHANGELOG.md` and `RULES-RATIONALE.md` live at the root of `d
 *   [MLB_FILTERING_GUIDE.md](./kalshi/kalshi-sports-betting/MLB_FILTERING_GUIDE.md) — Pitcher/matchup and weather filtering for baseball wagers.
 *   [KALSHI_API_REFERENCE.md](./kalshi/kalshi-sports-betting/KALSHI_API_REFERENCE.md) — Kalshi REST/auth reference (RSA signing, endpoints).
 *   [FUTURES_GUIDE.md](./kalshi/kalshi-futures-betting/FUTURES_GUIDE.md) — Championship and division futures de-vigging models.
-*   [PREDICTION_MARKETS_GUIDE.md](./kalshi/kalshi-prediction-betting/PREDICTION_MARKETS_GUIDE.md) — Scanners for Weather (NWS), Crypto (CoinGecko), and S&P 500.
 
 ### ⚙️ Scripts & CLI — [`scripts/`](./scripts/)
 *   [SCRIPTS_REFERENCE.md](./scripts/SCRIPTS_REFERENCE.md) — Complete CLI reference for every script, flag, and batch command.
-*   [per-script/](./scripts/per-script/) — Deep-dive docs for each script (edge_detector, futures_edge, prediction_scanner, kalshi_executor, kalshi_settler, risk_check, backtester).
+*   [per-script/](./scripts/per-script/) — Deep-dive docs for each script (edge_detector, futures_edge, kalshi_executor, kalshi_settler, risk_check, backtester).
 
 ### 🔬 Strategy Reviews — [`enhancements/`](./enhancements/)
 *   [betting-strategy-review-2026-08-26.md](./enhancements/betting-strategy-review-2026-08-26.md) — Full review of the settled record (402 bets), the defects found (CLV never computed, no cumulative-exposure gate, taker-only fee drag), and a four-phase action plan: stop waste → install CLV measurement → remove trading cost → scale only on evidence.

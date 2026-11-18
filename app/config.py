@@ -194,6 +194,9 @@ class RiskLimits:
     unit_size: float = 1.00
     max_bet_size: float = 100.0
     max_daily_loss: float = 250.0
+    # ER-16: the zone whose calendar day Gate 1 sums. UTC midnight is 7-8 pm ET,
+    # mid-slate, so evening losses used to land on a fresh limit.
+    daily_loss_tz: str = "America/New_York"
     max_open_positions: int = 50
     max_per_event: int = 2
     # P1: futures get their own Gate 6 cap. A diversified multi-outcome futures
@@ -225,6 +228,7 @@ class RiskLimits:
             unit_size=_float("UNIT_SIZE", 1.00),
             max_bet_size=_float("MAX_BET_SIZE", 100.0),
             max_daily_loss=_float("MAX_DAILY_LOSS", 250.0),
+            daily_loss_tz=_str("DAILY_LOSS_TZ", "America/New_York").strip() or "America/New_York",
             max_open_positions=_int("MAX_OPEN_POSITIONS", 50),
             max_per_event=_int("MAX_PER_EVENT", 2),
             max_per_event_futures=_int("MAX_PER_EVENT_FUTURES", _int("MAX_PER_EVENT", 2)),
@@ -580,6 +584,14 @@ class Config:
             raise ValueError(f"UNIT_SIZE must be > 0, got {self.risk.unit_size}")
         if self.risk.max_daily_loss < 0:
             raise ValueError(f"MAX_DAILY_LOSS must be >= 0, got {self.risk.max_daily_loss}")
+        try:
+            from zoneinfo import ZoneInfo
+
+            ZoneInfo(self.risk.daily_loss_tz)
+        except Exception as e:  # ZoneInfoNotFoundError, ValueError on a malformed key
+            raise ValueError(
+                f"DAILY_LOSS_TZ is not a time zone: {self.risk.daily_loss_tz!r}"
+            ) from e
         if self.risk.max_open_positions < 0:
             raise ValueError(f"MAX_OPEN_POSITIONS must be >= 0, got {self.risk.max_open_positions}")
         if self.risk.max_per_event < 0:

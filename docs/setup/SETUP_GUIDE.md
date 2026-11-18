@@ -38,7 +38,7 @@ Complete guide from clone → first scan → operating Edge-Radar in production.
 - **A Kalshi account** — Free to create at [kalshi.com](https://kalshi.com)
 - **An Odds API key** — Free tier at [the-odds-api.com](https://the-odds-api.com) (500 requests/month)
 
-> **Note:** All other data sources (ESPN, NHL, MLB, NWS, CoinGecko, Yahoo Finance) are free and require no API keys. They work out of the box.
+> **Note:** All other data sources (ESPN, NHL, MLB, NWS) are free and require no API keys. They work out of the box.
 
 ---
 
@@ -79,7 +79,7 @@ Only two credentials are strictly required. Everything else is a free public end
 |:-------|:--------|:----------|:----------------|:-----|
 | **Kalshi API** | Market data + order execution | Yes | `KALSHI_API_KEY`, `KALSHI_PRIVATE_KEY_PATH`, `KALSHI_BASE_URL` | [docs.kalshi.com](https://docs.kalshi.com) |
 | **The Odds API** | Sportsbook prices for edge comparison | Yes (for sports workflows) | `ODDS_API_KEYS` (or legacy `ODDS_API_KEY`) | [the-odds-api.com](https://the-odds-api.com) |
-| CoinGecko / Yahoo Finance / NWS / ESPN / MLB / NHL | Prediction/signal enrichment | No | — | Public endpoints used by scanner |
+| NWS / ESPN / MLB / NHL | Signal enrichment | No | — | Public endpoints used by scanner |
 | Kalshi production fallback | Optional split-credential setup | Optional | `KALSHI_PROD_API_KEY`, `KALSHI_PROD_PRIVATE_KEY_PATH`, `KALSHI_PROD_BASE_URL` | — |
 
 > The comma-separated `ODDS_API_KEYS` format enables automatic key rotation when one hits its monthly quota.

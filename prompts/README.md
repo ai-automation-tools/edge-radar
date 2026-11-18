@@ -13,7 +13,6 @@ Ready-to-use natural-language prompts for driving Edge-Radar through Claude Code
 | Folder | What it covers |
 |:-------|:---------------|
 | [`sports-betting/`](#sports-betting) | NBA/NHL/MLB/NFL/NCAA/soccer/combat/motorsport game, spread, total & prop scans and execution |
-| [`predictions/`](#prediction-markets) | Crypto, weather, S&P 500, TV mentions, companies & politics binary markets |
 | [`futures/`](#championship-futures) | Championship & season-long outright (futures) markets |
 | [`portfolio/`](#portfolio--risk) | Daily routines, status, risk audits, settlement & reviews |
 | [`analysis/`](#analysis--diagnostics) | Backtesting, calibration, environment health & quota checks |
@@ -42,18 +41,7 @@ The largest category. Sport filters: `nba`, `nhl`, `mlb`, `nfl`, `ncaamb`, `ncaa
 
 ## prediction-markets
 
-> **Execution is gated off by default (Gate 4.7 / R25).** Scans always preview; placing prediction bets requires `ALLOW_PREDICTION_BETS=true`. Filters: `crypto` (+ `btc`/`eth`/`xrp`/`doge`/`sol`), `weather`, `spx`, `mentions`, `companies`, `politics`.
-
-| Prompt | Use it to… |
-|:-------|:-----------|
-| [scan-all-predictions](predictions/scan-all-predictions.md) | One scan across every prediction category |
-| [morning-prediction-brief](predictions/morning-prediction-brief.md) | Quick morning overview of all prediction markets |
-| [crypto-edge-scan](predictions/crypto-edge-scan.md) | BTC/ETH/XRP/DOGE/SOL binary mispricing |
-| [weather-betting](predictions/weather-betting.md) | Temperature-threshold markets (13 cities) |
-| [spx-daily-scan](predictions/spx-daily-scan.md) | S&P 500 binary options using SPX + VIX |
-| [mention-markets](predictions/mention-markets.md) | TV mention / word-count markets |
-| [execute-predictions](predictions/execute-predictions.md) | Scan one category and execute (opt-in gate) |
-| [full-prediction-execute](predictions/full-prediction-execute.md) | Full scan-and-execute session across categories |
+Retired 2026-11-18 (ER-53) with the prediction scanners; the prompts are on the `archive/prediction-scanners` branch.
 
 ## championship-futures
 
@@ -94,7 +82,7 @@ Outright/futures markets priced via N-way de-vigging. Edges are small (0.5–2% 
 - **`--exclude-open`** skips markets where you already hold a position (avoids doubling up).
 - **`--save`** writes a markdown report under `reports/` (Sports/, Futures/, etc.).
 - **`--date today|tomorrow|YYYY-MM-DD`** scopes sports scans to a slate.
-- **Opt-in gates:** prediction execution needs `ALLOW_PREDICTION_BETS=true`; in-progress games need `ALLOW_LIVE_BETS=true`.
+- **Opt-in gate:** in-progress games need `ALLOW_LIVE_BETS=true`.
 - **Config changes need a restart** of any long-running host process — gate thresholds snapshot at import time. The CLI always re-reads `.env`.
 
 See `AGENTS.md` for the full gate list, risk limits, and `.env` reference.

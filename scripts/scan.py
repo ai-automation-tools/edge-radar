@@ -5,7 +5,6 @@ Routes to the correct scanner based on market type:
 
     python scripts/scan.py sports --filter mlb --date tomorrow --exclude-open
     python scripts/scan.py futures --filter nba-futures --save
-    python scripts/scan.py prediction --filter crypto
 
 All flags are forwarded directly to the underlying scanner.
 Run any subcommand with --help to see its full flag list.
@@ -22,12 +21,12 @@ PYTHON = sys.executable
 SCANNERS = {
     "sports": PROJECT_ROOT / "scripts" / "kalshi" / "edge_detector.py",
     "futures": PROJECT_ROOT / "scripts" / "kalshi" / "futures_edge.py",
-    "prediction": PROJECT_ROOT / "scripts" / "prediction" / "prediction_scanner.py",
 }
+
+ARCHIVE_BRANCH = "archive/prediction-scanners"  # ER-53
 
 ALIASES = {
     "sport": "sports",
-    "pred": "prediction",
 }
 
 
@@ -39,6 +38,12 @@ def main():
     market_type = sys.argv[1].lower()
     market_type = ALIASES.get(market_type, market_type)
 
+    if market_type in ("prediction", "pred"):
+        print(
+            "The prediction-market scanners (crypto, weather, S&P 500) were retired on "
+            f"2026-11-18 (ER-53). The code is on the `{ARCHIVE_BRANCH}` branch."
+        )
+        sys.exit(1)
     if market_type not in SCANNERS:
         print(f"Unknown market type: '{sys.argv[1]}'")
         print(f"Valid types: {', '.join(SCANNERS)}")
@@ -140,9 +145,9 @@ Usage:  python scripts/scan.py <market-type> [flags]
 Market types:
   sports       Kalshi sports betting (NBA, NHL, MLB, NFL, NCAA, etc.)
   futures      Championship & season-long futures
-  prediction   Crypto, weather, S&P 500, politics
 
-Aliases:  sport, pred
+Aliases:  sport
+(prediction scanners retired 2026-11-18; see the archive/prediction-scanners branch)
 
 Common flags (all scanners):
   --filter X       Filter by sport/asset/category
@@ -162,7 +167,6 @@ Common flags (all scanners):
 Examples:
   python scripts/scan.py sports --filter mlb --date today --save
   python scripts/scan.py futures --filter nba-futures --top 10
-  python scripts/scan.py prediction --filter crypto
 
 Run with <market-type> --help for the full flag list of each scanner."""
     )

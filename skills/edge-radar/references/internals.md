@@ -14,8 +14,6 @@
 | `/edge-radar nba --category spread` | `scan.py sports --filter nba --category spread` |
 | `/edge-radar nba-futures` | `scan.py futures --filter nba-futures` |
 | `/edge-radar superbowl` | `scan.py futures --filter nfl-futures` |
-| `/edge-radar crypto` | `scan.py prediction --filter crypto` |
-| `/edge-radar weather --min-edge 0.05` | `scan.py prediction --filter weather --min-edge 0.05` |
 | `/edge-radar status` | `kalshi_executor.py status` |
 | `/edge-radar settle` | `kalshi_settler.py settle` + `report --detail` |
 | `/edge-radar reconcile` | `kalshi_settler.py reconcile` |
@@ -45,7 +43,6 @@ When `--save` is used, the report format depends on whether `--unit-size` was pa
 | Sports (scan) | `reports/Sports/{date}_{sport}_sports_scan.md` |
 | Sports (execution) | `reports/Sports/{date}_{sport}_sports_execution.md` |
 | Futures | `reports/Futures/{date}_{category}_futures_scan.md` |
-| Predictions | `reports/Predictions/{date}_{category}_prediction_scan.md` |
 | Settle/P&L | `reports/Accounts/Kalshi/` |
 | Automated | `reports/Sports/schedulers/same-day-executions/` |
 

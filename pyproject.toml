@@ -19,7 +19,6 @@ testpaths = ["tests"]
 pythonpath = [
     "scripts/shared",
     "scripts/kalshi",
-    "scripts/prediction",
     "scripts/schedulers",
     "scripts/backtest",
     "scripts",

@@ -24,10 +24,7 @@ scan-sports:
 scan-futures:
 	$(PYTHON) scripts/scan.py futures --min-edge 0.01 --top 30
 
-scan-predictions:
-	$(PYTHON) scripts/scan.py prediction --min-edge 0.03 --top 20
-
-scan-all: scan-sports scan-futures scan-predictions
+scan-all: scan-sports scan-futures
 
 # ── Portfolio Management ─────────────────────────────────────────────────────
 
@@ -97,7 +94,6 @@ help:
 	@echo "  make scan-nfl          Scan NFL"
 	@echo "  make scan-sports       Scan all sports"
 	@echo "  make scan-futures      Scan championship futures"
-	@echo "  make scan-predictions  Scan prediction markets"
 	@echo "  make scan-all          Scan everything"
 	@echo ""
 	@echo "Portfolio:"
@@ -117,4 +113,4 @@ help:
 	@echo "  make install           Install dependencies"
 	@echo "  make hooks             Install pre-commit hooks"
 
-.PHONY: scan-mlb scan-nba scan-nhl scan-nfl scan-sports scan-futures scan-predictions scan-all status risk settle report reconcile backtest backtest-sim test test-quick lint-config doctor install lock hooks help
+.PHONY: scan-mlb scan-nba scan-nhl scan-nfl scan-sports scan-futures scan-all status risk settle report reconcile backtest backtest-sim test test-quick lint-config doctor install lock hooks help

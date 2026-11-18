@@ -22,7 +22,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 # Script directories
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
 KALSHI_DIR = SCRIPTS_DIR / "kalshi"
-PREDICTION_DIR = SCRIPTS_DIR / "prediction"
 SHARED_DIR = SCRIPTS_DIR / "shared"
 SCHEDULERS_DIR = SCRIPTS_DIR / "schedulers"
 
@@ -48,7 +47,6 @@ for p in [
     str(PROJECT_ROOT),
     str(SCRIPTS_DIR),
     str(KALSHI_DIR),
-    str(PREDICTION_DIR),
     str(SHARED_DIR),
     str(SCHEDULERS_DIR),
 ]:

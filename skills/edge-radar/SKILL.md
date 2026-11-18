@@ -31,9 +31,8 @@ Parse the user's intent from the arguments. The skill supports natural language 
 | `bet <filter>`, `play <filter>`, `wager <filter>` | **Scan & Bet** | Scan then prompt to execute |
 | `detail <TICKER>`, `lookup <TICKER>` | **Detail** | Deep dive on a single market |
 | `odds <sport>` | **Raw Odds** | Show sportsbook odds without edge detection |
-| `data <type>` | **Market Data** | Fetch stock/crypto/prediction market data |
 | `backtest`, `analyze`, `performance` | **Backtest** | Run backtester on settled trades |
-| Any sport/market name alone (e.g., `nba`, `mlb`, `crypto`) | **Scan** | Default to scan for that filter |
+| Any sport/market name alone (e.g., `nba`, `mlb`, `nhl`) | **Scan** | Default to scan for that filter |
 
 ### Flag Parsing
 
@@ -66,11 +65,9 @@ Parse the user's intent from the arguments. The skill supports natural language 
 python scripts/scan.py sports --filter mlb --date today --save
 python scripts/scan.py sports --unit-size 1 --max-bets 5 --budget 10% --date today --exclude-open --execute
 python scripts/scan.py futures --filter nba-futures
-python scripts/scan.py prediction --filter crypto
 ```
 
-Market types: `sports`, `futures`, `prediction`. (`polymarket` / `poly` / `pm` were removed 2026-09-29 with the Polymarket venue — see CHANGELOG.)
-Aliases: `sport` = `sports`, `pred` = `prediction`.
+Market types: `sports`, `futures`. Alias: `sport` = `sports`. (Polymarket was removed 2026-09-29; the `prediction` scanners were retired 2026-11-18, ER-53, and live on the `archive/prediction-scanners` branch.)
 
 The `scan` subcommand is auto-inserted if omitted. All flags are forwarded directly.
 
@@ -185,18 +182,6 @@ Sports: `nba`, `nfl`, `mlb`, `nhl`, `ncaafb`, `ncaabb`, `soccer`, `mma`, `all`.
 
 ---
 
-## Action: Market Data
-
-Fetch market data for research.
-
-```bash
-python scripts/kalshi/fetch_market_data.py --type <type> [--symbols SYM1 SYM2] [--source kalshi]
-```
-
-Types: `stocks`, `prediction`, `crypto`, `account`, `all`.
-
----
-
 ## Action: Scan (Preview Only)
 
 Run the appropriate scanner based on the filter. **No orders are placed.**
@@ -237,22 +222,10 @@ python scripts/scan.py futures \
   [--save]
 ```
 
-**Prediction markets:**
-```bash
-python scripts/scan.py prediction \
-  [--filter <category>] \
-  [--min-edge <threshold>] \
-  [--top <N>] \
-  [--date <DATE>] \
-  [--exclude-open] \
-  [--save]
-```
-
 **Direct scanner access** (still works for all scanners):
 ```bash
 python scripts/kalshi/edge_detector.py scan [flags]
 python scripts/kalshi/futures_edge.py scan [flags]
-python scripts/prediction/prediction_scanner.py scan [flags]
 ```
 
 ### Step 3: Present Results
@@ -266,7 +239,6 @@ Explain:
 - Top 2-3 picks and why they have edge (plain language)
 - Total estimated cost if all were executed
 - For futures: note that capital is tied up for weeks/months
-- For prediction markets: note settlement timing
 
 ---
 
@@ -296,14 +268,6 @@ python scripts/scan.py sports \
 ```bash
 python scripts/scan.py futures \
   --filter <sport>-futures --execute \
-  [--unit-size <N>] [--max-bets <N>] [--budget <X>] [--min-edge <N>] \
-  [--pick '1,3,5'] [--ticker <TICKER>]
-```
-
-**Prediction:**
-```bash
-python scripts/scan.py prediction \
-  --filter <category> --execute \
   [--unit-size <N>] [--max-bets <N>] [--budget <X>] [--min-edge <N>] \
   [--pick '1,3,5'] [--ticker <TICKER>]
 ```

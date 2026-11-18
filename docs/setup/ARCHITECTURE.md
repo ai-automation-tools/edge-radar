@@ -73,13 +73,9 @@ Same CDF approach as spreads for expected total. For NFL and MLB outdoor games, 
 
 For championship and season-long markets with N outcomes, de-vig the full N-way market from sportsbook futures odds. Distribute the overround proportionally (`FUTURES_DEVIG=proportional`, the default) or by the power method (`power`, which also skips a book whose raw implied total is under 1.05). Take weighted median across books. The shadow book scores both on every priced futures market until one wins (ER-42 / B5).
 
-### Predictions (Model-Specific)
+### Predictions
 
-| Market Type | Data Source | Method |
-| :--- | :--- | :--- |
-| Crypto (BTC, ETH, XRP, DOGE, SOL) | CoinGecko | Current price + 24h volatility vs. Kalshi strike; log-normal distribution |
-| Weather (13 US cities) | NWS / NOAA | Ensemble forecast temperature distributions vs. Kalshi strike thresholds |
-| S&P 500 | Yahoo Finance + VIX | Current level + implied volatility → probability of reaching strike by expiry |
+The crypto, weather and S&P 500 scanners were retired on 2026-11-18 (ER-53); the code is on the `archive/prediction-scanners` branch.
 
 ---
 
@@ -235,7 +231,7 @@ Every order must pass gates 1-7 (including 2b, 3.05, 3.5, 3.55, 3.6, 3.7, 4.5, 4
 
 | | Gate | Check | Behavior |
 | :--- | :--- | :--- | :--- |
-| 1 | **Daily loss limit** | Sum of realized losses today | **Reject** if losses ≥ `MAX_DAILY_LOSS` |
+| 1 | **Daily loss limit** | Sum of realized losses today, as a calendar day in `DAILY_LOSS_TZ` (default America/New_York) | **Reject** if losses ≥ `MAX_DAILY_LOSS` |
 | 2 | **Position count** | Number of open positions | **Reject** if count ≥ `MAX_OPEN_POSITIONS` |
 | 2b | **Cumulative exposure (S4)** | Total open at-risk dollars, and the row's own sport, against **equity** (cash + position value) | **Reject** if already ≥ `MAX_OPEN_EXPOSURE_PCT` or ≥ `MAX_SEGMENT_EXPOSURE_PCT`; otherwise **Cap** to the remaining headroom. The only gate that measures a standing total. |
 | 3 | **Edge threshold** | Calculated edge, **plus the exchange fee** (F1) | **Reject** if edge < per-sport floor (or `MIN_EDGE_THRESHOLD` global fallback). A floor ≥ 1.0 is unreachable and means the sport is **off** — reported as `sport_disabled`. |
@@ -402,24 +398,20 @@ Edge-Radar/
 ├── .github/
 │   └── workflows/                     # CI/CD + GitHub Pages deploy
 ├── app/
-│   └── domain/                        # Typed domain objects (Opportunity, RiskDecision, Execution*)
 ├── docs/                              # All public documentation
 │   ├── kalshi/                        # Kalshi domain guides (grouped)
 │   │   ├── kalshi-futures-betting/    # Championship futures guide
-│   │   ├── kalshi-prediction-betting/ # Crypto, weather, S&P guides
-│   │   └── kalshi-sports-betting/     # 31 sport filters, MLB filtering, sports guide
+│   │   │   └── kalshi-sports-betting/     # 31 sport filters, MLB filtering, sports guide
 │   ├── ROADMAP.md                     # Enhancement roadmap (docs root)
 │   ├── scripts/                       # Per-script detailed docs
 │   ├── setup/                         # SETUP_GUIDE.md, AUTOMATION_GUIDE.md, mcp-servers.md
 ├── prompts/                           # LLM prompts for analysis agents
 │   ├── futures/
 │   ├── portfolio/
-│   ├── predictions/
 │   └── sports-betting/
 ├── scripts/
 │   ├── backtest/                      # Equity curve, calibration, strategy simulation
 │   ├── kalshi/                        # Scan → Size → Execute → Settle pipeline
-│   ├── prediction/                    # Crypto, weather, S&P 500 scanners
 │   ├── shared/                        # Team stats, weather, tickers, logging, odds API,
 │   │                                  #   venue_eligibility (S3), shard_funding (X1)
 │   ├── scan.py                        # Unified entry point (routes to each scanner)

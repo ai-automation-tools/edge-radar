@@ -20,6 +20,80 @@
 
 ---
 
+## 2026-11-18 -- Prediction-market scanners retired (ER-53)
+
+Owner's decision: archive them and delete them from master. The crypto, weather, S&P 500, mentions,
+companies and politics scanners never placed a bet. Gate 4.7 has kept them off since the 2026-04-24 audit
+found their fair values unreliable, and they were the largest dormant code (2,061 lines) on the import
+path that places orders.
+
+- **Archived:** branch `archive/prediction-scanners` points at `d3017ce`, the last master commit with
+  the code, its 8 prompts and its guide.
+- **Removed:** `scripts/prediction/`, `prompts/predictions/`, `docs/kalshi/kalshi-prediction-betting/`,
+  `docs/scripts/per-script/prediction_scanner.md`, `make scan-predictions`, the executor's `--prediction`
+  flag, and `scripts/prediction` on every `sys.path` list (`paths.py`, `pyproject.toml`, `drift_autofix`).
+  `scan.py prediction` now exits 1 and names the archive branch.
+- **Kept:** Gate 4.7 and `ALLOW_PREDICTION_BETS`, as a guard (the gate count stays 21), and the venue
+  eligibility mapping for those categories. `sports_weather.py` (NWS at outdoor venues) is sports code
+  and stays.
+- **ROADMAP:** R25b, R25c, C10c and M1-M4 are dropped with the code; reopen only as a new plan.
+- **Docs:** README, AGENTS.md, the docs index, kalshi README, scripts reference, architecture, setup,
+  upstreams, prompts README, the `/edge-radar` skill and the public page's coverage cards no longer
+  offer the scanners. The skill's "Market Data" action went too: `fetch_market_data.py` was removed
+  long ago.
+
+---
+
+## 2026-11-18 -- Ops deck: no trading posture on a public-repo page (ER-24, ER-06)
+
+The ops deck (edge-radar.mikesailab.com) is served from this public repo. Owner's choice: strip it in
+place rather than move it.
+
+- **Removed:** the `DRY_RUN=false` line, the "live" badge on execute tasks, the Task Scheduler folder
+  path, the copy-to-run `schtasks` / `Start-ScheduledTask` triggers, and the copy/toast machinery they
+  needed. The halt box keeps the runbook (`DRY_RUN=true` stops everything; disable one task by name).
+- **Linked, not copied:** the hand-maintained "How it works" and "Pipeline" sections, which had drifted
+  from the public page, are replaced by links to it and to the betting diagram.
+- **House style:** the org source bar now heads the deck (it replaces the topbar repo button), and
+  the 12px timeline dots get a 24px hit area on every pointer, 32px on touch.
+- **Kept:** the schedule and its times. The same times are in `docs/task-schedules/README.md` and the
+  public Cronsole templates, and `test_site.py` pins the deck to the README.
+- **ER-06 at HEAD:** the last personal address in tracked files (three lines of
+  `docs/longshot/FORK-ROADMAP-ARCHIVE.md`) is described instead of quoted. History is left as is
+  (owner's call).
+
+---
+
+## 2026-11-18 -- Gate 1 counts an Eastern day (ER-16)
+
+- **Gate 1's "today" was UTC's calendar day**, which rolls over at 7-8 pm ET, in the middle of the
+  evening slate: losses closed before and after it sat on two different `MAX_DAILY_LOSS` budgets.
+  `get_today_pnl()` now converts each `closed_at` to `DAILY_LOSS_TZ` (default `America/New_York`,
+  owner's choice over a rolling 24 h) and sums the zone's calendar day. Rows closed at 23:30Z and
+  00:30Z both count toward an 01:00Z check.
+- A naive stamp is read as UTC; one that does not parse still counts if it starts with today's date,
+  so a malformed row cannot hide a loss. A bad zone name fails config validation.
+- Same function feeds the executor status line and `risk_check.py`, so all three agree. The
+  Daily-Summary's rolling 24 h "yesterday" is a report window, not the gate, and is unchanged.
+- Tests: `tests/test_daily_loss_window.py`.
+
+---
+
+## 2026-11-18 -- Security re-lock: six packages
+
+GitHub listed 80 open Dependabot alerts on master (7 critical), all from six packages. Python is
+out of Dependabot's version updates (its re-locks drop `--universal`), so they are bumped here with
+the repo's own `make lock` command plus `--upgrade-package`; nothing else moved.
+
+- Runtime (`requirements.txt`): certifi 2026.10.23, cryptography 50.0.2 (was 49), filelock 4.2.12,
+  urllib3 2.8.0.
+- Dev only (`requirements-dev.txt`): the same four, plus pillow 13.0.0 and black 26.10.1.
+- Tested in a fresh venv from the new lock: full suite passes. `cryptography` signs every Kalshi
+  request, so `tests/test_kalshi_signing.py` now checks an RSA-PSS signature round-trips.
+- Supersedes Dependabot #389 (filelock).
+
+---
+
 ## 2026-11-18 -- Smaller agent docs (ER-47)
 
 Every agent session loaded ~30k tokens of AGENTS.md and the `/edge-radar` skill before doing anything,

@@ -47,7 +47,7 @@
 |:---------|:---------|:-------------|
 | 🏟️ **Sports betting** | NFL, NBA, MLB, NHL, NCAAB/NCAAF, UFC, soccer/MLS, F1, NASCAR, PGA, IPL, esports: 31 game filters, plus 8 futures filters | The Odds API (9 US sportsbooks), ESPN, NHL/MLB Stats, NWS |
 | 🏆 **Championship futures** | Super Bowl, NBA Finals, Stanley Cup, World Series, PGA Tour — priced with N-way de-vig | Sportsbook outright odds |
-| 📈 **Prediction markets** | Crypto (BTC, ETH, XRP, SOL, DOGE), S&P 500 + VIX, weather (13 cities), politics | CoinGecko, Yahoo Finance, NWS |
+| 📈 **Prediction markets** | Crypto, S&P 500, weather and politics scanners: Retired 2026-11-18 (ER-53); code on the [`archive/prediction-scanners`](https://github.com/ai-automation-tools/edge-radar/tree/archive/prediction-scanners) branch | — |
 
 ---
 
@@ -175,16 +175,6 @@ python scripts/scan.py futures --filter nba-futures --save
 </details>
 
 <details>
-<summary><b>Prediction Markets</b></summary>
-
-```bash
-python scripts/scan.py prediction --filter crypto
-python scripts/scan.py prediction --filter weather
-python scripts/scan.py prediction --filter crypto --execute --unit-size 1 --max-bets 5
-```
-</details>
-
-<details>
 <summary><b>Portfolio & Settlement</b></summary>
 
 ```bash
@@ -275,7 +265,6 @@ Want the **complete** pipeline — emails, midday/late runs, weekly calibration/
 | **[Kalshi Coverage & Guides](docs/kalshi/README.md)** | Coverage matrix — which sports/markets are configured and what bet types |
 | **[Sports Guide](docs/kalshi/kalshi-sports-betting/SPORTS_GUIDE.md)** | Edge detection model, consensus de-vig, daily workflow |
 | **[Futures Guide](docs/kalshi/kalshi-futures-betting/FUTURES_GUIDE.md)** | NFL, NBA, NHL, MLB, golf championships |
-| **[Prediction Markets](docs/kalshi/kalshi-prediction-betting/PREDICTION_MARKETS_GUIDE.md)** | Crypto, weather, S&P 500, politics |
 | **[Architecture](docs/setup/ARCHITECTURE.md)** | Pipeline, edge models, risk gates, data flow, and project structure |
 | **[MLB Filtering](docs/kalshi/kalshi-sports-betting/MLB_FILTERING_GUIDE.md)** | 10 filter categories for MLB picks |
 | **[Roadmap](docs/ROADMAP.md)** | Open enhancement work |
@@ -295,8 +284,6 @@ All external data is **free**. Only Kalshi requires a funded account.
 | **[NHL Stats API](https://api-web.nhle.com)** | Standings, goal differential, last 10 record |
 | **[MLB Stats API](https://statsapi.mlb.com)** | Standings, run differential, pitcher stats |
 | **[NWS](https://weather.gov)** | Hourly forecasts for 61 NFL/MLB outdoor venues |
-| **[CoinGecko](https://coingecko.com)** | Crypto prices + 24h volatility |
-| **[Yahoo Finance](https://finance.yahoo.com)** | S&P 500 + VIX implied volatility |
 
 ---
 

@@ -1,6 +1,6 @@
 # Filter reference
 
-*Reference for the [`/edge-radar` skill](../SKILL.md).* Every `--filter` name each scanner accepts, plus raw ticker prefixes. Read it when routing a sport, futures or prediction request.
+*Reference for the [`/edge-radar` skill](../SKILL.md).* Every `--filter` name each scanner accepts, plus raw ticker prefixes. Read it when routing a sport or futures request.
 
 ---
 
@@ -45,17 +45,9 @@
 | `ncaab-futures` | NCAAB MOP | Yes |
 | `golf-futures` | Golf major winners (4 majors only) | Yes |
 
-### Prediction Markets — `prediction_scanner.py`
+### Prediction Markets
 
-| Filter | Category | Edge Detection | Data Source |
-|--------|----------|----------------|-------------|
-| `crypto`, `btc`, `eth`, `xrp`, `doge`, `sol` | Crypto prices | Yes | CoinGecko |
-| `weather` | Temperature forecasts | Yes | NWS API |
-| `spx`, `sp500` | S&P 500 levels | Yes | Yahoo Finance + VIX |
-| `mentions`, `lastword`, `nbamention`, `foxnews`, `politicsmention` | TV mentions | Yes | Historical rates |
-| `companies`, `bankruptcy`, `ipo` | Corporate events | Partial | Historical baseline |
-| `politics`, `impeach` | Political events | Yes | Time-decay model |
-| `techscience`, `quantum`, `fusion` | Tech milestones | Yes | Time-decay model |
+Retired 2026-11-18 (ER-53); the scanner and its filters are on the `archive/prediction-scanners` branch.
 
 ### Raw Ticker Prefixes
 
