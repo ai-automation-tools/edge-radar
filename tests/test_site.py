@@ -20,6 +20,7 @@ OPS = ROOT / ".claude" / "html" / "index.html"
 AGENTS_MD = ROOT / "AGENTS.md"
 README = ROOT / "README.md"
 SCHEDULES = ROOT / "docs" / "task-schedules" / "README.md"
+REPO_HREF = 'href="https://github.com/ai-automation-tools/edge-radar"'
 
 
 @pytest.fixture(scope="module")
@@ -287,11 +288,48 @@ def test_public_page_first_paint_stays_light(public: str) -> None:
     assert "font-size-adjust:" in public
     # ch widths follow whichever font is showing, so they moved text on the swap
     assert not re.search(r"max-width:\s*[\d.]+ch", public)
-    assert (
-        '<iframe id="diagram-frame"'
-        in public.split('<template id="diagramTpl">', 1)[1].split("</template>", 1)[0]
-    )
-    assert public.count("<iframe") == 1
+    # ER-31: the picture links to the diagram page; no inline frame to trap scroll
+    assert "<iframe" not in public
     assert re.search(
         r'<img src="diagram/betting-data-flow\.png" width="\d+" height="\d+" loading="lazy"', public
     )
+    assert '<a class="btn btn-primary" href="diagram/betting-data-flow.html">' in public
+
+
+def _rules(public: str) -> str:
+    """The stylesheet below the dark and light token blocks."""
+    css = public.split("<style>", 1)[1].split("</style>", 1)[0]
+    css = re.sub(r"\n    :root \{.*?\n    \}\n", "\n", css, count=1, flags=re.S)
+    return re.sub(r"\n    :root\.light \{.*?\n    \}\n", "\n", css, count=1, flags=re.S)
+
+
+def test_public_page_follows_web_house_style(public: str) -> None:
+    """ER-31: tokens not literals, the app icon as the mark, the switch last, one repo link."""
+    rules = _rules(public)
+    rules = re.sub(r"/\*.*?\*/", "", rules, flags=re.S)
+    rules = re.sub(r"\.btn-gh(:hover)? \{[^}]*\}", "", rules)  # black in both themes, by design
+    rules = rules.replace("linear-gradient(#000 0 0)", "").replace("linear-gradient(#000 60%", "")
+    assert not re.findall(r"#[0-9a-fA-F]{3,8}\b|rgba?\(", rules)
+    assert not re.search(r'style="--c:#', public)
+    favicon = (ROOT / "site" / "favicon.svg").read_text(encoding="utf-8")
+    glyph = re.search(r"<g transform.*?</g>", favicon).group(0)
+    brand = public.split('<a class="brand"', 1)[1].split("</a>", 1)[0]
+    assert glyph in brand, "the top-bar mark is the app icon"
+    right = public.split('<div class="topbar-right">', 1)[1].split('<div class="mobile-nav"', 1)[0]
+    order = [right.index(k) for k in ('id="palOpen"', 'class="theme-tg"', 'id="menuBtn"')]
+    assert order == sorted(order), "theme switch is the last control before the phone menu"
+    footer = public.split("<footer>", 1)[1]
+    assert REPO_HREF not in footer.split('class="fine"', 1)[0]
+    assert (
+        "@media (min-width: 760px) { .nav { display: flex; } .menu-btn { display: none; } }"
+        in public
+    )
+
+
+def test_diagram_page_carries_edge_radar_chrome() -> None:
+    """ER-31: the served diagram has the favicon, a source bar with a way back and a landmark."""
+    page = (ROOT / "site" / "diagram" / "betting-data-flow.html").read_text(encoding="utf-8")
+    assert '<link rel="icon" href="../favicon.svg"' in page
+    assert '<a class="er-back" href="../">' in page and REPO_HREF in page
+    assert '<div class="container" role="main">' in page
+    assert "localStorage.getItem('edge-radar.theme')" in page

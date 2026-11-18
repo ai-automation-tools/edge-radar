@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark" data-preset="classic">
 <head>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#060606">
+  <meta name="description" content="Edge-Radar's betting path as data flow: every box links to the code it describes.">
+  <script>
+    (function () {
+      var t = 'dark';
+      try { if (localStorage.getItem('edge-radar.theme') === 'light') t = 'light'; localStorage.setItem('archify-theme', t); } catch (_) {}
+      if (t === 'light') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#fafafa');
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="archify 3.2.0">
@@ -5083,8 +5096,42 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       svg [data-node-id], svg [data-edge-from], svg [data-detail], svg [data-detail-anchor], svg [data-legend-hit], svg { transition: none !important; }
     }
   </style>
+
+  <style id="edge-radar-chrome">
+    :root { --er-bar: 34px; }
+    html[data-theme="dark"] { --bg: #060606; }
+    body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+    /* !important: Archify's compact and stage-rail layouts reset body padding with more specific rules */
+    body { padding-top: calc(var(--archify-page-top) + var(--er-bar)) !important; }
+    /* Archify positions the toolbar from the page top above 720px; below that it sits in flow */
+    @media (min-width: 721px) { .toolbar, .toolbar .preset-menu, .toolbar .export-menu { margin-top: var(--er-bar); } }
+    .er-src { position: absolute; top: 0; left: 0; right: 0; z-index: 60; display: flex; align-items: center; gap: 16px;
+              height: var(--er-bar); padding: 0 16px; background: #0b0b0c; border-bottom: 1px solid rgba(39,39,42,.7);
+              font: 12px/1.4 'Inter', system-ui, sans-serif; }
+    .er-src a { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; color: #a1a1aa; text-decoration: none; }
+    .er-src a:hover { color: #f4f4f5; }
+    .er-src a:focus-visible { outline: 2px solid #34d399; outline-offset: 2px; border-radius: 4px; }
+    .er-src .er-back { font-weight: 600; color: #34d399; }
+    .er-src .er-note { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #7e7e87; }
+    .er-src .er-link { margin-left: auto; flex: none; white-space: nowrap; }
+    .er-src svg { width: 14px; min-width: 0; height: 14px; flex: none; } /* Archify sizes every svg to the diagram's */
+    html[data-theme="light"] .er-src { background: #f4f4f5; border-bottom-color: #e4e4e7; }
+    html[data-theme="light"] .er-src a { color: #52525b; }
+    html[data-theme="light"] .er-src a:hover { color: #09090b; }
+    html[data-theme="light"] .er-src .er-back { color: #047857; }
+    html[data-theme="light"] .er-src .er-note { color: #63636b; }
+    @media (max-width: 600px) { .er-src a { min-height: 34px; } }
+  </style>
 </head>
 <body>
+  <div class="er-src">
+    <a class="er-back" href="../">&larr; Edge-Radar</a>
+    <span class="er-note">Betting logic data flow</span>
+    <a class="er-link" href="https://github.com/ai-automation-tools/edge-radar" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      View source
+    </a>
+  </div>
   <!-- Toolbar: theme, live visual style, trace motion, presentation stage, and export.
        Motion appears only for trace-enabled artifacts and has no shortcut;
        Keyboard: T toggles theme, S cycles style, F toggles the stage, E opens export. -->
@@ -5185,7 +5232,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     </div>
   </div>
 
-  <div class="container">
+  <div class="container" role="main">
     <!-- Header -->
     <div class="header">
       <div class="header-row"
