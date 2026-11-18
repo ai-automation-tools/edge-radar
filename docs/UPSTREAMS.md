@@ -35,7 +35,6 @@ source. `—` means never checked.
 | Upstream | What the code assumes | Code | Check at | Last checked |
 |:---|:---|:---|:---|:---|
 | **Resend** | REST `POST /emails` over `requests`, no SDK | `scripts/custom/Python/send_report_email.py` | resend.com/docs and resend.com/changelog | 2026-11-16 |
-| **Telegram Bot API** | `api.telegram.org/bot…` | `scripts/schedulers/automation/telegram_bot.py` | core.telegram.org/bots/api-changelog | 2026-11-16 |
 
 ## Runtime and libraries
 

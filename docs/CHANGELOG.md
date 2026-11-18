@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-11-17 -- Telegram bot removed (ER-17)
+
+- **Security** `scripts/schedulers/automation/telegram_bot.py` could flip `DRY_RUN` in `.env` from
+  one chat message, authorised on chat id only. It had no scheduled task and had not run since
+  April, so it is deleted rather than hardened. `TelegramCredentials` in `app/config.py`, the
+  `TELEGRAM_*` lines in `.env.example` and its `docs/UPSTREAMS.md` row go with it. No tracked
+  code writes `DRY_RUN` to `.env` now; halting is `data/KILL` or the ops-deck commands (ER-11).
+
+---
+
 ## 2026-11-17 -- `--budget` percent parsing (ER-14)
 
 - **Fix** `parse_budget_arg` stripped the `%` before its range check, so `--budget 1%` and

@@ -186,19 +186,6 @@ class AlpacaCredentials:
         )
 
 
-@dataclass(frozen=True)
-class TelegramCredentials:
-    token: str = ""
-    chat_id: str = ""
-
-    @classmethod
-    def from_env(cls) -> "TelegramCredentials":
-        return cls(
-            token=_str("TELEGRAM_TOKEN", ""),
-            chat_id=_str("TELEGRAM_CHAT_ID", ""),
-        )
-
-
 # ── Operational groups ──────────────────────────────────────────────────────
 
 
@@ -515,7 +502,6 @@ class Config:
     kalshi_prod: KalshiProdCredentials
     odds: OddsApiCredentials
     alpaca: AlpacaCredentials
-    telegram: TelegramCredentials
     risk: RiskLimits
     gates: GateThresholds
     kelly: KellyConfig
@@ -531,7 +517,6 @@ class Config:
             kalshi_prod=KalshiProdCredentials.from_env(),
             odds=OddsApiCredentials.from_env(),
             alpaca=AlpacaCredentials.from_env(),
-            telegram=TelegramCredentials.from_env(),
             risk=RiskLimits.from_env(),
             gates=GateThresholds.from_env(),
             kelly=KellyConfig.from_env(),
