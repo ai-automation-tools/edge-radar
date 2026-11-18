@@ -16,7 +16,6 @@ make scan-nhl          # Scan NHL
 make scan-nfl          # Scan NFL
 make scan-sports       # All sports
 make scan-futures      # All futures
-make scan-predictions  # All prediction markets
 make scan-all          # Everything
 make status            # Portfolio status
 make risk              # Risk dashboard
@@ -52,7 +51,6 @@ make risk                      # Check if limits breached
 make scan-mlb                  # MLB today, exclude open, save
 make scan-nba                  # NBA scan
 make scan-futures              # All futures
-make scan-predictions          # Prediction markets
 make scan-all                  # Everything
 ```
 
@@ -61,7 +59,6 @@ Or with full control:
 python scripts/scan.py sports --filter mlb --date today --exclude-open --save
 python scripts/scan.py sports --filter nba
 python scripts/scan.py futures --filter nba-futures
-python scripts/scan.py prediction --filter crypto
 ```
 
 ### Executing

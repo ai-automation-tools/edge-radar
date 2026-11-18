@@ -14,7 +14,7 @@ PROMPTS = sorted((Path(__file__).resolve().parents[1] / "prompts").rglob("*.md")
 
 
 def test_prompts_found():
-    assert len(PROMPTS) >= 35
+    assert len(PROMPTS) >= 27  # 8 prediction prompts retired with their scanners (ER-53)
 
 
 @pytest.mark.parametrize("path", PROMPTS, ids=lambda p: p.stem)

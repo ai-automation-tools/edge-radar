@@ -3245,14 +3245,9 @@ def main():
         "--execute", action="store_true", help="Actually place orders (default: preview only)"
     )
     run_p.add_argument(
-        "--prediction",
-        action="store_true",
-        help="Use prediction market scanner (crypto, weather, S&P 500) instead of sports",
-    )
-    run_p.add_argument(
         "--filter",
         dest="ticker_filter",
-        help="Filter: ncaamb, nba, nhl, ... (sports) or crypto, btc, weather, spx (prediction)",
+        help="Filter: ncaamb, nba, nhl, ... (sports)",
     )
     run_p.add_argument(
         "--min-edge", type=float, default=MIN_EDGE_THRESHOLD, help="Minimum edge threshold"
@@ -3345,35 +3340,21 @@ def main():
         show_status(client, save=args.save)
 
     elif args.command == "run":
-        # Get opportunities
-        if args.prediction:
-            # Use prediction market scanner
-            rprint("[bold]Running prediction market scan...[/bold]")
-            from prediction_scanner import scan_prediction_markets
+        # Get opportunities (sports; the prediction scanners were retired, ER-53)
+        rprint("[bold]Running fresh sports market scan...[/bold]")
+        # Resolve date early so scan_all_markets can pre-filter before Odds API calls
+        resolved_date = None
+        if args.date:
+            from ticker_display import resolve_date_arg
 
-            opportunities = scan_prediction_markets(
-                scan_client,
-                min_edge=args.min_edge,
-                ticker_filter=args.ticker_filter,
-                top_n=args.top,
-            )
-
-        else:
-            # Use sports edge detector
-            rprint("[bold]Running fresh sports market scan...[/bold]")
-            # Resolve date early so scan_all_markets can pre-filter before Odds API calls
-            resolved_date = None
-            if args.date:
-                from ticker_display import resolve_date_arg
-
-                resolved_date = resolve_date_arg(args.date)
-            opportunities = scan_all_markets(
-                scan_client,
-                min_edge=args.min_edge,
-                ticker_filter=args.ticker_filter,
-                top_n=args.top,
-                date_filter=resolved_date,
-            )
+            resolved_date = resolve_date_arg(args.date)
+        opportunities = scan_all_markets(
+            scan_client,
+            min_edge=args.min_edge,
+            ticker_filter=args.ticker_filter,
+            top_n=args.top,
+            date_filter=resolved_date,
+        )
 
         if not opportunities:
             rprint("[yellow]No opportunities found.[/yellow]")

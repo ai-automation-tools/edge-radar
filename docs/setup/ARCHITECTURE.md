@@ -73,13 +73,9 @@ Same CDF approach as spreads for expected total. For NFL and MLB outdoor games, 
 
 For championship and season-long markets with N outcomes, de-vig the full N-way market from sportsbook futures odds. Distribute the overround proportionally. Take weighted median across books.
 
-### Predictions (Model-Specific)
+### Predictions
 
-| Market Type | Data Source | Method |
-| :--- | :--- | :--- |
-| Crypto (BTC, ETH, XRP, DOGE, SOL) | CoinGecko | Current price + 24h volatility vs. Kalshi strike; log-normal distribution |
-| Weather (13 US cities) | NWS / NOAA | Ensemble forecast temperature distributions vs. Kalshi strike thresholds |
-| S&P 500 | Yahoo Finance + VIX | Current level + implied volatility → probability of reaching strike by expiry |
+The crypto, weather and S&P 500 scanners were retired on 2026-11-18 (ER-53); the code is on the `archive/prediction-scanners` branch.
 
 ---
 
@@ -402,24 +398,20 @@ Edge-Radar/
 ├── .github/
 │   └── workflows/                     # CI/CD + GitHub Pages deploy
 ├── app/
-│   └── domain/                        # Typed domain objects (Opportunity, RiskDecision, Execution*)
 ├── docs/                              # All public documentation
 │   ├── kalshi/                        # Kalshi domain guides (grouped)
 │   │   ├── kalshi-futures-betting/    # Championship futures guide
-│   │   ├── kalshi-prediction-betting/ # Crypto, weather, S&P guides
-│   │   └── kalshi-sports-betting/     # 31 sport filters, MLB filtering, sports guide
+│   │   │   └── kalshi-sports-betting/     # 31 sport filters, MLB filtering, sports guide
 │   ├── ROADMAP.md                     # Enhancement roadmap (docs root)
 │   ├── scripts/                       # Per-script detailed docs
 │   ├── setup/                         # SETUP_GUIDE.md, AUTOMATION_GUIDE.md, mcp-servers.md
 ├── prompts/                           # LLM prompts for analysis agents
 │   ├── futures/
 │   ├── portfolio/
-│   ├── predictions/
 │   └── sports-betting/
 ├── scripts/
 │   ├── backtest/                      # Equity curve, calibration, strategy simulation
 │   ├── kalshi/                        # Scan → Size → Execute → Settle pipeline
-│   ├── prediction/                    # Crypto, weather, S&P 500 scanners
 │   ├── shared/                        # Team stats, weather, tickers, logging, odds API,
 │   │                                  #   venue_eligibility (S3), shard_funding (X1)
 │   ├── scan.py                        # Unified entry point (routes to each scanner)

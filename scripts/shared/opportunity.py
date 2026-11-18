@@ -2,8 +2,8 @@
 opportunity.py
 Single source of truth for the Opportunity dataclass.
 
-Used by both sports (kalshi/edge_detector.py) and prediction
-(prediction/prediction_scanner.py) edge detection pipelines.
+Used by the sports (kalshi/edge_detector.py) and futures
+(kalshi/futures_edge.py) edge detection pipelines.
 """
 
 from dataclasses import dataclass

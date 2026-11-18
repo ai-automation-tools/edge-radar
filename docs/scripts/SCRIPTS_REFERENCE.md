@@ -7,7 +7,7 @@
 [![Utilities](https://img.shields.io/badge/Utilities-4%20Scripts-F97316?style=flat-square)](#-utility-scripts)
 [![Automation](https://img.shields.io/badge/Automation-Task%20Scheduler-0078D4?style=flat-square)](#-automated-execution)
 
-For domain-specific guides: **[Sports](../kalshi/kalshi-sports-betting/SPORTS_GUIDE.md)** · **[Futures](../kalshi/kalshi-futures-betting/FUTURES_GUIDE.md)** · **[Predictions](../kalshi/kalshi-prediction-betting/PREDICTION_MARKETS_GUIDE.md)** · **[Architecture](../setup/ARCHITECTURE.md)** · **[Roadmap](../ROADMAP.md)**
+For domain-specific guides: **[Sports](../kalshi/kalshi-sports-betting/SPORTS_GUIDE.md)** · **[Futures](../kalshi/kalshi-futures-betting/FUTURES_GUIDE.md)** · **[Architecture](../setup/ARCHITECTURE.md)** · **[Roadmap](../ROADMAP.md)**
 
 ---
 
@@ -17,7 +17,6 @@ For domain-specific guides: **[Sports](../kalshi/kalshi-sports-betting/SPORTS_GU
 | :--- | :--- | :--- |
 | **Scan for sports bets** | `scan.py sports --filter mlb` | [edge_detector.md](per-script/edge_detector.md) |
 | **Scan championship futures** | `scan.py futures --filter nba-futures` | [futures_edge.md](per-script/futures_edge.md) |
-| **Scan prediction markets** | `scan.py prediction --filter crypto` | [prediction_scanner.md](per-script/prediction_scanner.md) |
 | **Scan AND execute** | Add `--execute` to any scan | Orders placed through risk pipeline |
 | **Quick portfolio status** | `kalshi_executor.py status` | [kalshi_executor.md](per-script/kalshi_executor.md) |
 | **Full risk dashboard** | `risk_check.py` | [risk_check.md](per-script/risk_check.md) |
@@ -41,7 +40,6 @@ flowchart LR
     subgraph ALIAS ["Alias Resolution"]
         direction TB
         A1["sport → sports"]
-        A2["pred → prediction"]
     end
 
     CMD --> ALIAS
@@ -63,14 +61,8 @@ flowchart LR
         F1D["Championship &\nseason-long markets\nN-way de-vig"]
     end
 
-    subgraph PRED ["📈 Predictions"]
-        P1["prediction_scanner.py\nprediction/"]
-        P1D["Crypto · Weather\nS&P 500 · Politics\nModel-specific edge"]
-    end
-
     R1 -- "sports" --> S1 --> S1D
     R1 -- "futures" --> F1 --> F1D
-    R1 -- "prediction" --> P1 --> P1D
 
     subgraph INSERT ["Auto-Insert"]
         INS["If first arg starts with '-'\nauto-prepend 'scan' subcommand"]
@@ -102,7 +94,6 @@ python scripts/scan.py <market-type> [flags]
 | :--- | :--- | :--- |
 | `sports` | `sport` | `edge_detector.py scan` |
 | `futures` | — | `futures_edge.py scan` |
-| `prediction` | `pred` | `prediction_scanner.py scan` |
 
 ### Common Flags
 
@@ -134,7 +125,6 @@ python scripts/scan.py sports --filter mlb --date today --save
 python scripts/scan.py sports --filter mlb,nhl --date today --save
 python scripts/scan.py sports --filter nba --category total --date tomorrow
 python scripts/scan.py futures --filter nba-futures --top 10
-python scripts/scan.py prediction --filter crypto
 ```
 
 ---
@@ -165,9 +155,8 @@ python scripts/scan.py sports --filter nhl
 # 5. Tomorrow's games only, skip open positions
 python scripts/scan.py sports --filter mlb --date tomorrow --exclude-open
 
-# 6. Scan futures & prediction markets
+# 6. Scan futures
 python scripts/scan.py futures --filter nba-futures
-python scripts/scan.py prediction --filter crypto
 ```
 
 ### Executing Bets
@@ -214,7 +203,6 @@ Each script has a dedicated doc with full flag tables, examples, methodology, an
 | :--- | :--- | :--- |
 | `edge_detector.py` | Sports edge detection (NBA, MLB, NHL, NFL, NCAA, etc.) | [edge_detector.md](per-script/edge_detector.md) |
 | `futures_edge.py` | Championship & season-long futures | [futures_edge.md](per-script/futures_edge.md) |
-| `prediction_scanner.py` | Crypto, weather, S&P 500, politics | [prediction_scanner.md](per-script/prediction_scanner.md) |
 ### 💼 Execution & Portfolio
 
 | Script | Purpose | Docs |
