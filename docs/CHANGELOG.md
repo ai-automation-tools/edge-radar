@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-11-17 -- Report emails escape HTML (ER-22)
+
+- **Security** `render_report_email.py` used markdown-it's `commonmark` preset, which passes raw
+  HTML through. Report text includes Kalshi market titles and model output, so a tag in either
+  rendered in the email. It now escapes HTML (`html=False`).
+- **Fix** Side effect: placeholders such as `<TN>` and `<league>` in the drift and betting-audit
+  reports were swallowed as unknown tags and missing from the emails. They now show as text.
+
+---
+
 ## 2026-11-17 -- Drift auto-fix contained (ER-04)
 
 - **Security** The daily drift auto-fix runs agent-written code before any review. Hardened:

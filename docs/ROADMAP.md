@@ -61,6 +61,7 @@ One item per PR, titled `fix(ER-xx): …`.
 - [ ] **ER-12** (P1) **Say LIVE or DRY RUN everywhere, and report what was placed, not what was requested.** One `mode_banner()` for console titles, report headers and email subjects; per-order placed / failed / blocked. *(effort S–M)*
 - [ ] **ER-05** (P1) Kalshi key rotation, with the **H8** runbook and the **M3** key-type choice. *(effort S)* 🔒 Needs owner
 - [ ] **ER-06** (P1) Public-repo data hygiene: stale branches and a history decision. *(effort S / L)* 🔒 Needs owner
+- [x] **ER-22** (P2) **Report emails rendered raw HTML from report text.** Done 2026-11-17: the renderer escapes HTML (`html=False`); placeholders like `<TN>` now show instead of vanishing. Pinned by `tests/test_render_report_email.py`.
 
 ### 🩹 Money-path defects: fix next
 
