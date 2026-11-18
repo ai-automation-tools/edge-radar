@@ -51,7 +51,7 @@ python scripts/scan.py futures --filter mlb-futures --save
 Futures markets have many candidates (e.g., 30 NBA teams for championship winner). The edge detection:
 
 1. **Fetch sportsbook odds** for the outright/futures market
-2. **N-way de-vig** -- removes the overround across all candidates simultaneously (not pairwise)
+2. **N-way de-vig** -- removes the overround across all candidates simultaneously (not pairwise). `FUTURES_DEVIG` picks `proportional` (default) or `power`; `devig_ab_rows()` prices every market under both for the shadow book (ER-42)
 3. **Compare to Kalshi prices** -- each candidate's de-vigged probability vs Kalshi ask price
 4. **Score** by edge, confidence (book count + agreement), and liquidity
 

@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-11-18 -- Futures power de-vig behind a flag, A/B'd in the shadow book (ER-42 / B5)
+
+- **`devig_power()`** in `futures_edge.py`: finds the `k` with `sum(p_i ** k) == 1`, which takes more of
+  the overround from longshots than the proportional method does. With it, a book whose raw implied
+  total is under 1.05 (an incomplete field) is skipped.
+- **`FUTURES_DEVIG`** (`proportional` | `power`, validated) picks the method. **The default is
+  unchanged (`proportional`)**, so live futures pricing does not move with this change.
+- **A/B:** `shadow_book.py collect --futures` logs every priced futures market, pre-gate and with no
+  edge or side filter, carrying both fair values. `shadow_book.py devig-review` prints the market,
+  proportional and power Brier with a bootstrap CI. The Shadow-Book task runs the collect on
+  Saturdays (one outright request per sport); the daily `settle` fills outcomes in as seasons resolve.
+- **Not done:** the switch. B5 stays open until the review favours power with a CI clear of zero.
+- `scan_futures_markets` shares market discovery with the A/B (`_markets_by_sport`) and name
+  matching (`_match_fair`); its output is unchanged.
+- Tests: `tests/test_futures_devig.py`.
+
+---
+
 ## 2026-11-18 -- Smaller agent docs (ER-47)
 
 Every agent session loaded ~30k tokens of AGENTS.md and the `/edge-radar` skill before doing anything,

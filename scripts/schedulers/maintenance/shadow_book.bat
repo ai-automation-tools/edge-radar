@@ -57,3 +57,9 @@ REM normal margin model. This gives the S18 Brier pair on every strike.
 REM   python scripts\backtest\shadow_book.py review --sport nfl --save
 .venv\Scripts\python.exe scripts\backtest\shadow_book.py collect --filter KXNFLSPREAD >> logs\shadow_book.log 2>&1
 .venv\Scripts\python.exe scripts\backtest\shadow_book.py collect --filter KXNFLTOTAL >> logs\shadow_book.log 2>&1
+REM 2026-11-18 (ER-42 / B5): futures under BOTH de-vig methods, every priced market,
+REM pre-gate. Saturdays only: futures move slowly, first sighting wins, and each run
+REM costs one Odds API outright request per sport. Read it with:
+REM   python scripts\backtest\shadow_book.py devig-review
+for /f %%d in ('powershell -NoProfile -Command "(Get-Date).DayOfWeek"') do set DOW=%%d
+if "%DOW%"=="Saturday" .venv\Scripts\python.exe scripts\backtest\shadow_book.py collect --futures >> logs\shadow_book.log 2>&1

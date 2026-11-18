@@ -71,7 +71,7 @@ Same CDF approach as spreads for expected total. For NFL and MLB outdoor games, 
 
 ### Futures (N-Way De-Vig)
 
-For championship and season-long markets with N outcomes, de-vig the full N-way market from sportsbook futures odds. Distribute the overround proportionally. Take weighted median across books.
+For championship and season-long markets with N outcomes, de-vig the full N-way market from sportsbook futures odds. Distribute the overround proportionally (`FUTURES_DEVIG=proportional`, the default) or by the power method (`power`, which also skips a book whose raw implied total is under 1.05). Take weighted median across books. The shadow book scores both on every priced futures market until one wins (ER-42 / B5).
 
 ### Predictions (Model-Specific)
 
