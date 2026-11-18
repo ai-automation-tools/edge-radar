@@ -679,70 +679,123 @@ def min_edge_for(opp: "Opportunity") -> float:
     return base_floor + fee_per_contract(opp.market_price)
 
 
-def preflight_gate_status(opp: "Opportunity") -> str:
-    """Predict which reject gate (if any) `size_order` would hit for this
-    opportunity, using only static per-opportunity properties.
+# ── The gate list (ER-19) ─────────────────────────────────────────────────────
+# One ordered list, run by all three paths: `size_order` (fresh scan),
+# `preflight_gate_status` (the scan table's Gate column) and the scan-cache
+# replay in `execute_pipeline` (--pick / --ticker). Each path used to carry its
+# own if/elif copy; the copies drifted, which is how a replay skipped Gates 2
+# and 4.8 (ER-03). Add a gate here, once, and every path runs it.
 
-    Returns a short label suitable for a scan-table column:
-        "ok"       — all statically-checkable gates pass
-        "edge"     — Gate 3   (edge below per-sport floor)
-        "off"      — Gate 3   (sport switched off: floor set to an
-                     unreachable >= 100%)
-        "edge-hi"  — Gate 3.05 (claimed edge above MAX_EDGE: likely a bug)
-        "price"    — Gate 3.5  (market price below R7 floor)
-        "price-hi" — Gate 3.55 (cost/payout ratio above MAX_MARKET_PRICE)
-        "illiq"    — Gate 3.6 (bid/ask spread or 24h volume below floor)
-        "far"      — Gate 3.7 (game market too many days before the event)
-        "score"    — Gate 4   (composite score below minimum)
-        "conf"     — Gate 4.5 (confidence below MIN_CONFIDENCE)
-        "no-fav"   — Gate 4.6 (R1 NO-side favorite guard)
-        "pred-off" — Gate 4.7 (R25 prediction-market safety gate)
-        "live-off" — Gate 4.8 (L1 live/in-play safety gate)
 
-    Static only. Runtime gates (daily loss, open positions, duplicate
-    ticker, per-event cap, series dedup) require live portfolio/log state
-    and are not checked here — an "ok" verdict doesn't guarantee execution
-    will succeed, just that the opportunity itself has no per-opp blockers.
+@dataclass
+class GateContext:
+    """Portfolio state the runtime gates read. Static gates never touch it."""
 
-    Shipped as R18 (2026-04-24) after users observed a scan surfacing
-    rows at +3-4% edge that the executor silently rejected on composite
-    score (F23). Gives the scan table a truthful preview of what will
-    actually pass to order placement.
-    """
-    # Gate 3: per-sport edge floor (an unreachable floor means the sport is off)
+    bankroll: float
+    open_positions: int
+    daily_pnl: float
+    open_tickers: set[str] | None
+    event_counts: dict[str, int] | None
+    max_per_event: int
+    max_per_event_futures: int
+    recent_matchups: set[tuple[str, str]] | None
+    open_exposure: float
+    segment_exposure: float  # standing exposure in this opportunity's segment
+    equity: float
+    open_sides: dict[str, str] | None
+
+
+def _gate_daily_loss(opp, c):
+    if daily_loss_breached(c.daily_pnl):
+        return f"daily_loss_limit_breached (P&L: ${c.daily_pnl:.2f})"
+
+
+def _gate_no_bankroll(opp, c):
+    # ER-43: no cash, no sizing. With bankroll <= 0 the bankroll cap still
+    # bought one contract (`max(1, ...)`) and the Hard Stop skipped itself, so a
+    # failed or zero balance read sized a real order.
+    if not c.bankroll > 0:
+        return f"no_bankroll (balance ${c.bankroll:.2f})"
+
+
+def _gate_max_positions(opp, c):
+    if positions_at_cap(c.open_positions):
+        return f"max_positions_reached ({c.open_positions}/{MAX_OPEN_POSITIONS})"
+
+
+def _gate_exposure(opp, c):
+    # S4: Gate 2 counts rows; this counts dollars, the same question in the unit
+    # that matters. The sizing half (trim to headroom) lives in `size_order`.
+    return _exposure_rejection(opp, c.open_exposure, c.segment_exposure, c.equity)
+
+
+def _gate_sport_off(opp, c):
+    # A floor at or above 1.0 can never be cleared (edge is bounded by 1): the
+    # idiom for switching a sport off. Say so rather than "5% < 100%".
+    floor = min_edge_for(opp)
+    if floor >= 1.0 and opp.edge < floor:
+        return (
+            f"sport_disabled ({_detect_sport(opp.ticker) or 'unknown'}: "
+            f"MIN_EDGE_THRESHOLD_* set to {floor:.0%})"
+        )
+
+
+def _gate_edge_floor(opp, c):
     floor = min_edge_for(opp)
     if opp.edge < floor:
-        return "off" if floor >= 1.0 else "edge"
+        fee = fee_per_contract(opp.market_price)
+        return (
+            f"edge_below_threshold ({opp.edge:.1%} < {floor:.1%}"
+            + (f", incl. {fee:.1%} fee" if fee > 0 else "")
+            + ")"
+        )
 
-    # Gate 3.05: implausible-edge ceiling (B7)
+
+def _gate_edge_ceiling(opp, c):
+    # B7: an 81% claimed edge on a 13c contract (ETSU -14.5, 2026-09-26) is the
+    # model disagreeing with every book -- a matching or sign bug. 1.0 disables.
     if MAX_EDGE < 1.0 and opp.edge > MAX_EDGE:
-        return "edge-hi"
+        return f"edge_implausible ({opp.edge:.1%} > {MAX_EDGE:.0%})"
 
-    # Gate 3.5: R7 market-price floor (disabled if MIN_MARKET_PRICE == 0)
+
+def _gate_price_floor(opp, c):
+    # R7 lottery-ticket filter: sub-10c bets went 1W-3L on claimed "+50% edge"
+    # (F10). Hard reject, no exception. 0 disables.
     if MIN_MARKET_PRICE > 0 and opp.market_price < MIN_MARKET_PRICE:
-        return "price"
+        return f"price_below_floor (${opp.market_price:.2f} < ${MIN_MARKET_PRICE:.2f})"
 
-    # Gate 3.55: cost/payout ratio ceiling (disabled if MAX_MARKET_PRICE >= 1.0)
+
+def _gate_price_ceiling(opp, c):
+    # A contract pays $1, so the price IS the cost/payout ratio: a 76c bet is a
+    # 76% ratio. 1.0 disables.
     if MAX_MARKET_PRICE < 1.0 and opp.market_price > MAX_MARKET_PRICE:
-        return "price-hi"
+        return f"price_above_ceiling (${opp.market_price:.2f} > ${MAX_MARKET_PRICE:.2f})"
 
-    # Gate 3.6: hard liquidity floor
-    if _liquidity_rejection(opp):
-        return "illiq"
 
-    # Gate 3.7: time-to-event cap on game markets (S5)
-    if _time_to_event_rejection(opp):
-        return "far"
+def _gate_liquidity(opp, c):
+    # The Hard Stop "market clearly illiquid (spread > 5%)", documented from
+    # launch, enforced on the raw book rather than the soft composite term.
+    return _liquidity_rejection(opp)
 
-    # Gate 4: minimum composite score
+
+def _gate_time_to_event(opp, c):
+    # S5: the NFL book that reached 31% of bankroll was bought 25-112 days out.
+    return _time_to_event_rejection(opp)
+
+
+def _gate_score(opp, c):
     if opp.composite_score < MIN_COMPOSITE_SCORE:
-        return "score"
+        return f"score_below_minimum ({opp.composite_score:.1f} < {MIN_COMPOSITE_SCORE:.1f})"
 
-    # Gate 4.5: minimum confidence level
+
+def _gate_confidence(opp, c):
     if _confidence_rank(opp.confidence) < _confidence_rank(MIN_CONFIDENCE):
-        return "conf"
+        return f"confidence_below_minimum ({opp.confidence or 'unknown'} < {MIN_CONFIDENCE})"
 
-    # Gate 4.6: R1 NO-side favorite guard
+
+def _gate_no_side_favorite(opp, c):
+    # R1: NO on a heavy favorite needs both the higher edge bar and high
+    # confidence. 2026-04-21: all 13 high-edge losers in 14 days were NO-side.
     if (
         opp.side
         and opp.side.strip().lower() == "no"
@@ -752,17 +805,117 @@ def preflight_gate_status(opp: "Opportunity") -> str:
             or _confidence_rank(opp.confidence) < _confidence_rank("high")
         )
     ):
-        return "no-fav"
+        return (
+            f"no_side_favorite (price ${opp.market_price:.2f} < "
+            f"${NO_SIDE_FAVORITE_THRESHOLD:.2f}; needs edge >= "
+            f"{NO_SIDE_MIN_EDGE:.0%} and confidence=high)"
+        )
 
-    # Gate 4.7: R25 prediction-market safety gate
+
+def _gate_prediction(opp, c):
+    # R25: the prediction modules priced garbage fair values (crypto +80% on
+    # tails, weather $1.00 on 1-degree ranges) and have no calibration.
     if not ALLOW_PREDICTION_BETS and opp.category in PREDICTION_CATEGORIES:
-        return "pred-off"
+        return (
+            f"prediction_market_disabled (category={opp.category}; "
+            f"set ALLOW_PREDICTION_BETS=true to enable)"
+        )
 
-    # Gate 4.8: L1 live/in-play safety gate (S23 detection)
+
+def _gate_live(opp, c):
+    # L1: in-play stays opt-in until calibrated. S23: `_game_has_started`
+    # prefers the Odds API commence_time; the ticker alone only dates moneylines.
     if not ALLOW_LIVE_BETS and _game_has_started(opp):
-        return "live-off"
+        return "live_betting_disabled (game in progress; set ALLOW_LIVE_BETS=true to enable)"
 
-    return "ok"
+
+def _gate_duplicate(opp, c):
+    if c.open_tickers and opp.ticker in c.open_tickers:
+        return f"duplicate_ticker (already holding {opp.ticker})"
+
+
+def _gate_per_event(opp, c):
+    # Futures get their own, wider cap: their outcomes partition one event
+    # rather than doubling down on it.
+    if c.event_counts:
+        evt = _event_key(opp.ticker)
+        cap = c.max_per_event_futures if opp.category == "futures" else c.max_per_event
+        if c.event_counts.get(evt, 0) >= cap:
+            return f"per_event_cap ({c.event_counts[evt]}/{cap} on {evt[:30]})"
+
+
+def _gate_opposing_side(opp, c):
+    # S22: Gate 6 is concentration, this is coherence -- a book under the
+    # position cap can still hold both sides of one game. Futures exempt.
+    if c.open_sides and opp.category != "futures":
+        clash = opposing_position(opp.ticker, opp.side, c.open_sides)
+        if clash:
+            return f"opposing_side (already holding {clash})"
+
+
+def _gate_series_dedup(opp, c):
+    # C5 + R9: same matchup bet within SERIES_DEDUP_HOURS, per-sport overrides
+    # (MLB/NHL series outlast 48h, F12). A per-sport 0 disables it there.
+    if c.recent_matchups:
+        mkey = matchup_key(opp.ticker)
+        if mkey:
+            hours = _PER_SPORT_SERIES_DEDUP.get(mkey[0], SERIES_DEDUP_HOURS)
+            if hours > 0 and mkey in c.recent_matchups:
+                return f"series_dedup (matchup {mkey[1]} bet within {hours}h)"
+
+
+# (gate id, scan-preview label or None for portfolio-state gates, check).
+# Order is precedence: the first gate that rejects names the reason. Sizing
+# caps (max bet, exposure headroom, bankroll, Hard Stop) are in `size_order`.
+GATES = (
+    ("1", None, _gate_daily_loss),
+    ("1b", None, _gate_no_bankroll),
+    ("2", None, _gate_max_positions),
+    ("2b", None, _gate_exposure),
+    ("3", "off", _gate_sport_off),
+    ("3", "edge", _gate_edge_floor),
+    ("3.05", "edge-hi", _gate_edge_ceiling),
+    ("3.5", "price", _gate_price_floor),
+    ("3.55", "price-hi", _gate_price_ceiling),
+    ("3.6", "illiq", _gate_liquidity),
+    ("3.7", "far", _gate_time_to_event),
+    ("4", "score", _gate_score),
+    ("4.5", "conf", _gate_confidence),
+    ("4.6", "no-fav", _gate_no_side_favorite),
+    ("4.7", "pred-off", _gate_prediction),
+    ("4.8", "live-off", _gate_live),
+    ("5", None, _gate_duplicate),
+    ("6", None, _gate_per_event),
+    ("6b", None, _gate_opposing_side),
+    ("7", None, _gate_series_dedup),
+)
+
+
+def first_rejection(
+    opp: "Opportunity", ctx: GateContext | None, static_only: bool = False
+) -> tuple[str, str | None, str] | None:
+    """Run GATES in order; return (gate id, preview label, reason) for the first
+    that rejects, or None. `static_only` skips the portfolio-state gates."""
+    for gate_id, label, check in GATES:
+        if static_only and label is None:
+            continue
+        reason = check(opp, ctx)
+        if reason:
+            return gate_id, label, reason
+    return None
+
+
+def preflight_gate_status(opp: "Opportunity") -> str:
+    """Scan-table preview (R18): the label of the first static gate in GATES
+    that rejects, or "ok". Labels: off, edge, edge-hi, price, price-hi, illiq,
+    far, score, conf, no-fav, pred-off, live-off.
+
+    Static only: daily loss, positions, exposure, duplicates, per-event cap,
+    opposing side and series dedup need live portfolio state, so "ok" means the
+    opportunity itself has no blocker, not that the order will place.
+    """
+    hit = first_rejection(opp, None, static_only=True)
+    return hit[1] if hit else "ok"
 
 
 def _game_has_started(opp, now: datetime | None = None) -> bool:
@@ -1392,24 +1545,9 @@ def size_order(
     the full fraction). Falls back to flat unit sizing if Kelly
     produces fewer contracts than the flat unit.
 
-    Risk gates enforced:
-        1.   Daily loss limit                             (reject)
-        2.   Max open positions                           (reject)
-        2b.  Cumulative open / per-segment exposure (S4)  (reject + sizing cap)
-        3.   Minimum edge threshold (global + per-sport)  (reject)
-        3.5  Minimum market-price floor (R7)              (reject)
-        4.   Minimum composite score                      (reject)
-        4.5  Minimum confidence level (R3)                (reject)
-        4.6  NO-side favorite guard (R1)                  (reject)
-        4.7  Prediction-market safety gate (R25)          (reject)
-        5.   Duplicate ticker (already holding this market) (reject)
-        6.   Per-event cap (max positions on same game)   (reject)
-        6b.  Opposing side already held on this game (S22) (reject)
-        3.6  Bid/ask spread + 24h volume floor           (reject)
-        3.7  Days-to-event cap on game markets          (reject)
-        7.   Series dedup (same matchup within last Nh)   (reject)
-        8.   Max bet size                                 (sizing cap)
-        9.   Bet ratio cap                                (sizing cap)
+    Rejection gates: `GATES`, in order (ER-19). Sizing caps, applied here after
+    they pass: max bet size, exposure headroom (2b), bankroll, then the 10% Hard
+    Stop. The batch-level bet-ratio and budget caps run in `execute_pipeline`.
 
     NO-side Kelly multiplier (R1): NO bets priced below
     NO_SIDE_KELLY_PRICE_FLOOR are sized at NO_SIDE_KELLY_MULTIPLIER of normal
@@ -1417,186 +1555,32 @@ def size_order(
     NO_SIDE_KELLY_PRICE_CEILING get the same multiplier -- the expensive end is
     where the NO side actually bleeds (-11.3% ROI above 50c).
     """
-    rejection = None
-    edge_floor = min_edge_for(opp)
-    liquidity_reject = _liquidity_rejection(opp)
-    time_to_event_reject = _time_to_event_rejection(opp)
     # S4: equity (cash + positions) is the exposure denominator; callers that
     # don't track it fall back to `bankroll`, which with both caps at 0 is moot.
     equity = bankroll if equity is None else equity
-    exposure_reject = _exposure_rejection(opp, open_exposure, segment_exposure, equity)
-
-    # ── Risk Gate 1: Daily loss limit
-    if daily_loss_breached(daily_pnl):
-        rejection = f"daily_loss_limit_breached (P&L: ${daily_pnl:.2f})"
-
-    # ── ER-43: no cash, no sizing. With bankroll <= 0 the bankroll cap below
-    #   still bought one contract (`max(1, ...)`) and the Hard Stop skipped
-    #   itself, so a failed or zero balance read sized a real order.
-    elif not bankroll > 0:
-        rejection = f"no_bankroll (balance ${bankroll:.2f})"
-
-    # ── Risk Gate 2: Max open positions
-    elif positions_at_cap(open_positions):
-        rejection = f"max_positions_reached ({open_positions}/{MAX_OPEN_POSITIONS})"
-
-    # ── Risk Gate 2b: Cumulative exposure ceilings (S4)
-    #   Gate 2 counts rows; this counts dollars. Directly above it in the chain
-    #   because it is the same question asked in the unit that matters.
-    elif exposure_reject:
-        rejection = exposure_reject
-
-    # ── Risk Gate 3: Minimum edge (per-sport override, global fallback)
-    elif opp.edge < edge_floor:
-        # A floor at or above 1.0 can never be cleared (edge is bounded by 1),
-        # which is the idiom for switching a sport off entirely -- say so plainly
-        # rather than reporting a nonsensical "5% < 100%" edge comparison.
-        if edge_floor >= 1.0:
-            rejection = (
-                f"sport_disabled ({_detect_sport(opp.ticker) or 'unknown'}: "
-                f"MIN_EDGE_THRESHOLD_* set to {edge_floor:.0%})"
-            )
-        else:
-            _fee = fee_per_contract(opp.market_price)
-            rejection = (
-                f"edge_below_threshold ({opp.edge:.1%} < {edge_floor:.1%}"
-                + (f", incl. {_fee:.1%} fee" if _fee > 0 else "")
-                + ")"
-            )
-
-    # ── Risk Gate 3.05: Implausible-edge ceiling (B7)
-    #   An 81% claimed edge on a 13c contract (ETSU -14.5, 2026-09-26) is the
-    #   model disagreeing with every book -- a matching or sign bug. It won by
-    #   luck at 44 contracts. MAX_EDGE=1.0 disables.
-    elif MAX_EDGE < 1.0 and opp.edge > MAX_EDGE:
-        rejection = f"edge_implausible ({opp.edge:.1%} > {MAX_EDGE:.0%})"
-
-    # ── Risk Gate 3.5: Minimum market-price floor (R7)
-    #   Lottery-ticket filter. F10 from the 14-day review: sub-10¢ bets went
-    #   1W-3L with claimed "+50% edge" — hard reject, no edge/confidence
-    #   exception. MIN_MARKET_PRICE=0 disables.
-    elif MIN_MARKET_PRICE > 0 and opp.market_price < MIN_MARKET_PRICE:
-        rejection = f"price_below_floor (${opp.market_price:.2f} < ${MIN_MARKET_PRICE:.2f})"
-
-    # ── Risk Gate 3.55: Maximum cost/payout ratio (MAX_MARKET_PRICE=0 disables)
-    #   A contract pays $1 if it wins, so the market price IS the cost/payout
-    #   ratio. Reject bets priced above this ceiling, e.g. a 76c bet to win $1
-    #   is a 76% ratio; 75c (75%) still passes. 1.0 disables the gate.
-    elif MAX_MARKET_PRICE < 1.0 and opp.market_price > MAX_MARKET_PRICE:
-        rejection = f"price_above_ceiling (${opp.market_price:.2f} > ${MAX_MARKET_PRICE:.2f})"
-
-    # ── Risk Gate 3.6: Hard liquidity floor
-    #   Implements the CLAUDE.md Hard Stop "the market is clearly illiquid
-    #   (spread > 5%)", which was documented from launch but never enforced.
-    #   Rejects on the raw book, not the soft composite `liquidity` term.
-    elif liquidity_reject:
-        rejection = liquidity_reject
-
-    # ── Risk Gate 3.7: Days-to-event cap on game markets (S5)
-    #   The NFL book that reached 31% of bankroll was 26 positions bought 25 to
-    #   112 days out. Futures are exempt -- their event is a season.
-    elif time_to_event_reject:
-        rejection = time_to_event_reject
-
-    # ── Risk Gate 4: Minimum composite score
-    elif opp.composite_score < MIN_COMPOSITE_SCORE:
-        rejection = f"score_below_minimum ({opp.composite_score:.1f} < {MIN_COMPOSITE_SCORE:.1f})"
-
-    # ── Risk Gate 4.5: Minimum confidence level (R3)
-    elif _confidence_rank(opp.confidence) < _confidence_rank(MIN_CONFIDENCE):
-        rejection = f"confidence_below_minimum ({opp.confidence or 'unknown'} < {MIN_CONFIDENCE})"
-
-    # ── Risk Gate 4.6: NO-side favorite guard (R1)
-    #   Reject NO bets on heavy favorites unless both edge and confidence clear
-    #   the higher bar. Observed 2026-04-21: all 13 high-edge losers in the
-    #   14-day window were NO-side; NO at >=20% edge realized -33% ROI.
-    elif (
-        opp.side
-        and opp.side.strip().lower() == "no"
-        and opp.market_price < NO_SIDE_FAVORITE_THRESHOLD
-        and (
-            opp.edge < NO_SIDE_MIN_EDGE
-            or _confidence_rank(opp.confidence) < _confidence_rank("high")
-        )
-    ):
-        rejection = (
-            f"no_side_favorite (price ${opp.market_price:.2f} < "
-            f"${NO_SIDE_FAVORITE_THRESHOLD:.2f}; needs edge >= "
-            f"{NO_SIDE_MIN_EDGE:.0%} and confidence=high)"
-        )
-
-    # ── Risk Gate 4.7: Prediction-market safety gate (R25)
-    #   Reject bets on prediction-market categories (crypto/weather/spx/
-    #   mentions/companies/politics) unless ALLOW_PREDICTION_BETS=true.
-    #   2026-04-24 audit found those modules produce garbage fair values
-    #   (crypto +80% on tail bets, weather $1.00 fair on 1-degree ranges)
-    #   and have never produced a settled bet — no calibration exists.
-    elif not ALLOW_PREDICTION_BETS and opp.category in PREDICTION_CATEGORIES:
-        rejection = (
-            f"prediction_market_disabled (category={opp.category}; "
-            f"set ALLOW_PREDICTION_BETS=true to enable)"
-        )
-
-    # ── Risk Gate 4.8: Live/in-play safety gate (L1)
-    #   Reject bets on games that have already started unless ALLOW_LIVE_BETS=
-    #   true. The L1 freshness fix makes in-play edges honest (current book
-    #   odds, not a stale pre-game snapshot), so they can now reach order
-    #   placement; keep in-play opt-in until calibrated. S23: detection is
-    #   _game_has_started(), which prefers the Odds API commence_time carried
-    #   on the opportunity -- is_game_started() alone reads a ticker-embedded
-    #   time that only moneyline series have, so it never fired on a spread,
-    #   a total, or any football market.
-    elif not ALLOW_LIVE_BETS and _game_has_started(opp):
-        rejection = (
-            "live_betting_disabled (game in progress; " "set ALLOW_LIVE_BETS=true to enable)"
-        )
-
-    # ── Risk Gate 5: Duplicate ticker
-    elif open_tickers and opp.ticker in open_tickers:
-        rejection = f"duplicate_ticker (already holding {opp.ticker})"
-
-    # ── Risk Gate 6: Per-event cap (futures get their own, wider cap -- a
-    # diversified multi-outcome futures book is a different shape of bet than
-    # holding >2 sides of one game: the outcomes partition one event rather
-    # than doubling down on it)
-    elif event_counts:
-        evt = _event_key(opp.ticker)
-        cap = max_per_event_futures if opp.category == "futures" else max_per_event
-        if event_counts.get(evt, 0) >= cap:
-            rejection = f"per_event_cap ({event_counts[evt]}/{cap} on {evt[:30]})"
-
-    # ── Risk Gate 6b: Opposing side already held on this game (S22)
-    #
-    # Gate 6 counts positions; this one compares DIRECTION, which nothing did
-    # before. Runs after 6 rather than inside it because they answer different
-    # questions -- 6 is about concentration, 6b is about coherence, and a book
-    # can be under the position cap and still hold both sides of one game.
-    # Futures are exempt for the same reason Gate 6 gives them their own cap:
-    # their outcomes partition an event instead of contradicting each other.
-    if rejection is None and open_sides and opp.category != "futures":
-        clash = opposing_position(opp.ticker, opp.side, open_sides)
-        if clash:
-            rejection = f"opposing_side (already holding {clash})"
-
-    # ── Risk Gate 7: Series dedup (C5 + R9) -- same matchup bet in last
-    # SERIES_DEDUP_HOURS, with per-sport overrides (R9: MLB/NHL series cycles
-    # exceed the 48h global default — F12). A per-sport `0` (or global `0`
-    # without a per-sport override) disables the gate for that sport.
-    if rejection is None and recent_matchups:
-        mkey = matchup_key(opp.ticker)
-        if mkey:
-            sport_hours = _PER_SPORT_SERIES_DEDUP.get(mkey[0], SERIES_DEDUP_HOURS)
-            if sport_hours > 0 and mkey in recent_matchups:
-                rejection = f"series_dedup (matchup {mkey[1]} bet within {sport_hours}h)"
-
-    if rejection:
+    ctx = GateContext(
+        bankroll=bankroll,
+        open_positions=open_positions,
+        daily_pnl=daily_pnl,
+        open_tickers=open_tickers,
+        event_counts=event_counts,
+        max_per_event=max_per_event,
+        max_per_event_futures=max_per_event_futures,
+        recent_matchups=recent_matchups,
+        open_exposure=open_exposure,
+        segment_exposure=segment_exposure,
+        equity=equity,
+        open_sides=open_sides,
+    )
+    hit = first_rejection(opp, ctx)
+    if hit:
         return SizedOrder(
             opportunity=opp,
             contracts=0,
             price_cents=0,
             cost_dollars=0,
             bankroll_pct=0,
-            risk_approval=f"REJECTED: {rejection}",
+            risk_approval=f"REJECTED: {hit[2]}",
         )
 
     # ── Size: quarter-Kelly with flat unit as floor
@@ -1693,7 +1677,7 @@ def size_order(
     approval = "APPROVED"
     bankroll_pct = actual_cost / bankroll if bankroll > 0 else 0
 
-    # ── Risk Gate 7: Max bet size cap (sizing cap, not reject)
+    # ── Sizing cap: MAX_BET_SIZE (not a reject; Gate 7 is series dedup)
     if actual_cost > MAX_BET_SIZE:
         contracts = max(1, int(MAX_BET_SIZE / opp.market_price))
         actual_cost = contracts * opp.market_price
@@ -2724,14 +2708,11 @@ def execute_pipeline(
     if cached_rows is not None:
         # ── R26 replay path: sizing / correlated-bracket dedup / bet-ratio &
         #    budget caps are intentionally locked from the original preview run
-        #    (that's what makes --pick row indices stable). BUT the three
-        #    portfolio-STATE-dependent gates can go stale inside the cache TTL:
-        #    between the preview and the replay you may have opened one of these
-        #    tickers, filled the per-event cap, or bet the matchup. Re-check
-        #    gates 2 (max positions), 4.8 (game started), 5 (duplicate ticker),
-        #    6 (per-event cap), 6b, 7 (series dedup) and 2b against *current*
-        #    state so a replay can't re-bet a market you now hold. Sizing is NOT
-        #    recomputed, only clamped down to the current MAX_BET_SIZE (ER-03).
+        #    (that's what makes --pick row indices stable). The gates are NOT:
+        #    portfolio state, the clock and `.env` can all move inside the cache
+        #    TTL, so every row runs the full GATES list against *current* state
+        #    (ER-19; before it, a hand-kept subset that missed Gates 2 and 4.8).
+        #    Sizing is NOT recomputed, only clamped down to MAX_BET_SIZE (ER-03).
         age_str = f"{cache_age_seconds}s" if cache_age_seconds is not None else "unknown"
         rprint(
             f"\n[bold cyan]Replaying cached preview "
@@ -2762,44 +2743,26 @@ def execute_pipeline(
             tkr = s.opportunity.ticker
             evt = _event_key(tkr)
             mkey = matchup_key(tkr)
-            # ER-03: Gate 2 and Gate 4.8 are portfolio/clock state too. Without
-            # them a replay inside the cache TTL could exceed MAX_OPEN_POSITIONS
-            # or place an in-play bet with ALLOW_LIVE_BETS=false.
-            if positions_at_cap(open_count + len(to_execute)):
-                replay_dropped.append(
-                    (tkr, f"max open positions {MAX_OPEN_POSITIONS} reached (gate 2)")
-                )
-                continue
-            if not ALLOW_LIVE_BETS and _game_has_started(s.opportunity):
-                replay_dropped.append((tkr, "game in progress, live betting disabled (gate 4.8)"))
-                continue
-            if tkr in open_tickers:
-                replay_dropped.append((tkr, "already holding this market (gate 5)"))
-                continue
-            cap = MAX_PER_EVENT_FUTURES if s.opportunity.category == "futures" else MAX_PER_EVENT
-            if event_counts.get(evt, 0) >= cap:
-                replay_dropped.append((tkr, f"per-event cap {cap} reached (gate 6)"))
-                continue
-            if mkey and mkey in recent_matchups:
-                replay_dropped.append((tkr, "matchup bet within series-dedup window (gate 7)"))
-                continue
-            if s.opportunity.category != "futures":
-                clash = opposing_position(tkr, s.opportunity.side, open_sides)
-                if clash:
-                    replay_dropped.append(
-                        (tkr, f"opposing side held on this game: {clash} (gate 6b)")
-                    )
-                    continue
-            # S4: exposure is portfolio state too, so it re-checks here for the
-            # same reason gates 5/6/7 do -- the cache TTL is long enough to have
-            # filled a ceiling since the preview. Sizing stays locked (that is
-            # what makes --pick row indices stable), so this only drops rows.
             seg = exposure_segment(s.opportunity)
-            exp_reject = _exposure_rejection(
-                s.opportunity, open_exposure, segment_exposure.get(seg, 0.0), equity
+            hit = first_rejection(
+                s.opportunity,
+                GateContext(
+                    bankroll=bankroll,
+                    open_positions=open_count + len(to_execute),
+                    daily_pnl=daily_pnl,
+                    open_tickers=open_tickers,
+                    event_counts=event_counts,
+                    max_per_event=MAX_PER_EVENT,
+                    max_per_event_futures=MAX_PER_EVENT_FUTURES,
+                    recent_matchups=recent_matchups,
+                    open_exposure=open_exposure,
+                    segment_exposure=segment_exposure.get(seg, 0.0),
+                    equity=equity,
+                    open_sides=open_sides,
+                ),
             )
-            if exp_reject:
-                replay_dropped.append((tkr, f"{exp_reject} (gate 2b)"))
+            if hit:
+                replay_dropped.append((tkr, f"{hit[2]} (gate {hit[0]})"))
                 continue
             # ER-03: MAX_BET_SIZE may have been lowered since the preview.
             # Clamp like size_order does; contracts change, row order does not.

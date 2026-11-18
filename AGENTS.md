@@ -157,7 +157,9 @@ Edge-Radar/
 
 ### Execution gates
 
-Every gate runs before any trade executes:
+Every gate runs before any trade executes. The reject gates are one ordered list, `GATES` in
+`kalshi_executor.py`, run by the fresh scan (`size_order`), the scan preview (static gates only) and the
+`--pick`/`--ticker` cache replay (ER-19). Add or change a gate there, never in one path.
 
 | # | Gate | Type |
 |:-:|:-----|:-----|

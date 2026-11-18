@@ -12,6 +12,15 @@ import tempfile
 # mocked failures from the test suite were written into the live logs/.
 os.environ["EDGE_RADAR_LOG_DIR"] = tempfile.mkdtemp(prefix="edge_radar_test_logs_")
 
+# ER-19: tests run on the code's defaults, never the operator's `.env`. Every
+# script calls `load_dotenv()` at import, so a live knob (a sport frozen, a
+# date cap, an exposure ceiling) used to fail tests on one machine only, and
+# each one needed its own "ignore the operator's .env" fixture here. python-
+# dotenv honours this switch in `load_dotenv()`; a profile would overlay
+# `.env.<profile>`, so that goes too. Tests that want a knob set it themselves.
+os.environ["PYTHON_DOTENV_DISABLED"] = "1"
+os.environ.pop("EDGE_RADAR_PROFILE", None)
+
 import pytest  # noqa: E402
 import trade_log  # noqa: E402
 from opportunity import Opportunity  # noqa: E402
@@ -47,85 +56,6 @@ def _isolate_venue_eligibility(tmp_path, monkeypatch):
     import venue_eligibility as vel
 
     monkeypatch.setattr(vel, "ELIGIBILITY_PATH", tmp_path / "venue_eligibility.json")
-
-
-@pytest.fixture(autouse=True)
-def _ignore_operator_time_to_event_cap(monkeypatch):
-    """Never let the operator's live `.env` date-cap a test's fixture tickers.
-
-    Gate 3.7 (S5) rejects game markets more than `MAX_DAYS_TO_EVENT` days before
-    their event, and `.env` sets 14. Test tickers are written for readability,
-    not for proximity to today -- `KXNFLSPREAD-26SEP13BALIND-IND5`,
-    `KXMLBGAME-99APR171900NYYKAC-NYY` -- so enabling the cap failed 126 tests
-    that have nothing to do with lead time, purely from a config change.
-
-    Same lesson as `_ignore_operator_sport_freezes` below: a gate whose value
-    comes from the operator's environment must be neutralised here and opted
-    into explicitly by the tests that exercise it (see
-    `tests/test_time_to_event_gate.py`, which sets its own cap).
-    """
-    import kalshi_executor as ke
-
-    monkeypatch.setattr(ke, "MAX_DAYS_TO_EVENT", 0)
-
-
-@pytest.fixture(autouse=True)
-def _ignore_operator_exposure_caps(monkeypatch):
-    """Never let the operator's live `.env` exposure ceilings resize a test order.
-
-    Gate 2b (S4) trims an order to the remaining exposure headroom, and `.env`
-    sets 0.50 / 0.33. Tests that pin exact contract counts often use a small
-    `bankroll` (which doubles as the equity fallback), so a live 33% segment cap
-    would silently cap sizing in tests about Kelly, fees, or the flat floor.
-
-    Third instance of the same lesson (see the two fixtures around this one): a
-    gate whose value comes from the operator's environment is neutralised here
-    and opted into explicitly by the tests that exercise it -- see
-    `tests/test_exposure_gate.py`, which sets its own caps.
-    """
-    import kalshi_executor as ke
-
-    monkeypatch.setattr(ke, "MAX_OPEN_EXPOSURE_PCT", 0.0)
-    monkeypatch.setattr(ke, "MAX_SEGMENT_EXPOSURE_PCT", 0.0)
-
-
-@pytest.fixture(autouse=True)
-def _ignore_operator_sport_freezes(monkeypatch):
-    """Never let the operator's live `.env` switch a sport off underneath a test.
-
-    `MIN_EDGE_THRESHOLD_<SPORT> >= 1.0` is the "this sport is off" idiom (F3),
-    and `_PER_SPORT_MIN_EDGE` is populated from the environment at import. So
-    freezing a sport in `.env` makes `size_order` reject on `sport_disabled`
-    *before* reaching whatever gate a test is actually exercising -- which broke
-    four tests the day NFL was frozen (S1, 2026-08-26), none of which were about
-    per-sport floors: TestLiquidityGate deliberately uses the real
-    `KXNFLTOTAL-26SEP13CLEJAC-20` book from the L2 audit, and test_sport_disable
-    uses an NFL ticker as its "other sports are untouched" control.
-
-    Dropping disabled sports here makes the suite hermetic against operator
-    config, permanently. A test that *wants* a sport off sets it explicitly
-    (see `wc_off` in test_sport_disable.py).
-    """
-    import kalshi_executor as ke
-
-    live = {k: v for k, v in ke._PER_SPORT_MIN_EDGE.items() if v < 1.0}
-    monkeypatch.setattr(ke, "_PER_SPORT_MIN_EDGE", live)
-
-
-@pytest.fixture(autouse=True)
-def _ignore_operator_max_market_price(monkeypatch):
-    """Never let the operator's live `.env` cost/payout ceiling reject a test bet.
-
-    Gate 3.55 (2026-09-03) rejects any bet priced above `MAX_MARKET_PRICE`, and
-    `.env` sets 0.75. Plenty of tests price opportunities at 0.85/0.99 to
-    exercise Kelly sizing, the no-side ceiling, or limit-price rounding at the
-    top of the range -- none of them about this gate. Same lesson as the other
-    fixtures around this one: neutralise here, opt in explicitly (see
-    `TestMaxMarketPriceGate` in test_risk_gates.py, which sets its own ceiling).
-    """
-    import kalshi_executor as ke
-
-    monkeypatch.setattr(ke, "MAX_MARKET_PRICE", 1.0)
 
 
 @pytest.fixture
