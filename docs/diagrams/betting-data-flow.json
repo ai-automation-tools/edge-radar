@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "d7fa15fd395eb7947259294b3a7984c1f481d3e6"
+      "revision": "9d00d6a5ce2f1783f92a709b14d7a6acebb31a8c"
     }
   },
   "stages": [
@@ -216,8 +216,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 2589,
-          "end_line": 2693
+          "line": 2607,
+          "end_line": 2711
         }
       ]
     },
@@ -232,8 +232,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1408,
-          "end_line": 1582
+          "line": 1420,
+          "end_line": 1600
         },
         {
           "path": "scripts/kalshi/kalshi_executor.py",
@@ -252,8 +252,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1603,
-          "end_line": 1736
+          "line": 1621,
+          "end_line": 1754
         }
       ]
     },
@@ -267,8 +267,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1574,
-          "end_line": 1582
+          "line": 1592,
+          "end_line": 1600
         }
       ]
     },
@@ -283,13 +283,13 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1989,
-          "end_line": 2223
+          "line": 2007,
+          "end_line": 2241
         },
         {
           "path": "scripts/kalshi/kalshi_client.py",
-          "line": 403,
-          "end_line": 435
+          "line": 471,
+          "end_line": 503
         }
       ]
     },
@@ -303,8 +303,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1831,
-          "end_line": 1944
+          "line": 1849,
+          "end_line": 1962
         },
         {
           "path": "scripts/shared/paths.py",
@@ -492,7 +492,7 @@
       "title": "Risk gates, in order",
       "dot": "rose",
       "items": [
-        "Daily loss, open positions, total and per-sport exposure",
+        "Daily loss, cash above $0, open positions, total and per-sport exposure",
         "Fee-aware edge floor, too-good edge, price floor/ceiling, spread and volume",
         "Days to event, composite score, confidence, NO on heavy favorite",
         "Already started, already held, per-event cap, opposite side, recent matchup",

@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-11-17 -- Money-path hardening (ER-35, 37, 38, 40, 41, 43, 44, 46)
+
+- **ER-46** Demo detection is an exact host match (`demo-api.kalshi.co`) instead of a substring
+  test on the base URL; any other URL is treated as live.
+- **ER-43** Sizing with a balance of $0 or less (or a failed read) still bought one contract,
+  because the bankroll cap rounds up to 1 and the Hard Stop skipped itself. A new `no_bankroll`
+  rejection runs right after Gate 1. `get_balance_dollars` reads the venue's `*_dollars` fields
+  first; `settlement_revenue_dollars` reads `None` as $0 and the string `"56"` as 56 cents, not
+  $56; the fill helpers treat a null field as missing instead of crashing.
+- **ER-44** A GET that gets no response, a 429 or a 5xx is retried twice with jittered backoff.
+  POST and DELETE are never retried (a lost order response is ER-13's job).
+- **ER-40** `get_positions` and `get_orders` follow `cursor` to the last page (capped at 50) when
+  called without one, so every caller sees the whole book instead of the first 50-200 rows.
+- **ER-37** Gate 7 (series dedup) counted failed placements and dry-run rows as bets and blocked
+  matchups with no money on them. It now skips both.
+- **ER-41** Shard auto-funding moved exactly the order cost; it now moves cost + taker fee + 1
+  cent, so the order isn't refused for the fee after the transfer.
+- **ER-35** The scan-cache fingerprint now carries the profile and subaccount, so a preview
+  can't be replayed with `--pick` into another wallet. The first replay after this update
+  rescans, because the old cache has no wallet keys.
+- **ER-38** `risk_check --gate` summed today's P&L across every profile; it now uses this
+  profile's rows, like the executor's Gate 1.
+- `tests/test_money_path_p3.py` (24 tests); `test_shard_funding` now expects the fee headroom.
+
+---
+
 ## 2026-11-17 -- Void settlements in the risk and calibration reports (ER-15 follow-up)
 
 - **Fix** ER-15 marked scalar and voided settlements `won=None`, but two reports still counted them
