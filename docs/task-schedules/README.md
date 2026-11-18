@@ -155,7 +155,7 @@ It **never merges**, never touches master, `mike_desktop`, `.env`, the executor 
 | **Action 2** | `render_report_email.py daily-summary` → `Edge-Radar \| Daily Summary \| … \| <date>` |
 | **Report** | `reports/Performance/daily_summary_YYYY-MM-DD.md` (written even on empty days — proof of life) |
 
-Runs after the overnight settle passes and before the 5:05 execute, so "Open Exposure" reflects overnight carry, not today's fills. Also reports post-kickoff orders (S23b). Three blank sections every morning for a week is a real signal: fills not captured, settler not finding settlements, or the pipeline paused.
+Runs after the overnight settle passes and before the 5:05 execute, so "Open Exposure" reflects overnight carry, not today's fills. It opens with **Ops health** (ER-50, `scripts/shared/ops_health.py`): every task in this folder with its state, last run, result and next run, plus the newest settlement, ledger backup, report per preset and data/log size. A disabled or failing execute task is FAIL, and the email subject then reads `Edge-Radar | Daily Summary | FAIL | <date>`. `python scripts/doctor.py --ops` prints the same table on demand. Also reports post-kickoff orders (S23b). Three blank sections every morning for a week is a real signal: fills not captured, settler not finding settlements, or the pipeline paused.
 
 ### 3. `All-Sports-SameDay-Execution` ⚠️ — Daily 5:05 AM PT (8:05 AM ET)
 

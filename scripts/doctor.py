@@ -526,7 +526,22 @@ if __name__ == "__main__":
         "REAL order; requires DRY_RUN=false.",
     )
     ap.add_argument("--ticker", help=PROBE_TICKER_HINT)
+    ap.add_argument(
+        "--ops",
+        action="store_true",
+        help="ER-50: scheduled tasks, newest settlement, ledger backup, report "
+        "freshness and data/log size. Read-only; exits 1 on any FAIL.",
+    )
     args = ap.parse_args()
+    if args.ops:
+        from datetime import datetime, timezone
+
+        import ops_health
+        from trade_log import load_settlement_log
+
+        checks = ops_health.collect(datetime.now(timezone.utc), load_settlement_log())
+        sys.stdout.buffer.write(ops_health.render(checks).encode("utf-8"))
+        sys.exit(1 if any(c.status == "FAIL" for c in checks) else 0)
     if args.verify_eligibility:
         sys.exit(verify_eligibility(args.ticker))
     sys.exit(main())
