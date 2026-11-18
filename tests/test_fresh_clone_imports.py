@@ -26,6 +26,11 @@ KNOWN_BROKEN = {
     "scripts/prediction/prediction_scanner.py",
 }
 
+# A missing third-party package (Pillow, for make_favicon.py) is a requirements
+# question, not a sys.path one: only a project module that can't be found fails.
+PROJECT_MODULES = {p.stem for p in (ROOT / "scripts").rglob("*.py")} | {"app"}
+_MISSING = re.compile(r"No module named '(\w+)")
+
 _LOAD = (
     "import importlib.util as u, os, sys; p = sys.argv[1]; "
     "sys.path.insert(0, os.path.dirname(p)); "
@@ -40,6 +45,13 @@ def _entry_points() -> list[Path]:
         for p in (ROOT / "scripts").rglob("*.py")
         if MAIN_GUARD.search(p.read_text(encoding="utf-8"))
     )
+
+
+def _path_failure(r: subprocess.CompletedProcess) -> bool:
+    if r.returncode == 0:
+        return False
+    missing = _MISSING.search(r.stderr)
+    return not missing or missing[1] in PROJECT_MODULES
 
 
 def test_entry_points_import_without_venv_pth(tmp_path):
@@ -62,7 +74,7 @@ def test_entry_points_import_without_venv_pth(tmp_path):
         results = dict(pool.map(load, _entry_points()))
 
     assert "scripts/kalshi/kalshi_settler.py" in results, "entry-point discovery found nothing"
-    broken = {rel for rel, r in results.items() if r.returncode != 0}
+    broken = {rel for rel, r in results.items() if _path_failure(r)}
     detail = {rel: results[rel].stderr.strip().splitlines()[-1:] for rel in broken - KNOWN_BROKEN}
     assert not detail, f"entry points that fail without the venv .pth: {detail}"
     fixed = KNOWN_BROKEN - broken
