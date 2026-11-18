@@ -25,7 +25,10 @@ import json
 import uuid
 import logging  # noqa: F401
 import argparse
+import functools
+import inspect
 import re
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path  # noqa: F401
 from dataclasses import dataclass, asdict, replace  # noqa: F401
@@ -33,6 +36,7 @@ from dataclasses import dataclass, asdict, replace  # noqa: F401
 # Shared imports
 import paths  # noqa: F401 -- path constants -- configures sys.path
 from opportunity import Opportunity
+import trade_log as _trade_log_mod
 from trade_log import (
     load_trade_log,
     append_trades,
@@ -2019,6 +2023,22 @@ def _book_accepted(order_resp: dict, s: SizedOrder, trade_log: list, venue: str)
     return record
 
 
+def _find_order_by_client_id(client, ticker: str, client_order_id: str) -> dict | None:
+    """The venue's copy of an order we sent, by our `client_order_id`, or None.
+
+    Used after a transport error, when the POST may or may not have landed.
+    Any failure of the lookup itself returns None: the caller then records the
+    order as UNKNOWN, which is what it did before this lookup existed.
+    """
+    try:
+        resp = client.get_orders(ticker=ticker, limit=100)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Order lookup for %s failed: %s", ticker, e)
+        return None
+    orders = resp.get("orders", []) if isinstance(resp, dict) else []
+    return next((o for o in orders if o.get("client_order_id") == client_order_id), None)
+
+
 def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) -> list:
     """Place each sized order, recording a trade or a failure record per order.
 
@@ -2074,6 +2094,9 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
         opp = s.opportunity
         opp_venue = (opp.details or {}).get("venue", "kalshi")
         s.outcome = "failed"  # ER-12: until the venue accepts it
+        # ER-13: our own id, so an order whose response was lost can be found
+        # again (`_find_order_by_client_id`) instead of guessed at.
+        client_order_id = str(uuid.uuid4())
         try:
             # Sharding (2026-08-24): sizing is whole-account, but an order can
             # only spend its own shard's cash. Move the shortfall across first,
@@ -2103,6 +2126,7 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
                 "action": "buy",
                 "count": s.contracts,
                 "time_in_force": "good_till_canceled",
+                "client_order_id": client_order_id,
             }
             if opp.side == "yes":
                 kwargs["yes_price_cents"] = s.price_cents
@@ -2136,10 +2160,25 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
                 f"  [red]NET-FAIL[/red] {opp.ticker}: {e.message[:80]} "
                 f"[dim](no response — may or may not have placed)[/dim]"
             )
+            # ER-13: ask the venue whether it got the order. Found -> book it
+            # like any accepted order; otherwise record it as before, with the
+            # client_order_id so a later reconcile can still match it.
+            found = _find_order_by_client_id(client, opp.ticker, client_order_id)
+            if found is not None:
+                consecutive_conn_errors = 0  # the lookup got through
+                s.outcome = "placed"
+                rprint(f"  [cyan]found after transport error[/cyan] {opp.ticker}")
+                try:
+                    results.append(_book_accepted({"order": found}, s, trade_log, opp_venue))
+                except Exception as be:  # noqa: BLE001 -- same rule as BUG-03 above
+                    log.exception("Order for %s found but not booked", opp.ticker)
+                    rprint(f"  [red bold]FOUND, NOT BOOKED[/red bold] {opp.ticker}: {be}")
+                continue
             _record_failure(
                 opp.ticker,
                 opp.side,
-                f"transport failure (placement UNKNOWN — reconcile): {e.message}",
+                f"transport failure (placement UNKNOWN — reconcile; "
+                f"client_order_id {client_order_id}): {e.message}",
                 venue=opp_venue,
             )
             if consecutive_conn_errors >= MAX_CONSECUTIVE_CONN_ERRORS:
@@ -2405,6 +2444,53 @@ def _calibration_preflight(execute: bool) -> bool:
     return True
 
 
+EXECUTE_LOCK_TIMEOUT_SECONDS = 900
+
+
+class ExecuteRunBusy(RuntimeError):
+    """Another execute run for this profile held the lock past the timeout."""
+
+
+@contextmanager
+def execute_run_lock(timeout: float = EXECUTE_LOCK_TIMEOUT_SECONDS):
+    """ER-13: one execute run per profile, from state gathering through placement.
+
+    Two overlapping runs each read positions before either placed, so both
+    passed Gate 5 / Gate 6 / Gate 2b on the same ticker. The second run waits,
+    then reads the state the first one left. The trade-log lock is per write,
+    not per run, so it cannot do this.
+    """
+    from filelock import FileLock, Timeout
+
+    profile = get_config().system.profile
+    path = _trade_log_mod.TRADE_LOG_PATH.parent / f".execute_{profile}.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(str(path), timeout=timeout)
+    try:
+        lock.acquire()
+    except Timeout:
+        raise ExecuteRunBusy(f"another execute run for profile '{profile}' holds {path}") from None
+    try:
+        yield
+    finally:
+        lock.release()
+
+
+def _one_execute_run_per_profile(fn):
+    """Hold `execute_run_lock` around a pipeline call that may place orders."""
+    sig = inspect.signature(fn)
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not sig.bind(*args, **kwargs).arguments.get("execute", False):
+            return fn(*args, **kwargs)
+        with execute_run_lock():
+            return fn(*args, **kwargs)
+
+    return wrapper
+
+
+@_one_execute_run_per_profile
 def execute_pipeline(
     client: KalshiClient,
     opportunities: list[Opportunity],
@@ -2584,6 +2670,10 @@ def execute_pipeline(
     if venue == "kalshi":
         for _tkr, _sd in resting_sides(client, load_trade_log()).items():
             open_sides.setdefault(_tkr, _sd)
+    # ER-13: a resting zero-fill order is a ticker we already hold an intent on.
+    # Without it in this set, Gate 5 (duplicate ticker) and Gate 6 (per-event
+    # count) let a second order onto the same market before the first filled.
+    open_tickers |= set(open_sides)
     event_counts: dict[str, int] = {}
     for t in open_tickers:
         evt = _event_key(t)
