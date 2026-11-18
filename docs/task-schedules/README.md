@@ -266,7 +266,7 @@ REM WARNING: places live orders when DRY_RUN=false in .env.
 REM Self-locate the repo root (adjust ..\..\.. to your folder depth):
 cd /d "%~dp0..\..\.."
 
-REM UTF-8 so rich's box characters don't crash a redirected cp1252 stdout:
+REM Pin the log's encoding instead of leaving it to the machine's code page:
 set PYTHONIOENCODING=utf-8
 set LOG=logs\scan_same_day.log
 
