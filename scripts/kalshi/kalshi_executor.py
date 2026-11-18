@@ -585,23 +585,36 @@ def reload_risk_config() -> None:
 def parse_budget_arg(raw: str | None) -> float | None:
     """Parse a CLI `--budget` value into the form `execute_pipeline` expects.
 
-    Accepts three forms:
-        "10%"   -> 0.10   (10% of bankroll — fraction)
-        "15"    -> 0.15   (bare integer 1-100 interpreted as percentage)
-        "0.15"  -> 0.15   (explicit fraction; <=1)
-        "150"   -> 150.0  (>100 interpreted as flat dollar amount)
+    Returns a fraction of bankroll (<= 1) or a dollar amount (> 1):
+        "10%"   -> 0.10   (a trailing % always means percent: "1%" -> 0.01)
+        "15"    -> 0.15   (bare number above 1 and up to 100: percent)
+        "0.15"  -> 0.15   (bare number below 1: fraction)
+        "150"   -> 150.0  (bare number above 100: dollars)
+        "1"     -> ValueError (100% or 1%? ambiguous, so refused)
 
-    Shared by the sports, futures, and prediction scanners
-    so the `--budget` contract is identical across all three.
+    ER-14: the % used to be stripped before the range check, so "1%" and
+    "0.5%" fell into the fraction branch and meant 100% and 50% of bankroll.
+    Shared by the executor and the sports, futures, and prediction scanners
+    so the `--budget` contract is identical across all of them.
     """
     if raw is None:
         return None
-    num = float(str(raw).strip().rstrip("%"))
-    if num <= 1:
-        return num  # already a fraction (e.g., 0.15)
+    text = str(raw).strip()
+    if text.endswith("%"):
+        pct = float(text[:-1])
+        if not 0 < pct <= 100:
+            raise ValueError(f"--budget {raw!r}: percent must be above 0 and at most 100")
+        return pct / 100
+    num = float(text)
+    if not (math.isfinite(num) and num > 0):
+        raise ValueError(f"--budget {raw!r}: must be a positive number")
+    if num == 1:
+        raise ValueError(f"--budget {raw!r} is ambiguous: write '100%' or '1%'")
+    if num < 1:
+        return num
     if num <= 100:
-        return num / 100  # percentage (15 -> 0.15)
-    return num  # flat dollar amount (150 -> $150)
+        return num / 100
+    return num
 
 
 def min_edge_for(opp: "Opportunity") -> float:
@@ -3185,8 +3198,8 @@ def main():
         "--budget",
         type=str,
         default=None,
-        help="Max total cost for the batch. Percentage of bankroll (e.g. '10%%') "
-        "or dollar amount (e.g. '15'). Bets are proportionally scaled down "
+        help="Max total cost: '10%%' of bankroll, or dollars above 100 ('150'). "
+        "Bets are proportionally scaled down "
         "to stay within budget while preserving Kelly edge-weighting.",
     )
     run_p.add_argument(
@@ -3314,18 +3327,7 @@ def main():
             rprint("[yellow]No opportunities after filtering.[/yellow]")
             return
 
-        # Parse --budget: "15%" or "15" -> 0.15 (fraction of bankroll)
-        # Values <= 1 treated as fractions, 1-100 as percentages, >100 as dollars
-        budget_val = None
-        if args.budget is not None:
-            raw = args.budget.strip().rstrip("%")
-            num = float(raw)
-            if num <= 1:
-                budget_val = num
-            elif num <= 100:
-                budget_val = num / 100
-            else:
-                budget_val = num
+        budget_val = parse_budget_arg(args.budget)
 
         execute_pipeline(
             client=client,

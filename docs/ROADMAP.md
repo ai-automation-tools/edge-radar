@@ -62,6 +62,7 @@ One item per PR, titled `fix(ER-xx): …`.
 - [ ] **ER-05** (P1) Kalshi key rotation, with the **H8** runbook and the **M3** key-type choice. *(effort S)* 🔒 Needs owner
 - [ ] **ER-06** (P1) Public-repo data hygiene: stale branches and a history decision. *(effort S / L)* 🔒 Needs owner
 - [x] **ER-22** (P2) **Report emails rendered raw HTML from report text.** Done 2026-11-17: the renderer escapes HTML (`html=False`); placeholders like `<TN>` now show instead of vanishing. Pinned by `tests/test_render_report_email.py`.
+- [x] **ER-14** (P2) **`--budget 1%` meant 100% of bankroll.** Done 2026-11-17: a trailing `%` always means percent, a bare `1` is refused as ambiguous, the executor's duplicate parser is gone, and the four `--budget` help texts match the code (a bare `15` is 15%, not $15). Pinned by `tests/test_executor_cli.py`.
 
 ### 🩹 Money-path defects: fix next
 

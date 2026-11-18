@@ -675,8 +675,8 @@ if __name__ == "__main__":
         "--budget",
         type=str,
         default=None,
-        help="Max total cost for the batch. Percentage of bankroll (e.g. '10%%') "
-        "or dollar amount (e.g. '15'). Bets scaled down proportionally.",
+        help="Max total cost: '10%%' of bankroll, or dollars above 100 ('150'). "
+        "Bets scaled down proportionally.",
     )
     scan_p.add_argument(
         "--exclude-open",
