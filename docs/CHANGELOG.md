@@ -11,6 +11,7 @@
   `segment_key(ticker)`: the sport, else `unknown`. A new bet on a sport-less ticker used to be keyed
   by its scanner category (`futures`), while the positions it should count against sat in `unknown`,
   so `MAX_SEGMENT_EXPOSURE_PCT` never saw them together.
+- **Diagram** Re-pinned to the new executor: every cited executor range moved down 6 lines, same code.
 
 ---
 
