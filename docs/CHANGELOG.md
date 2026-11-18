@@ -17,6 +17,21 @@
 
 ---
 
+## 2026-11-18 -- Security re-lock: six packages
+
+GitHub listed 80 open Dependabot alerts on master (7 critical), all from six packages. Python is
+out of Dependabot's version updates (its re-locks drop `--universal`), so they are bumped here with
+the repo's own `make lock` command plus `--upgrade-package`; nothing else moved.
+
+- Runtime (`requirements.txt`): certifi 2026.10.23, cryptography 50.0.2 (was 49), filelock 4.2.12,
+  urllib3 2.8.0.
+- Dev only (`requirements-dev.txt`): the same four, plus pillow 13.0.0 and black 26.10.1.
+- Tested in a fresh venv from the new lock: full suite passes. `cryptography` signs every Kalshi
+  request, so `tests/test_kalshi_signing.py` now checks an RSA-PSS signature round-trips.
+- Supersedes Dependabot #389 (filelock).
+
+---
+
 ## 2026-11-18 -- Smaller agent docs (ER-47)
 
 Every agent session loaded ~30k tokens of AGENTS.md and the `/edge-radar` skill before doing anything,
