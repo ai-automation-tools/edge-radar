@@ -3,6 +3,7 @@
 import importlib.util
 import os
 import time
+from datetime import datetime
 from pathlib import Path
 
 _PATH = (
@@ -107,9 +108,62 @@ def test_non_execute_preset_never_fails(tmp_path, monkeypatch):
     assert r.failure("daily-summary", 3) is None
 
 
-def test_subject_carries_the_report_mode_line():
-    """ER-12: the subject says LIVE and how many orders were really placed."""
-    body = "# Sports Execution Report\n\n**LIVE · REAL MONEY · PROD** · 0 placed · 3 blocked\n"
-    want = "Edge-Radar | X | LIVE · REAL MONEY · PROD · 0 placed · 3 blocked"
-    assert r.with_mode("Edge-Radar | X", body) == want
-    assert r.with_mode("Edge-Radar | X", "# Daily Summary\n\n**Status: OK**\n") == "Edge-Radar | X"
+# ── ER-33: the inbox line answers "did it trade?"; the email reads on a phone
+
+LIVE_REPORT = (
+    "# Sports Execution Report\n\n**LIVE · REAL MONEY · PROD** · 1 placed · 1 failed\n\n"
+    "**Sized cost: $2.08**\n**Placed cost: $1.04**\n"
+)
+
+
+def _fixed_day(monkeypatch):
+    day = datetime(2026, 11, 16, 17, 5, tzinfo=r.LOCAL_ZONES[0][1])
+    monkeypatch.setattr(r, "_local_now", lambda: day)
+
+
+def test_subject_shows_mode_count_cost_and_date(monkeypatch):
+    _fixed_day(monkeypatch)
+    detail, cells, tone = r.status("Same-Day", LIVE_REPORT)
+    assert r.subject("Same-Day", detail) == (
+        "Edge-Radar | Same-Day | LIVE · 1 placed · 1 failed · $1.04 | Mon Nov 16"
+    )
+    assert ("Cost", "$1.04 placed") in cells and tone == "amber"
+
+
+def test_subject_for_dry_runs_failures_and_plain_reports(monkeypatch):
+    _fixed_day(monkeypatch)
+    dry = "**DRY RUN · nothing sent** · 2 dry run\n\n**Sized cost: $3.10**\n"
+    assert r.status("Next-Day", dry)[0] == "DRY RUN · 2 dry run · $3.10 sized"
+    failed = r.status("Same-Day", "", "scan exited 1")
+    assert r.subject("Same-Day", failed[0], failed=True) == (
+        "[FAILED] Edge-Radar | Same-Day | scan exited 1 | Mon Nov 16"
+    )
+    assert failed[2] == "red"
+    warn = r.status("Weekly Analysis", "# Audit\n\n**Status: WARN** · window 60d\n")
+    assert warn[0] == "WARN" and warn[2] == "amber"
+    assert r.subject("Daily Summary", r.status("Daily Summary", "# x\n")[0]) == (
+        "Edge-Radar | Daily Summary | Mon Nov 16"
+    )
+
+
+def test_page_has_banner_preheader_and_readable_footer(monkeypatch):
+    _fixed_day(monkeypatch)
+    page = r.wrap(["<p>body</p>"], "x.md", r.status("Same-Day", LIVE_REPORT))
+    assert page.index("display:none") < page.index('<table role="presentation"')
+    assert "LIVE · REAL MONEY · PROD · 1 placed · 1 failed · $1.04 placed" in page
+    assert "color:#6b7280;font-size:12px" in page and "#888" not in page
+    assert "PT" in page and "ET" in page and "UTC" in page
+
+
+def test_wide_table_gets_a_stacked_copy_for_phones():
+    wide = (
+        "| # | Sport | Bet | Type | Pick | When | Qty | Cost |\n"
+        "|--:|:--|:--|:--|:--|:--|--:|--:|\n"
+        "| 1 | NBA | LAL vs BOS | ML | LAL | Nov 16 | 2 | $1.04 |\n"
+    )
+    out = r.md_to_html(wide)
+    assert 'class="er-wide"' in out and 'class="er-stack"' in out
+    assert "<strong>#1 · NBA · LAL vs BOS</strong>" in out
+    assert '<span style="color:#6b7280">Cost</span> $1.04' in out
+    assert "er-stack" not in r.md_to_html(ORDERS)  # four columns fit a phone
+    assert "@media only screen and (max-width:600px)" in r.wrap([out], "x.md")

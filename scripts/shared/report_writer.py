@@ -7,6 +7,7 @@ Used by all scanners when --save is passed.
 
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from ticker_display import (
     parse_game_datetime,
@@ -23,6 +24,22 @@ REPORT_DIRS = {
     "futures": _PROJECT_ROOT / "reports" / "Futures",
     "prediction": _PROJECT_ROOT / "reports" / "Predictions",
 }
+
+
+# ER-33: report times in UTC plus the operator's and the market's zones.
+LOCAL_ZONES = (("PT", ZoneInfo("America/Los_Angeles")), ("ET", ZoneInfo("America/New_York")))
+
+
+def time_line(now: datetime | None = None) -> str:
+    """'08:05 PM UTC · 12:05 PM PT · 03:05 PM ET'"""
+    now = now or datetime.now(timezone.utc)
+    zones = (("UTC", timezone.utc),) + LOCAL_ZONES
+    return " · ".join(f"{now.astimezone(z):%I:%M %p} {name}" for name, z in zones)
+
+
+def plural(n: int, one: str, many: str | None = None) -> str:
+    """'1 order', '3 orders', '1 opportunity', '0 opportunities'."""
+    return f"{n} {one if n == 1 else (many or one + 's')}"
 
 
 def outcome_summary(orders: list, banner: str = "") -> str:
@@ -67,7 +84,6 @@ def save_scan_report(
 
     now = datetime.now(timezone.utc)
     date_str = now.strftime("%Y-%m-%d")
-    time_str = now.strftime("%I:%M %p UTC")
 
     # Build filename
     label = f"_{filter_label}" if filter_label else ""
@@ -86,8 +102,8 @@ def save_scan_report(
     lines.append(f"# {type_label} Edge Scan{f' — {filter_label.upper()}' if filter_label else ''}")
     lines.append("")
     lines.append(
-        f"*{now.strftime('%A, %B %d, %Y')} | {time_str} | "
-        f"{len(opportunities)} opportunities | min edge: {min_edge:.0%}*"
+        f"*{now.strftime('%A, %B %d, %Y')} | {time_line(now)} | "
+        f"{plural(len(opportunities), 'opportunity', 'opportunities')} | min edge: {min_edge:.0%}*"
     )
     lines.append("")
 
@@ -213,7 +229,8 @@ def save_execution_report(
     if mode:
         lines += [f"**{mode}** · {outcome_summary(sized_orders, mode)}", ""]
     lines += [
-        f"*{now.strftime('%A, %B %d, %Y | %I:%M %p UTC')} | {len(sized_orders)} orders sized | "
+        f"*{now.strftime('%A, %B %d, %Y')} | {time_line(now)} | "
+        f"{plural(len(sized_orders), 'order')} sized | "
         f"sized cost: ${total_cost:.2f} | min edge: {min_edge:.0%}*",
         "",
         "## Orders",

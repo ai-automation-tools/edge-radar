@@ -118,7 +118,7 @@ settled, or errored orders; a "dark" sport in the latest drift probe. The analys
 | Property | Value |
 |:--|:--|
 | **Action 1** | `run-hidden.vbs` → `maintenance\drift_check.bat` → `scripts/kalshi/integration_drift.py --save --analyze auto --autofix` |
-| **Action 2** | `render_report_email.py drift-check` → subject `Edge-Radar \| Integration Drift Check` |
+| **Action 2** | `render_report_email.py drift-check` → subject `Edge-Radar \| Drift Check \| … \| <date>` |
 | **Report** | `reports/Maintenance/drift/drift_<date>.md` |
 | **Cost** | Probe is deterministic, no model, **zero Odds API quota** (reads cached odds only) |
 
@@ -152,7 +152,7 @@ It **never merges**, never touches master, `mike_desktop`, `.env`, the executor 
 | Property | Value |
 |:--|:--|
 | **Action 1** | `maintenance\daily_summary.bat` → `daily_summary.py --save` |
-| **Action 2** | `render_report_email.py daily-summary` → `Edge-Radar \| Daily Summary` |
+| **Action 2** | `render_report_email.py daily-summary` → `Edge-Radar \| Daily Summary \| … \| <date>` |
 | **Report** | `reports/Performance/daily_summary_YYYY-MM-DD.md` (written even on empty days — proof of life) |
 
 Runs after the overnight settle passes and before the 5:05 execute, so "Open Exposure" reflects overnight carry, not today's fills. Also reports post-kickoff orders (S23b). Three blank sections every morning for a week is a real signal: fills not captured, settler not finding settlements, or the pipeline paused.
@@ -164,7 +164,7 @@ Runs after the overnight settle passes and before the 5:05 execute, so "Open Exp
 | **Script** | `same_day_executions\same_day_execute.bat` |
 | **Flags** | `--unit-size 1 --max-bets 5 --min-bets 1 --budget 12% --date today --exclude-open --save --execute` |
 | **Report** | `reports/Sports/schedulers/same-day-executions/` |
-| **Email** | `render_report_email.py same-day` → `Edge-Radar \| Same Day Execution Report` |
+| **Email** | `render_report_email.py same-day` → `Edge-Radar \| Same-Day \| … \| <date>` |
 
 MLB starters announced, NHL morning skate done, weather stable, before sharp money fully lands.
 
@@ -178,7 +178,7 @@ Runs `maintenance\shadow_book.bat`: `shadow_book.py settle`, then `collect --fil
 |:--|:--|
 | **Script** | `futures_executions\weekly_futures_execute.bat` |
 | **Flags** | `scan.py futures --unit-size 1 --max-bets 3 --min-bets 1 --budget 10% --exclude-open --save --report-dir "reports\Futures\schedulers" --execute` |
-| **Email** | `render_report_email.py weekly-futures` → `Edge-Radar \| Weekly Futures Execution Report` |
+| **Email** | `render_report_email.py weekly-futures` → `Edge-Radar \| Weekly Futures \| … \| <date>` |
 
 Thin, longshot-heavy boards — most weeks place **0 bets**, by design. `futures_edge.py` always writes a report on `--save`, so empty weeks still email. Offseason series with no outright odds are skipped; golf prices only the 4 majors.
 
@@ -192,7 +192,7 @@ Direct `python.exe scripts\schedulers\automation\refresh_account_graph.py`. Pull
 |:--|:--|
 | **Script** | `no_date_filter_executions\no_date_filter_execution_midday.bat` |
 | **Flags** | `--unit-size 1 --max-bets 5 --min-bets 1 --budget 12% --exclude-open --save --execute` (**no `--date`**) |
-| **Email** | `render_report_email.py nodatefilter-midday` → `Edge-Radar \| NoDateFilter Midday Execution Report` |
+| **Email** | `render_report_email.py nodatefilter-midday` → `Edge-Radar \| Midday \| … \| <date>` |
 
 The no-date-filter scan finds candidates nearly every run while `--date today` is empty most mornings; slate width was the bottleneck, not time of day (`timing-analysis-2026-05-17.md`). 11 AM also catches MLB pitcher confirmations and NBA/NHL morning-skate news. Gate 3.7 (14-day cap) bounds how far out it can buy game markets.
 
@@ -202,7 +202,7 @@ The no-date-filter scan finds candidates nearly every run while `--date today` i
 |:--|:--|
 | **Script** | `same_day_executions\same_day_execute_late.bat` |
 | **Flags** | `--unit-size 1 --max-bets 5 --min-bets 1 --budget 12% --date today --exclude-open --save --execute` |
-| **Email** | `render_report_email.py same-day-late` → `Edge-Radar \| Same-Day Late Execution Report` |
+| **Email** | `render_report_email.py same-day-late` → `Edge-Radar \| Same-Day Late \| … \| <date>` |
 
 Late-breaking news on tonight's slate: scratches, goalie confirmations, afternoon sharp moves.
 
@@ -224,7 +224,7 @@ Late-breaking news on tonight's slate: scratches, goalie confirmations, afternoo
 |:--|:--|
 | **Script** | `next_day_executions\next_day_execute.bat` |
 | **Flags** | `--unit-size 1 --max-bets 5 --min-bets 1 --budget 12% --date tomorrow --exclude-open --save --execute` |
-| **Email** | `render_report_email.py next-day` → `Edge-Radar \| Next Day Edge Report` |
+| **Email** | `render_report_email.py next-day` → `Edge-Radar \| Next-Day \| … \| <date>` |
 
 8:30 PM PT gives books time to post next-day lines (it was empty 43% of the time at 6 PM). Fri/Sat are skipped; the Sunday 5:05 AM run covers Sunday NFL with fresher data. To run it ad hoc on a skipped night: `Start-ScheduledTask -TaskPath '\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\' -TaskName 'All-Sports-NextDay-Execution'`.
 
@@ -243,7 +243,7 @@ JSON file in the zip doesn't parse. Log: `logs/backup_ledger_<date>.log`. Restor
 | Property | Value |
 |:--|:--|
 | **Action 1** | `maintenance\weekly_analysis.bat` → `betting_analysis.py --days 7 --save` |
-| **Action 2** | `render_report_email.py weekly-analysis` → `Edge-Radar \| Weekly Performance Analysis` |
+| **Action 2** | `render_report_email.py weekly-analysis` → `Edge-Radar \| Weekly Analysis \| … \| <date>` |
 | **Report** | `reports/Performance/betting_analysis_YYYY-MM-DD_7d.md` |
 
 Runs after Reconcile and the 11:35 settle. The filename carries the UTC date (tomorrow's), which is why the emailer picks the newest fresh file rather than today's name.
@@ -338,23 +338,28 @@ cd /d "%~dp0..\..\.."
 
 | Preset | Task | Subject | Log |
 |:--|:--|:--|:--|
-| `drift-check` | `Integration-Drift-Check` | `Edge-Radar \| Integration Drift Check` | `logs/email_drift_check.log` |
-| `daily-summary` | `Daily-Summary` | `Edge-Radar \| Daily Summary` | `logs/email_daily_summary.log` |
-| `same-day` | `All-Sports-SameDay-Execution` | `Edge-Radar \| Same Day Execution Report` | `logs/email_sameday.log` |
-| `nodatefilter-midday` | `All-Sports-NoDateFilter-Midday-Execution` | `Edge-Radar \| NoDateFilter Midday Execution Report` | `logs/email_nodatefilter_midday.log` |
-| `same-day-late` | `All-Sports-SameDay-Late-Execution` | `Edge-Radar \| Same-Day Late Execution Report` | `logs/email_sameday_late.log` |
-| `next-day` | `All-Sports-NextDay-Execution` | `Edge-Radar \| Next Day Edge Report` | `logs/email_nextday.log` |
-| `weekly-futures` | `Weekly-Futures-Execution` | `Edge-Radar \| Weekly Futures Execution Report` | `logs/email_futures.log` |
-| `weekly-analysis` | `Weekly-Analysis` | `Edge-Radar \| Weekly Performance Analysis` | `logs/email_weekly_analysis.log` |
+| `drift-check` | `Integration-Drift-Check` | `Edge-Radar \| Drift Check \| … \| <date>` | `logs/email_drift_check.log` |
+| `daily-summary` | `Daily-Summary` | `Edge-Radar \| Daily Summary \| … \| <date>` | `logs/email_daily_summary.log` |
+| `same-day` | `All-Sports-SameDay-Execution` | `Edge-Radar \| Same-Day \| … \| <date>` | `logs/email_sameday.log` |
+| `nodatefilter-midday` | `All-Sports-NoDateFilter-Midday-Execution` | `Edge-Radar \| Midday \| … \| <date>` | `logs/email_nodatefilter_midday.log` |
+| `same-day-late` | `All-Sports-SameDay-Late-Execution` | `Edge-Radar \| Same-Day Late \| … \| <date>` | `logs/email_sameday_late.log` |
+| `next-day` | `All-Sports-NextDay-Execution` | `Edge-Radar \| Next-Day \| … \| <date>` | `logs/email_nextday.log` |
+| `weekly-futures` | `Weekly-Futures-Execution` | `Edge-Radar \| Weekly Futures \| … \| <date>` | `logs/email_futures.log` |
+| `weekly-analysis` | `Weekly-Analysis` | `Edge-Radar \| Weekly Analysis \| … \| <date>` | `logs/email_weekly_analysis.log` |
 
 - **Which report:** the newest file in the preset's folder modified within `--max-age-hours` (default 3) — not today's name, because filenames carry the UTC date.
 - **Failed execute run (ER-07):** for the five execute presets, a non-zero `exit code` in the scan log or no
-  fresh report sends `[FAILED] <subject>` with the log's last run and exits **1**. Every execute run writes a
+  fresh report sends `[FAILED] Edge-Radar | <label> | <reason> | <date>` with the log's last run and exits **1**. Every execute run writes a
   report, even with zero bets, so a missing one means the scan died.
-- **Mode in the subject (ER-12):** an execution report opens with a mode line such as
-  `**LIVE · REAL MONEY · PROD** · 2 placed · 1 failed`, and the subject gets it appended:
-  `Edge-Radar | Same Day Execution Report | LIVE · REAL MONEY · PROD · 2 placed · 1 failed`. A live run that
-  placed nothing says `0 placed`. Other modes: `DRY RUN · nothing sent`, `DEMO · paper orders`, `PREVIEW · …`.
+- **Outcome in the subject (ER-12, ER-33):** an execution report opens with a mode line such as
+  `**LIVE · REAL MONEY · PROD** · 2 placed · 1 failed`, and the subject reads
+  `Edge-Radar | Same-Day | LIVE · 2 placed · 1 failed · $2.08 | Mon Nov 16`: mode, outcome, placed cost (sized
+  cost on a dry run), then the PT date, which also stops Gmail threading every day into one conversation. A live
+  run that placed nothing says `0 placed`. Reports with a `**Status: X**` line put X there (the drift check,
+  the weekly audit); a failed run puts its reason, after `[FAILED]`.
+- **Banner and phone layout (ER-33):** a three-cell banner (mode, orders, cost; or report, status, time) opens
+  the email and doubles as the inbox preview line. Tables wider than six columns get a stacked copy, one card per
+  row, that replaces them below 600px wide. Report times read UTC · PT · ET.
 - **No fresh report, other presets:** exits 2 and sends nothing. A stale email is worse than none.
 - **Preview:** `render_report_email.py same-day --dry-run out.html`. **Probe Resend without spending quota:** `send_report_email.py --check`.
 - Every successful send stamps `logs/last_email_sent.json`, so a broken mail path is detectable on its own.
