@@ -135,7 +135,7 @@ def test_public_page_links_every_template_to_cronsole(public: str) -> None:
 
 def test_public_gate_grid_matches_claude_md(public: str) -> None:
     expected = _gate_rows()
-    assert len(expected) == 21
+    assert len(expected) == 22
     script = public[
         public.index("const GATES = [") : public.index("];", public.index("const GATES = ["))
     ]

@@ -191,6 +191,65 @@ def persist_trade(record: dict, attempts: int = 8, delay: float = 0.1) -> bool:
     return False
 
 
+def pending_dir() -> Path:
+    return TRADE_LOG_PATH.parent / "pending_orders"
+
+
+def write_pending(client_order_id: str, record: dict) -> None:
+    """ER-13: the row for an order about to be POSTed, one file per order.
+
+    The executor deletes it once the outcome is recorded, so a file that
+    outlives its run means the run died mid-request (or the venue took an
+    order nothing booked). `recover_pending` settles it.
+    """
+    path = pending_dir() / f"{client_order_id}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record, default=str), encoding="utf-8")
+
+
+def clear_pending(client_order_id: str) -> None:
+    (pending_dir() / f"{client_order_id}.json").unlink(missing_ok=True)
+
+
+def recover_pending(lookup, min_age_s: float = 900, now: float | None = None) -> int:
+    """Book what a crashed execute run sent but never logged; return how many.
+
+    `lookup(ticker, client_order_id)` returns the venue's order, None when the
+    venue never got it, or raises when it cannot tell (the file is then kept
+    for the next settle). Files younger than `min_age_s` belong to a run that
+    may still be placing. A found order with no fill that is no longer resting
+    cost nothing and is dropped; anything else is booked once (by `order_id`)
+    and refreshed by the usual pre-settle order read (BUG-01).
+    """
+    root = pending_dir()
+    if not root.is_dir():
+        return 0
+    now = time.time() if now is None else now
+    booked = 0
+    for path in sorted(root.glob("*.json")):
+        if now - path.stat().st_mtime < min_age_s:
+            continue
+        try:
+            rec = json.loads(path.read_text(encoding="utf-8"))
+            order = lookup(rec["ticker"], rec.get("client_order_id") or path.stem)
+        except Exception as e:  # noqa: BLE001 -- unknown stays pending
+            log.warning("pending order %s not resolved (%s); kept", path.name, e)
+            continue
+        if order is not None:
+            fill = float(order.get("fill_count_fp") or order.get("fill_count") or 0)
+            left = float(order.get("remaining_count_fp") or order.get("remaining_count") or 0)
+            status = order.get("status", "unknown")
+            if fill > 0 or status == "resting":
+                rec.update(order_id=order.get("order_id", ""), status=status)
+                set_row_fills(rec, fill, left)
+                if rec["order_id"] not in {t.get("order_id") for t in load_trade_log()}:
+                    persist_trade(rec)
+                    booked += 1
+                    log.warning("Booked order %s from a pending file (ER-13)", rec["order_id"])
+        path.unlink()
+    return booked
+
+
 def journal_path() -> Path:
     return TRADE_LOG_PATH.parent / "trade_journal.jsonl"
 

@@ -15,6 +15,35 @@
 
 ---
 
+## 2026-11-18 -- A pending row before every order POST (ER-13 leftover)
+
+- **The gap:** an order whose POST reached Kalshi while the run died (killed task, crash, power) before
+  `log_trade` left no ledger row. Reconcile only flags *filled* positions it can't explain, and a resting
+  order was invisible to it.
+- **Fix:** `_place_order_batch` writes the order's row to `data/history/pending_orders/<client_order_id>.json`
+  before `create_order` and deletes it once the outcome is recorded. No file, no POST. The file is kept
+  when the outcome is unknown (transport error with no match yet) or the venue accepted an order that
+  could not be booked.
+- **Recovery:** `kalshi_settler.py settle` runs `recover_pending` first: for each file over 15 minutes old
+  it looks the order up by `client_order_id`, books it once (by `order_id`) if it filled or is resting,
+  and drops it otherwise. A failed lookup keeps the file for the next settle.
+- `log_trade`'s row builder is now `_trade_record`, shared by the pending file. Tests in
+  `tests/test_order_idempotency.py`.
+
+---
+
+## 2026-11-18 -- Gate 1b in the docs; `RESEND_API_KEY` belongs in `.env`
+
+- **Gate 1b** (no bankroll, ER-43) has run in `GATES` since the ER-43 fix but was missing from every
+  gate table. It is now listed in `AGENTS.md`, `ARCHITECTURE.md`, `kalshi_executor.md` and the public
+  gate grid, and every count says **22 risk gates** (README, site, ops deck, skill).
+- **`RESEND_API_KEY`:** `.env.example` and the task-schedules README no longer advise
+  `setx`. The key goes in `.env` like every other secret; an OS variable of the same name still
+  works and wins, because `load_dotenv` does not override. No code change.
+- Markdown-it-py re-locked to 4.3.0 (#416, supersedes Dependabot #366).
+
+---
+
 ## 2026-11-18 -- Futures power de-vig behind a flag, A/B'd in the shadow book (ER-42 / B5)
 
 - **`devig_power()`** in `futures_edge.py`: finds the `k` with `sum(p_i ** k) == 1`, which takes more of

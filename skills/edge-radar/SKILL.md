@@ -299,7 +299,7 @@ Read the one a request needs; each holds sections moved verbatim from this file 
 1. **Always check status first** before any scan or bet — if daily loss limit is breached, STOP.
 2. **Never execute yourself.** Order-placing commands are the user's to run (`! <command>`); the ER-01 hook blocks them for agents.
 3. **Preview is the default** — every scan shows a table first, orders only placed with `--execute`.
-4. **All 21 risk gates** in the AGENTS.md table are checked before every order, plus the resting-order janitor at the top of every live execute run. Gate notes: [references/risk-limits.md](references/risk-limits.md).
+4. **All 22 risk gates** in the AGENTS.md table are checked before every order, plus the resting-order janitor at the top of every live execute run. Gate notes: [references/risk-limits.md](references/risk-limits.md).
 5. **API keys are in `.env`** — never print, log, or expose them.
 6. **R26 row-order lock for `--pick`** — when running `--execute --pick/--ticker`, keep filter args identical to the previous preview so the cached row→ticker mapping replays. If anything differs, the executor prints a bold red banner and rescans (different rows). Pass `--rescan` only when you intend a fresh ranking.
 7. **R8 cross-category dedup is opt-in** — by default ML+Total+Spread on the same game survive as 3 distinct bets (current behavior). To collapse them per sport, set `CROSS_CATEGORY_DEDUP_<SPORT>=true` (e.g. `CROSS_CATEGORY_DEDUP_NBA=true`); when active, the dedup banner names the sports (`Deduped correlated brackets: 12 -> 8 opportunities (cross-category: ['nba'])`). Per-sport `false` overrides the global flag in either direction.
