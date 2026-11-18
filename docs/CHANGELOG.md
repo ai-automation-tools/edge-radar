@@ -22,6 +22,36 @@ place rather than move it.
 
 ---
 
+## 2026-11-18 -- Gate 1 counts an Eastern day (ER-16)
+
+- **Gate 1's "today" was UTC's calendar day**, which rolls over at 7-8 pm ET, in the middle of the
+  evening slate: losses closed before and after it sat on two different `MAX_DAILY_LOSS` budgets.
+  `get_today_pnl()` now converts each `closed_at` to `DAILY_LOSS_TZ` (default `America/New_York`,
+  owner's choice over a rolling 24 h) and sums the zone's calendar day. Rows closed at 23:30Z and
+  00:30Z both count toward an 01:00Z check.
+- A naive stamp is read as UTC; one that does not parse still counts if it starts with today's date,
+  so a malformed row cannot hide a loss. A bad zone name fails config validation.
+- Same function feeds the executor status line and `risk_check.py`, so all three agree. The
+  Daily-Summary's rolling 24 h "yesterday" is a report window, not the gate, and is unchanged.
+- Tests: `tests/test_daily_loss_window.py`.
+
+---
+
+## 2026-11-18 -- Security re-lock: six packages
+
+GitHub listed 80 open Dependabot alerts on master (7 critical), all from six packages. Python is
+out of Dependabot's version updates (its re-locks drop `--universal`), so they are bumped here with
+the repo's own `make lock` command plus `--upgrade-package`; nothing else moved.
+
+- Runtime (`requirements.txt`): certifi 2026.10.23, cryptography 50.0.2 (was 49), filelock 4.2.12,
+  urllib3 2.8.0.
+- Dev only (`requirements-dev.txt`): the same four, plus pillow 13.0.0 and black 26.10.1.
+- Tested in a fresh venv from the new lock: full suite passes. `cryptography` signs every Kalshi
+  request, so `tests/test_kalshi_signing.py` now checks an RSA-PSS signature round-trips.
+- Supersedes Dependabot #389 (filelock).
+
+---
+
 ## 2026-11-18 -- Smaller agent docs (ER-47)
 
 Every agent session loaded ~30k tokens of AGENTS.md and the `/edge-radar` skill before doing anything,

@@ -345,12 +345,38 @@ def for_profile(trades: list[dict], profile: str | None = None) -> list[dict]:
     return [t for t in trades if t.get("profile", "main") == profile]
 
 
-def get_today_pnl(trades: list[dict] | None = None) -> float:
-    """Calculate today's realized P&L from the trade log."""
+def get_today_pnl(
+    trades: list[dict] | None = None, now: datetime | None = None, tz: str | None = None
+) -> float:
+    """Realized P&L for today's calendar day in `DAILY_LOSS_TZ` (ER-16; Gate 1).
+
+    The day used to be UTC's, which rolls over at 7-8 pm ET, in the middle of
+    the evening slate: a loss closed at 23:30Z and one at 00:30Z landed on two
+    different limits. `closed_at` is compared as an instant, converted to the
+    zone; a naive stamp is read as UTC, and one that does not parse still
+    counts if it starts with today's date, so a malformed row never hides a loss.
+    """
+    from zoneinfo import ZoneInfo
+
     if trades is None:
         trades = load_trade_log()
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    return sum(t.get("net_pnl", 0) for t in trades if (t.get("closed_at") or "").startswith(today))
+    if tz is None:
+        from app.config import get_config
+
+        tz = get_config().risk.daily_loss_tz
+    zone = ZoneInfo(tz)
+    today = (now or datetime.now(timezone.utc)).astimezone(zone).date()
+
+    def closed_today(stamp: str) -> bool:
+        try:
+            dt = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        except ValueError:
+            return stamp.startswith(today.isoformat())
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(zone).date() == today
+
+    return sum(t.get("net_pnl", 0) for t in trades if closed_today(t.get("closed_at") or ""))
 
 
 def get_filled_contracts(trade: dict) -> float:
