@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-11-18 -- Kalshi key-rotation runbook; new keys must be RSA (H8, M3)
+
+- **`docs/setup/KEY_ROTATION.md`:** where a key lives (`.env`, the PEM, profile overrides, hosted
+  `KALSHI_PRIVATE_KEY`), then create → install → check with `doctor.py` → revoke the old key → check
+  again → delete old copies. Warns that `doctor.py --verify-eligibility` places a real order.
+- **RSA, not Ed25519:** Kalshi's dialog has defaulted new keys to Ed25519 since 2026-10-01 and
+  `kalshi_client.py` signs RSA-PSS only. SETUP_GUIDE now says to pick RSA. Roadmap H8 and M3 closed.
+
+---
+
 ## 2026-11-18 -- Balance reads paced to Kalshi's 1/s bucket (K1, ER-44 leftover)
 
 - Since 2026-10-15 `GET /portfolio/balance` allows 1 request per second with no burst. A batch that

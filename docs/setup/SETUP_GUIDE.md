@@ -96,7 +96,8 @@ Kalshi uses RSA key-pair authentication. You'll need an **API Key ID** and a **p
 
 1. Go to [demo.kalshi.com](https://demo.kalshi.com) and create a free demo account
 2. **Settings > API Keys** → [demo.kalshi.com/account/api-keys](https://demo.kalshi.com/account/api-keys)
-3. Click **Create API Key**
+3. Click **Create API Key** and set the key type to **RSA**. Kalshi defaults to Ed25519, which this
+   client cannot sign with (every call fails with an auth error)
 4. Kalshi generates:
    - **API Key ID** — a short string like `a1b2c3d4-e5f6-7890-abcd-ef1234567890`
    - **Private Key** — a PEM file download (saved immediately, shown only once)
@@ -109,7 +110,8 @@ Kalshi uses RSA key-pair authentication. You'll need an **API Key ID** and a **p
 
 1. [kalshi.com](https://kalshi.com) → log in to your funded account
 2. **Settings > API Keys** → [kalshi.com/account/api-keys](https://kalshi.com/account/api-keys)
-3. Create a new API key (same process as demo)
+3. Create a new API key (same process as demo, **RSA** key type). To replace a key later, follow
+   [KEY_ROTATION.md](KEY_ROTATION.md)
 4. Save the API Key ID and private key file
 
 > **Production API base URL:** `https://api.elections.kalshi.com/trade-api/v2`
