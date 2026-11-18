@@ -33,9 +33,14 @@ TEMPLATES = {t[0]: reg.template(*t) for t in reg.TEMPLATES}
 
 
 def _scan_flags(tokens: list[str]) -> list[str]:
-    """Flags after `sports`, without the two that legitimately differ (where, and whether live)."""
+    """Flags after `sports`, without the two that legitimately differ (where, and whether live).
+
+    Stops at a shell redirect: the .bat appends its output to a log (ER-07).
+    """
     out, skip = [], False
     for tok in tokens[tokens.index("sports") + 1 :]:
+        if tok.startswith((">", "2>")):
+            break
         if skip:
             skip = False
         elif tok in ("--report-dir", "--mode"):
@@ -57,7 +62,7 @@ def test_every_installer_profile_has_a_template_or_a_reason():
 
 @pytest.mark.parametrize("profile", ["scan", "execute", "next-day"])
 def test_scan_templates_pass_the_same_flags_as_their_bat(profile):
-    # The .bat files are gitignored, so this runs only where they exist (the owner's machine).
+    # The scheduled .bat files are tracked since ER-27, so this runs everywhere.
     bat = installer.TASK_PROFILES[profile]["script"]
     if not bat.exists():
         pytest.skip(f"{bat.name} is not in this checkout")
