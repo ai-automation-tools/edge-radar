@@ -45,8 +45,8 @@ Nothing below blocks go-live.
 
 ### 🔎 Audit follow-ups, 2026-11-16
 
-A full audit at `610b403` raised 53 items (`ER-01` to `ER-53`); the P0 and P1 ones are below, in work
-order. Security and privacy detail stays in the owner's private audit report, not in public issues.
+A full audit at `610b403` raised 53 items (`ER-01` to `ER-53`); the P0 and P1 ones are below in work
+order, then each later one as it landed. Security and privacy detail stays in the owner's private audit report, not in public issues.
 One item per PR, titled `fix(ER-xx): …`.
 
 - [x] **ER-01** (P0) **Enforce human approval and a client-level hard cap before any live order.** A committed PreToolUse hook that blocks agent-run order commands in every permission mode, `.claude/settings.json` deny rules for `.env` and `keys/`, `disable-model-invocation` on the `edge-radar` skill, a `MAX_BET_SIZE` notional cap and a `data/KILL` kill switch inside `KalshiClient.create_order` (the switch also stops shard transfers), and the `scan.py --execute` help text no longer promises a confirmation. Done 2026-11-17; pinned by `tests/test_client_guards.py`.
@@ -69,6 +69,12 @@ One item per PR, titled `fix(ER-xx): …`.
 - [x] **ER-25** (P2) **Execute prompts previewed nothing and waited for nothing.** Done 2026-11-17: the nine prompts that place orders now run a sizing preview without `--execute`, wait for **go**, then place only the chosen rows (`--pick` for sports, which replays the cached preview; `--ticker` for futures and predictions, which don't cache). Pinned by `tests/test_prompts.py`.
 - [x] **ER-19** (P2) **The gate chain was written three times and the copies drifted.** Done 2026-11-17: one ordered `GATES` list in `kalshi_executor.py` runs the fresh scan, the scan preview and the `--pick`/`--ticker` replay, which now checks every gate against current state and config. The test suite no longer reads the operator's `.env`. Not done: a frozen `RiskConfig` in place of the module globals. Pinned by `tests/test_gate_list.py`.
 - [x] **ER-33** (P2) **Report emails didn't say what happened until opened, and clipped on phones.** Done 2026-11-17: subjects read `Edge-Radar | Same-Day | LIVE · 2 placed · 1 failed · $2.08 | Mon Nov 16` (no more one-thread-per-preset), a status banner and preheader open each email, wide tables stack into cards under 600px, report times show UTC · PT · ET, counts are pluralised and the footer meets contrast. Pinned by `tests/test_render_report_email.py` and `tests/test_report_writer.py`.
+- [x] **ER-18** (P2) **Scripts failed to import on a fresh clone.** Done 2026-11-17: every entry point puts `scripts/shared` on `sys.path` itself, so no venv `.pth` file is needed. Pinned by `tests/test_fresh_clone_imports.py`.
+- [x] **ER-21** (P2) **CI ran no lint or secret scan, and only one Python.** Done 2026-11-17: tests on 3.11 and 3.12, the pre-commit hooks on each PR's changed files, one required `ci` gate (see T3).
+- [x] **ER-20** (P2) **Dependencies were unpinned.** Done 2026-11-17: hashed `requirements.txt` / `requirements-dev.txt` built by `make lock`, CI installs with `--require-hashes`, Actions pinned by SHA. Python is out of Dependabot, whose re-lock dropped the Windows-only pins; re-lock with `make lock`.
+- [x] **ER-27** (P2) **The scheduled wrappers and the email sender were untracked.** Done 2026-11-17: the 15 task `.bat` wrappers and the hidden launcher are tracked (change them by PR), and `scripts/schedulers/automation/send_report_email.py` is the one send path (`--check` probes Resend). Not done: a weekly export of the task XML. Pinned by `tests/test_scheduler_wrappers.py`.
+- [x] **ER-35, 37, 38, 40, 41, 43, 44, 46** (P3) **Money-path hardening.** Done 2026-11-17: exact demo-host check, read retries (never on order POSTs), paginated positions and orders, a `no_bankroll` reject at $0, dollar-first balances and null-safe accounting helpers, Gate 7 ignores error and dry-run rows, shard funding covers the fee, and the scan cache and `risk_check` are per wallet. Pinned by `tests/test_money_path_p3.py`.
+- [ ] **Still open from the audit:** P2 ER-23, 26, 28, 29, 30, 31, 32 and owner items ER-16, 24, 34; P3 ER-36, 39, 42, 45, 47 to 53. Smaller leftovers: a pending ledger row before each order POST (ER-13), one balance read per batch, a frozen `RiskConfig` (ER-19), Gate 1b in the AGENTS.md gate table and the site's gate grid together.
 
 ### 🩹 Money-path defects: fix next
 

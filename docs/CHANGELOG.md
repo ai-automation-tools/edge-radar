@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-17 -- Roadmap catches up with the audit fixes
+
+- **Docs** `docs/ROADMAP.md` now lists every audit item merged so far, including ER-18, ER-20, ER-21,
+  ER-27 and the P3 money-path batch, which shipped without their own roadmap lines, and ends the audit
+  section with what is still open.
+
+---
+
 ## 2026-11-17 -- Report emails answer "did it trade?" from the inbox (ER-33)
 
 - **Email** Subjects carry the outcome and the date:
