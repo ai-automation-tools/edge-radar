@@ -486,9 +486,8 @@ Spherical: 0.20/√(0.80²+0.20²) = 0.243
 
 ## Return to Main Skill
 
-[← Back to Market Mechanics & Betting](../SKILL.md)
+[← Back to Betting-Logic Review](../SKILL.md)
 
 **Related Resources:**
 - [Betting Theory Fundamentals](betting-theory.md)
 - [Kelly Criterion Deep Dive](kelly-criterion.md)
-

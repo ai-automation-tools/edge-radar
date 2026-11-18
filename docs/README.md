@@ -19,7 +19,7 @@ Only `README.md` and `CHANGELOG.md` live at the root of `docs/`. Everything else
 *   [SETUP_GUIDE.md](./setup/SETUP_GUIDE.md) — Step-by-step instructions to configure API keys, venv, and RSA private credentials.
 *   [ARCHITECTURE.md](./setup/ARCHITECTURE.md) — In-depth overview of the pipeline, Kelly sizing equations, and risk gating conditions.
 *   [AUTOMATION_GUIDE.md](./setup/AUTOMATION_GUIDE.md) — Setting up the automated scanners and schedulers.
-*   [mcp-servers.md](./setup/mcp-servers.md) — MCP Server setup for Edge-Radar.
+*   [mcp-servers.md](./setup/mcp-servers.md) — why Edge-Radar needs no MCP server.
 *   **[diagrams/](./diagrams/README.md) — the betting logic data-flow diagram the [homepage](https://edge-radar.ai-automation-tools.dev/#pipeline) shows** (interactive, every box linked to its code). Generated from one JSON; a pre-commit hook and `--check` flag it when cited code changes.
 *   [pipeline-diagram.md](./setup/pipeline-diagram.md) — End-to-end pipeline & data-flow diagram (scan → edge models → risk gating → execution → calibration feedback).
 

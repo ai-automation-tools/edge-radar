@@ -142,5 +142,6 @@ def test_skill_and_agent_do_not_invite_bypasses():
     skill = (ROOT / "skills" / "edge-radar" / "SKILL.md").read_text(encoding="utf-8")
     assert "disable-model-invocation: true" in skill.split("---")[1]
     assert "no confirmation needed" not in skill and "still asks" not in skill
-    agent = (ROOT / ".claude" / "agents" / "KALSHI_BETTOR.md").read_text(encoding="utf-8")
-    assert "insist" not in agent and "just do it" not in agent
+    for agent in (ROOT / ".claude" / "agents").glob("*.md"):  # ER-26 retired kalshi-bettor
+        text = agent.read_text(encoding="utf-8")
+        assert "insist" not in text and "just do it" not in text, agent.name
