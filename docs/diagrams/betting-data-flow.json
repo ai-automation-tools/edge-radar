@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "edd820574b222105d082f721c7a1dbf32e775076"
+      "revision": "8e0911d87320cfe096a5e27558503b5746991ea2"
     }
   },
   "stages": [
@@ -216,8 +216,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 2577,
-          "end_line": 2681
+          "line": 2608,
+          "end_line": 2712
         }
       ]
     },
@@ -232,13 +232,13 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 873,
-          "end_line": 908
+          "line": 875,
+          "end_line": 910
         },
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 631,
-          "end_line": 682
+          "line": 633,
+          "end_line": 684
         }
       ]
     },
@@ -252,8 +252,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1608,
-          "end_line": 1741
+          "line": 1610,
+          "end_line": 1743
         }
       ]
     },
@@ -267,8 +267,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1578,
-          "end_line": 1587
+          "line": 1580,
+          "end_line": 1589
         }
       ]
     },
@@ -283,8 +283,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1994,
-          "end_line": 2228
+          "line": 2001,
+          "end_line": 2259
         },
         {
           "path": "scripts/kalshi/kalshi_client.py",
@@ -303,8 +303,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1836,
-          "end_line": 1949
+          "line": 1838,
+          "end_line": 1956
         },
         {
           "path": "scripts/shared/paths.py",
@@ -323,8 +323,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_settler.py",
-          "line": 383,
-          "end_line": 705
+          "line": 384,
+          "end_line": 717
         }
       ]
     },
@@ -338,8 +338,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_settler.py",
-          "line": 247,
-          "end_line": 307
+          "line": 248,
+          "end_line": 308
         }
       ]
     }

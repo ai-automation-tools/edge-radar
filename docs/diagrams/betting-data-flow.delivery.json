@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "receiptId": "ce3d365a-9601-490f-9afb-05523232488f",
+  "receiptId": "447fca5a-9a99-4695-94da-26cbcc435b25",
   "status": "current",
   "command": "deliver",
   "type": "dataflow",
-  "input": "D:\\AI_Agents\\_maintenance\\tmp\\er53\\docs\\diagrams\\betting-data-flow.json",
-  "output": "D:\\AI_Agents\\_maintenance\\tmp\\er53\\docs\\diagrams\\betting-data-flow.html",
+  "input": "D:\\AI_Agents\\_maintenance\\tmp\\er13p\\docs\\diagrams\\betting-data-flow.json",
+  "output": "D:\\AI_Agents\\_maintenance\\tmp\\er13p\\docs\\diagrams\\betting-data-flow.html",
   "specification": {
-    "sha256": "c994cb27aaa52fa9a20b5d279cbddfd1252ca25ed46ce1402d46f7d37007afa6",
+    "sha256": "43b59fc80262a1f3bed851858c1011d0c445f3e7b373fe8f5adbe278896b328f",
     "bytes": 12073
   },
   "artifact": {
-    "sha256": "f604536dcd2939f31d0c6362cdad5f2b75534ebc92fb494669ab4dd7e31fe457",
+    "sha256": "9a61c8d2f670fd73eb4882972522bb489121ea1330ce2039cf9f7330d89cfd96",
     "bytes": 844768
   }
 }
