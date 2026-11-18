@@ -103,7 +103,7 @@ def test_drift_check_flags_sport_with_odds_but_no_series(monkeypatch, tmp_path):
     import integration_drift as idr
 
     soon = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
-    monkeypatch.setattr(idr, "KalshiClient", lambda: None)
+    monkeypatch.setattr(idr, "PublicMarkets", lambda: None)
     monkeypatch.setattr(idr, "fetch_series", lambda client, prefix: [])
     monkeypatch.setattr(
         idr,

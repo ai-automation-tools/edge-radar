@@ -131,12 +131,19 @@ settled, or errored orders; a "dark" sport in the latest drift probe. The analys
 | Outcome of the fix session | Result |
 |:--|:--|
 | No files changed (false positive, or not confident) | **No PR.** Report says "No code change proposed" |
-| Touched anything outside parsing/matching code + tests (`edge_detector.py`, `futures_edge.py`, `kalshi_client.py`, `ticker_display.py`, `odds_api.py`, `market_client.py`, `tests/`), or deleted a file | **Rejected, no PR.** Diff saved as `drift_<date>.rejected.patch` |
+| Touched anything outside parsing/matching code + tests (`edge_detector.py`, `futures_edge.py`, `ticker_display.py`, `odds_api.py`, `market_client.py`, `tests/`), or deleted a file | **Rejected, no PR.** Diff saved as `drift_<date>.rejected.patch` |
 | Fewer tests collected, or the full suite fails (one retry with the failure output) | **Rejected, no PR** |
 | Probe re-run on the fixed tree not better than today's | **Rejected, no PR** |
 | All checks pass | Pushes `drift-fix/<date>`, opens a **draft** PR into `mike_desktop` with the before/after probe table and test output. Link is in the email |
 
 It **never merges**, never touches master, `mike_desktop`, `.env`, the executor or the risk gates, and can't edit the probe that grades it. While a `drift-fix/*` PR is open, later runs skip the fix pass so one unresolved break doesn't open a PR every day. Tests and the probe run through `drift_autofix.py --in-tree`, because the venv's `edge_radar.pth` would otherwise import the main checkout's code instead of the fix.
+
+**Containment (ER-04).** Agent-written code runs in the worktree before anyone reviews it, so:
+
+- The fix session can read only inside the worktree (`Read(./**)`, `Grep(./**)`, `Glob(./**)`). Its prompt carries the probe report and JSON (copied into the worktree's `data/drift_input/`), never the analysis section, whose session can fetch web pages.
+- The worktree's tests and probe get an allowlisted environment: no `.env`, no API keys or tokens, `DRY_RUN=true`. The probe reads markets unsigned (`GET /markets` is public), here and in the daily run.
+- The public commit and PR carry the probe table, a diff stat and the test tail. The session's own summary goes only into the emailed report.
+- `kalshi_client.py` is off the editable list: it places orders.
 
 **Why it exists:** M1 (CHANGELOG 2026-10-03). Kalshi reworded NFL rules to "... Pro Football game", team extraction failed silently, and the scanner was blind to 13 of 14 NFL games for ~2 weeks while every scan said "no opportunities". **Why 4:15 AM:** ahead of Daily-Summary (4:50) and the first execute (5:05), so a break is in the inbox before money moves.
 
