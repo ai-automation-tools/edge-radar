@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "9d00d6a5ce2f1783f92a709b14d7a6acebb31a8c"
+      "revision": "5ee77272ee995da3ab0824ad918e96882162c00f"
     }
   },
   "stages": [
@@ -496,6 +496,7 @@
         "Fee-aware edge floor, too-good edge, price floor/ceiling, spread and volume",
         "Days to event, composite score, confidence, NO on heavy favorite",
         "Already started, already held, per-event cap, opposite side, recent matchup",
+        "One GATES list: fresh scan, preview and --pick replay all run it",
         "Venue eligibility runs last and is skipped under DRY_RUN"
       ]
     },
