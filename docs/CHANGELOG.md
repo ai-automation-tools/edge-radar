@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-11-18 -- Homepage accessibility (ER-30)
+
+- **Site** Lighthouse accessibility is 100 on desktop, mobile and the light theme (it was 91, 88, 88):
+  - The command palette is a native modal `<dialog>`: Tab stays inside, Esc and a click outside
+    close it, focus returns to where it was. The input is a combobox over a grouped listbox, and the
+    shortcut reads Ctrl K, or ⌘K on Apple devices.
+  - The Quick start tabs form a real tablist (arrow keys, Home and End) with a tabpanel; the shell
+    switch and Copy sit outside it and get their own row on phones, where they were off-screen.
+  - Contrast: `--fg-4` is #7e7e87 (5.0:1) and no text uses `--fg-5`, here and on the ops deck.
+    N/A gate chips use a dashed border instead of 55% opacity. In-text links are underlined.
+  - Focus is visible on the gate-lab sliders, the gate search and the theme switch.
+  - A Pause motion button stops the radar sweep, the pulsing dots, the connector and the cursor,
+    and remembers the choice; the radar also stops while off-screen. The page no longer overwrites
+    the diagram's own motion setting on every load.
+  - Gate cards are a heading with a disclosure button, and their hidden detail is `inert`. The
+    phone-only GitHub button with no name is gone; "View source" is a 24px target (34px on phones).
+- **Tests** `tests/test_site.py` pins the contrast tokens, the dialog, the tablist and the motion control.
+
+---
+
 ## 2026-11-18 -- Retire dead AI tooling (ER-26)
 
 - **Removed** the `footballbin-predictions`, `kalshi-markets`, `document-writer` and
