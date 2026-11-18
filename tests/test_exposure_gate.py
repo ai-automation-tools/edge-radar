@@ -97,9 +97,17 @@ class TestSegmentKey:
     def test_sport_wins(self):
         assert exposure_segment(_opp("KXNFLSPREAD-26SEP13MIALV-MIA7")) == "nfl"
 
-    def test_falls_back_to_category_then_unknown(self):
-        assert exposure_segment(_opp("KXSB-26-KC", category="futures")) == "futures"
+    def test_sportless_ticker_is_unknown_whatever_the_category(self):
+        assert exposure_segment(_opp("KXSB-26-KC", category="futures")) == "unknown"
         assert exposure_segment(_opp("KXSB-26-KC", category="")) == "unknown"
+
+    def test_new_bet_meets_its_open_position(self):
+        """ER-39: a position row has no category, so a category-keyed bet on the
+        same sport-less ticker landed in a different bucket and the cap never saw it."""
+        _, by_segment = exposure_from_positions(
+            [{"ticker": "KXSB-26-KC", "market_exposure_dollars": "5.00"}]
+        )
+        assert exposure_segment(_opp("KXSB-26-KC", category="futures")) in by_segment
 
     def test_is_not_the_event_key(self):
         """Gate 6 already binds one event -- and passed 26 times over 26 events."""

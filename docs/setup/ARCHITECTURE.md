@@ -281,7 +281,7 @@ In addition, NO bets priced below `NO_SIDE_KELLY_PRICE_FLOOR` (default $0.35) ar
 | `MAX_DAILY_LOSS` | $250 | Hard stop — no new positions after this daily loss |
 | `MAX_OPEN_POSITIONS` | 50 | Maximum concurrent open positions — counts *rows*, not dollars |
 | `MAX_OPEN_EXPOSURE_PCT` | 0 (off) | Gate 2b: total open at-risk / equity. Live `.env`: 0.50 |
-| `MAX_SEGMENT_EXPOSURE_PCT` | 0 (off) | Gate 2b: same, per sport (falls back to category). Live `.env`: 0.33 |
+| `MAX_SEGMENT_EXPOSURE_PCT` | 0 (off) | Gate 2b: same, per sport (`unknown` for a ticker with no sport). Live `.env`: 0.33 |
 | `MAX_DAYS_TO_EVENT_FOR_GAME_MARKETS` | 0 (off) | Gate 3.7: max days from now to a **game's** date; futures exempt. Live `.env`: 14 |
 | `MAX_PER_EVENT` | 2 | Maximum positions on the same game/event |
 | `MIN_EDGE_THRESHOLD` | 3% | Global minimum edge required to consider a bet |

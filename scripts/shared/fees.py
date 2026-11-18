@@ -64,7 +64,9 @@ def taker_fee(contracts: int, price: float, rate: float | None = None) -> float:
     r = fee_rate() if rate is None else rate
     if r <= 0 or contracts <= 0 or not 0.0 < price < 1.0:
         return 0.0
-    return math.ceil(r * contracts * price * (1.0 - price) * 100.0) / 100.0
+    # round() first: float noise like 7.000000000000001 cents would otherwise
+    # ceil to 8 (4 @ 50c is exactly $0.07, not $0.08).
+    return math.ceil(round(r * contracts * price * (1.0 - price) * 100.0, 6)) / 100.0
 
 
 def fee_per_contract(price: float, rate: float | None = None) -> float:
@@ -102,14 +104,18 @@ def _demo() -> None:
 
     # Roundup is per order, so it never scales below one cent.
     assert taker_fee(1, 0.5, 0.07) == 0.02  # 0.0175 -> 0.02
+    # An exact cent stays put despite float noise (4 * 0.07 * 0.25 = 0.07).
+    assert taker_fee(4, 0.5, 0.07) == 0.07, taker_fee(4, 0.5, 0.07)
 
     # Fee is a strict cost: it can only ever reduce a net edge.
     for p in (0.05, 0.14, 0.5, 0.9):
         assert fee_per_contract(p, 0.07) >= 0.0
 
     print("fees.py self-check passed")
-    print(f"  fee/contract at 10c/25c/50c/75c: "
-          f"{[round(100 * fee_per_contract(p, 0.07), 2) for p in (0.1, 0.25, 0.5, 0.75)]} cents")
+    print(
+        f"  fee/contract at 10c/25c/50c/75c: "
+        f"{[round(100 * fee_per_contract(p, 0.07), 2) for p in (0.1, 0.25, 0.5, 0.75)]} cents"
+    )
 
 
 if __name__ == "__main__":
