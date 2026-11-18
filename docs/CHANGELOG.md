@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-11-17 -- Void settlements in the risk and calibration reports (ER-15 follow-up)
+
+- **Fix** ER-15 marked scalar and voided settlements `won=None`, but two reports still counted them
+  as losses. `risk_check.py`'s dashboard now shows them as `void`, adds them to the record line
+  (`3W - 2L (60%) + 1 void`) and leaves them out of every win rate; their P&L (refund minus fees)
+  still counts. `model_calibration.py` skips them, since there is no yes/no outcome to score a
+  probability against.
+- `tests/test_void_settlement_reports.py` covers both.
+
+---
+
 ## 2026-11-17 -- Hashed dependency locks, Actions pinned by SHA (ER-20)
 
 - **Supply chain** `requirements.txt` held floor pins (`>=`), so every install could pull a different

@@ -605,6 +605,44 @@ def main():
         _save_dashboard_report(client, bal, positions, resting, today_trades, daily_pnl, watchlist)
 
 
+def _settlement_record(s: dict) -> dict | None:
+    """One Kalshi settlement -> a report row, or None when nothing was staked.
+
+    `won` is None when the market didn't resolve yes/no (scalar or voided): the stake comes
+    back as revenue, so it counts in P&L but not as a win or a loss (ER-15).
+    """
+    yes_count = float(s.get("yes_count_fp", 0))
+    no_count = float(s.get("no_count_fp", 0))
+    yes_cost = float(s.get("yes_total_cost_dollars", 0))
+    no_cost = float(s.get("no_total_cost_dollars", 0))
+    revenue = settlement_revenue_dollars(s.get("revenue", 0))
+    fees = float(s.get("fee_cost", 0))
+    result = s.get("market_result", "")
+    side = "yes" if yes_count > 0 and (no_count == 0 or yes_cost > no_cost) else "no"
+    cost = yes_cost if side == "yes" else no_cost
+    if not (cost > 0 or revenue > 0):
+        return None
+    return {
+        "ticker": s.get("ticker", ""),
+        "side": side,
+        "cost": cost,
+        "revenue": revenue,
+        "fees": fees,
+        "net_pnl": round(revenue - cost - fees, 4),
+        "won": side == result if result in ("yes", "no") else None,
+        "result": result,
+        "contracts": int(yes_count if side == "yes" else no_count),
+        "settled_time": s.get("settled_time", ""),
+    }
+
+
+def _win_rate(recs: list[dict]) -> str:
+    """'wins/decided (pct)' over yes/no results only; '-' when every row was void."""
+    wins = sum(1 for r in recs if r["won"])
+    decided = sum(1 for r in recs if r["won"] is not None)
+    return f"{wins}/{decided} ({wins / decided:.0%})" if decided else "-"
+
+
 def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_pnl, watchlist):
     """Generate and save a markdown risk dashboard report."""
     now = datetime.now(timezone.utc)
@@ -680,47 +718,19 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
 
         recent = [s for s in all_settlements if (s.get("settled_time") or "") >= cutoff]
 
-        # Normalize settlement records
-        settled_records = []
-        for s in recent:
-            yes_count = float(s.get("yes_count_fp", 0))
-            no_count = float(s.get("no_count_fp", 0))
-            yes_cost = float(s.get("yes_total_cost_dollars", 0))
-            no_cost = float(s.get("no_total_cost_dollars", 0))
-            revenue = settlement_revenue_dollars(s.get("revenue", 0))
-            fees = float(s.get("fee_cost", 0))
-            result = s.get("market_result", "")
-            side = "yes" if yes_count > 0 and (no_count == 0 or yes_cost > no_cost) else "no"
-            cost = yes_cost if side == "yes" else no_cost
-            won = (side == "yes" and result == "yes") or (side == "no" and result == "no")
-            net_pnl = revenue - cost - fees
-
-            if cost > 0 or revenue > 0:
-                settled_records.append(
-                    {
-                        "ticker": s.get("ticker", ""),
-                        "side": side,
-                        "cost": cost,
-                        "revenue": revenue,
-                        "fees": fees,
-                        "net_pnl": round(net_pnl, 4),
-                        "won": won,
-                        "result": result,
-                        "contracts": int(yes_count if side == "yes" else no_count),
-                        "settled_time": s.get("settled_time", ""),
-                    }
-                )
+        settled_records = [r for r in map(_settlement_record, recent) if r]
 
         # Settlement summary
         if settled_records:
             s_wins = [r for r in settled_records if r["won"]]
-            s_losses = [r for r in settled_records if not r["won"]]
+            s_losses = [r for r in settled_records if r["won"] is False]
             s_pnl = sum(r["net_pnl"] for r in settled_records)
             s_wagered = sum(r["cost"] for r in settled_records)
             s_revenue = sum(r["revenue"] for r in settled_records)
             s_fees = sum(r["fees"] for r in settled_records)
             s_roi = s_pnl / s_wagered if s_wagered > 0 else 0
-            s_wr = len(s_wins) / len(settled_records) if settled_records else 0
+            s_decided = len(s_wins) + len(s_losses)
+            s_wr = len(s_wins) / s_decided if s_decided else 0
             s_avg_win = sum(r["net_pnl"] for r in s_wins) / len(s_wins) if s_wins else 0
             s_avg_loss = sum(r["net_pnl"] for r in s_losses) / len(s_losses) if s_losses else 0
 
@@ -729,7 +739,9 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
             md.append("")
             md.append("| Metric | Value |")
             md.append("|--------|-------|")
-            md.append(f"| Record | **{len(s_wins)}W - {len(s_losses)}L ({s_wr:.0%})** |")
+            s_voids = len(settled_records) - s_decided
+            void_note = f" + {s_voids} void" if s_voids else ""
+            md.append(f"| Record | **{len(s_wins)}W - {len(s_losses)}L ({s_wr:.0%}){void_note}** |")
             md.append(f"| Net P&L | **${s_pnl:+.2f}** |")
             md.append(f"| Total wagered | ${s_wagered:.2f} |")
             md.append(f"| Total revenue | ${s_revenue:.2f} |")
@@ -772,13 +784,10 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
                     sport_groups.items(), key=lambda x: -sum(r["net_pnl"] for r in x[1])
                 ):
                     n = len(recs)
-                    w = sum(1 for r in recs if r["won"])
                     pnl = sum(r["net_pnl"] for r in recs)
                     wag = sum(r["cost"] for r in recs)
                     roi_v = pnl / wag if wag > 0 else 0
-                    md.append(
-                        f"| {name} | {n} | {w}/{n} ({w/n:.0%}) | ${pnl:+.2f} | {roi_v:+.0%} |"
-                    )
+                    md.append(f"| {name} | {n} | {_win_rate(recs)} | ${pnl:+.2f} | {roi_v:+.0%} |")
 
             # By type breakdown
             type_groups: dict[str, list] = {}
@@ -795,13 +804,10 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
                     type_groups.items(), key=lambda x: -sum(r["net_pnl"] for r in x[1])
                 ):
                     n = len(recs)
-                    w = sum(1 for r in recs if r["won"])
                     pnl = sum(r["net_pnl"] for r in recs)
                     wag = sum(r["cost"] for r in recs)
                     roi_v = pnl / wag if wag > 0 else 0
-                    md.append(
-                        f"| {name} | {n} | {w}/{n} ({w/n:.0%}) | ${pnl:+.2f} | {roi_v:+.0%} |"
-                    )
+                    md.append(f"| {name} | {n} | {_win_rate(recs)} | ${pnl:+.2f} | {roi_v:+.0%} |")
 
             # Recent settlement detail (last 15)
             recent_sorted = sorted(
@@ -813,7 +819,7 @@ def _save_dashboard_report(client, bal, positions, resting, today_trades, daily_
             md.append("| Bet | Type | Side | Result | Qty | Cost | Revenue | P&L |")
             md.append("|-----|------|------|--------|-----|------|---------|-----|")
             for r in recent_sorted:
-                won_str = "W" if r["won"] else "L"
+                won_str = {True: "W", False: "L"}.get(r["won"], "void")
                 md.append(
                     f"| {format_bet_label(r['ticker'], r['ticker'])[:30]} "
                     f"| {bet_type_from_ticker(r['ticker'])} "
