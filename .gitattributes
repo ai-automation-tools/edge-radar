@@ -4,3 +4,6 @@ site/diagram/* -text
 
 # Cronsole verifies registry files by sha256 over exact bytes.
 site/registry/** text eol=lf
+
+# Batch files run under cmd.exe, which mishandles labels and long lines in LF-only files.
+*.bat text eol=crlf

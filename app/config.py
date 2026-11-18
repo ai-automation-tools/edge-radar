@@ -493,6 +493,31 @@ class ScanCacheConfig:
         )
 
 
+@dataclass(frozen=True)
+class EmailConfig:
+    """Report emails through Resend (scripts/schedulers/automation/send_report_email.py).
+
+    `NOTIFY_EMAIL` is the inbox, `RESEND_FROM` a verified-domain sender. Neither
+    has a default: this repo is public, so an unset value fails the send loudly
+    instead of mailing someone else. `RESEND_API_KEY` may live in the OS
+    environment or `.env`; it is kept out of repr.
+    """
+
+    notify_email: str = ""
+    resend_from: str = ""
+    resend_reply_to: str = ""
+    resend_api_key: str = field(default="", repr=False)
+
+    @classmethod
+    def from_env(cls) -> "EmailConfig":
+        return cls(
+            notify_email=_str("NOTIFY_EMAIL", "").strip(),
+            resend_from=_str("RESEND_FROM", "").strip(),
+            resend_reply_to=_str("RESEND_REPLY_TO", "").strip(),
+            resend_api_key=_str("RESEND_API_KEY", "").strip(),
+        )
+
+
 # ── Aggregate ───────────────────────────────────────────────────────────────
 
 
@@ -509,6 +534,7 @@ class Config:
     system: System
     odds_cache: OddsCacheConfig
     scan_cache: ScanCacheConfig
+    email: EmailConfig = EmailConfig()
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -524,6 +550,7 @@ class Config:
             system=System.from_env(),
             odds_cache=OddsCacheConfig.from_env(),
             scan_cache=ScanCacheConfig.from_env(),
+            email=EmailConfig.from_env(),
         )
         cfg.validate()
         return cfg

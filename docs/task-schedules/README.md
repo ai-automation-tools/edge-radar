@@ -12,7 +12,7 @@
 </div>
 
 > [!NOTE]
-> **This is the schedule the repo owner actually runs, published as a reference, not a turnkey installer.** The owner's `.bat` files are gitignored (they hardcode a machine path and a private inbox), so this doc carries **sanitized templates** — see [Reproducing this on your own machine](#reproducing-this-on-your-own-machine). For just the minimal "execute + settle + calibration" core, start with [`AUTOMATION_GUIDE.md`](../setup/AUTOMATION_GUIDE.md) and its one-command installer.
+> **This is the schedule the repo owner actually runs, published as a reference, not a turnkey installer.** The `.bat` wrappers the owner's tasks run are tracked under `scripts/schedulers/` (paths from `%~dp0`, recipients from `.env`); this doc also carries **sanitized templates** — see [Reproducing this on your own machine](#reproducing-this-on-your-own-machine). For just the minimal "execute + settle + calibration" core, start with [`AUTOMATION_GUIDE.md`](../setup/AUTOMATION_GUIDE.md) and its one-command installer.
 
 **Task Scheduler folder:** `\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\` &nbsp;·&nbsp; **Times:** PT (ET in parentheses) &nbsp;·&nbsp; **History:** every add, change and retirement is in [`docs/CHANGELOG.md`](../CHANGELOG.md).
 
@@ -90,7 +90,7 @@ Disable-ScheduledTask -TaskPath '\AI-Automation-Tools-Org-LocalApps\Edge-Radar-M
 
 ## Task Details
 
-All `.bat` wrappers live under `scripts/schedulers/` (gitignored). Execute wrappers print `kalshi_executor.py status` before and after the scan.
+The scheduled `.bat` wrappers live under `scripts/schedulers/` and are tracked (ER-27), so `git log` shows every change to a task's flags; old and one-off wrappers there stay gitignored. Execute wrappers print `kalshi_executor.py status` before and after the scan.
 
 ### Weekly betting audit (inside `Weekly-Analysis`, Sun 11:45 PM PT)
 
@@ -334,7 +334,7 @@ cd /d "%~dp0..\..\.."
 
 ### Template C — report emailer (tracked, nothing to copy)
 
-`scripts/schedulers/automation/render_report_email.py <preset>` renders the report markdown to inline-styled HTML (markdown-it-py, tables byte-exact) and sends through `scripts/custom/Python/send_report_email.py` (Resend). **No model involved.**
+`scripts/schedulers/automation/render_report_email.py <preset>` renders the report markdown to inline-styled HTML (markdown-it-py, tables byte-exact) and sends through `scripts/schedulers/automation/send_report_email.py` (Resend; `NOTIFY_EMAIL`, `RESEND_FROM` and `RESEND_API_KEY` must be set, `--check` probes without sending). **No model involved.**
 
 | Preset | Task | Subject | Log |
 |:--|:--|:--|:--|
@@ -415,7 +415,7 @@ Unregister-ScheduledTask -TaskPath $F -TaskName '<task>' -Confirm:$false
 From Git Bash, prefix `schtasks` with `MSYS_NO_PATHCONV=1` or the `/TN` path is mangled into a filesystem path:
 
 ```bash
-MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\Daily-Summary"
+MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\Daily-Summary"  # pragma: allowlist secret
 ```
 
 ---

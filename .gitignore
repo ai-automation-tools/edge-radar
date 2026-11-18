@@ -90,11 +90,36 @@ docs/my-documents/
 
 # === My Scripts ===
 scripts/custom/
-# Ignore schedulers by default (many .bat files hardcode local paths),
-# but track the portable automation/ folder (paths derived from __file__, no secrets).
+# Ignore schedulers by default (old and one-off .bat files), but track the portable
+# automation/ folder and the wrappers the scheduled tasks actually run (ER-27): they
+# carry the live flags, so a change to an execute task's sizing shows up in git log.
+# Paths in them come from %~dp0; recipients and keys come from .env.
 scripts/schedulers/*
 !scripts/schedulers/automation/
+!scripts/schedulers/run-hidden.vbs
+!scripts/schedulers/run-hidden-guard.ps1
+!scripts/schedulers/same_day_executions/
+!scripts/schedulers/next_day_executions/
+!scripts/schedulers/no_date_filter_executions/
+!scripts/schedulers/futures_executions/
+!scripts/schedulers/maintenance/
+scripts/schedulers/*/*
 !scripts/schedulers/automation/**
+!scripts/schedulers/same_day_executions/same_day_execute.bat
+!scripts/schedulers/same_day_executions/same_day_execute_late.bat
+!scripts/schedulers/same_day_executions/same_day_scan.bat
+!scripts/schedulers/next_day_executions/next_day_execute.bat
+!scripts/schedulers/no_date_filter_executions/no_date_filter_execution_midday.bat
+!scripts/schedulers/futures_executions/weekly_futures_execute.bat
+!scripts/schedulers/maintenance/backtest.bat
+!scripts/schedulers/maintenance/calibration.bat
+!scripts/schedulers/maintenance/clv_capture.bat
+!scripts/schedulers/maintenance/daily_summary.bat
+!scripts/schedulers/maintenance/drift_check.bat
+!scripts/schedulers/maintenance/odds_keys.bat
+!scripts/schedulers/maintenance/reconcile.bat
+!scripts/schedulers/maintenance/shadow_book.bat
+!scripts/schedulers/maintenance/weekly_analysis.bat
 scripts/schedulers/automation/__pycache__/
 
 # === Repos ===
