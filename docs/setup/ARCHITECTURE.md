@@ -26,7 +26,7 @@ The system processes every opportunity through seven sequential stages. Each sta
 | **2. Categorize** | Classify by type | Determines which edge model applies |
 | **3. Compare** | Fair value vs. Kalshi ask price | Score on 4 dimensions: edge, confidence, liquidity, time |
 | **4. Cap** | Limit to top 3 per game/event | Prevents concentration in a single contest |
-| **5. Risk-Check** | 21 risk gates + Kelly sizing | Reject or cap — see [Risk Management](#%EF%B8%8F-risk-management) |
+| **5. Risk-Check** | 22 risk gates + Kelly sizing | Reject or cap — see [Risk Management](#%EF%B8%8F-risk-management) |
 | **6. Execute** | Place limit orders on Kalshi | Full trade journal entry with rationale |
 | **7. Monitor** | Track positions, settle, calibrate | Realized P&L + closing line value tracking |
 
@@ -232,6 +232,7 @@ Every order must pass gates 1-7 (including 2b, 3.05, 3.5, 3.55, 3.6, 3.7, 4.5, 4
 | | Gate | Check | Behavior |
 | :--- | :--- | :--- | :--- |
 | 1 | **Daily loss limit** | Sum of realized losses today, as a calendar day in `DAILY_LOSS_TZ` (default America/New_York) | **Reject** if losses ≥ `MAX_DAILY_LOSS` |
+| 1b | **Bankroll** | Cash balance from the API | **Reject** if the balance is ≤ $0 or the read failed (ER-43) |
 | 2 | **Position count** | Number of open positions | **Reject** if count ≥ `MAX_OPEN_POSITIONS` |
 | 2b | **Cumulative exposure (S4)** | Total open at-risk dollars, and the row's own sport, against **equity** (cash + position value) | **Reject** if already ≥ `MAX_OPEN_EXPOSURE_PCT` or ≥ `MAX_SEGMENT_EXPOSURE_PCT`; otherwise **Cap** to the remaining headroom. The only gate that measures a standing total. |
 | 3 | **Edge threshold** | Calculated edge, **plus the exchange fee** (F1) | **Reject** if edge < per-sport floor (or `MIN_EDGE_THRESHOLD` global fallback). A floor ≥ 1.0 is unreachable and means the sport is **off** — reported as `sport_disabled`. |

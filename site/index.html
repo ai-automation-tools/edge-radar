@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Edge-Radar</title>
-  <meta name="description" content="Open-source edge detection and risk-gated execution for Kalshi sports and prediction markets. Compares the exchange price against an independent fair value, nets out the fee, runs 21 risk gates and sizes by fractional Kelly. Dry run by default." />
+  <meta name="description" content="Open-source edge detection and risk-gated execution for Kalshi sports and prediction markets. Compares the exchange price against an independent fair value, nets out the fee, runs 22 risk gates and sizes by fractional Kelly. Dry run by default." />
   <link rel="canonical" href="https://edge-radar.ai-automation-tools.dev/" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 
@@ -645,7 +645,7 @@
   <div class="strip">
     <span class="lbl">Defaults</span>
     <a href="https://github.com/ai-automation-tools/edge-radar/blob/master/AGENTS.md#dry-run" target="_blank" rel="noopener" style="--c:var(--accent)"><i class="dot"></i>DRY_RUN=true</a>
-    <a href="#gates" style="--c:var(--rose)"><i class="dot"></i>21 risk gates</a>
+    <a href="#gates" style="--c:var(--rose)"><i class="dot"></i>22 risk gates</a>
     <a href="#pipeline" style="--c:var(--sky)"><i class="dot"></i>7 pipeline stages</a>
     <a href="#coverage" style="--c:var(--amber)"><i class="dot"></i>31 sport filters</a>
     <a href="#how" style="--c:var(--violet)"><i class="dot"></i>fee-aware Kelly</a>
@@ -657,7 +657,7 @@
     <div class="sec-head">
       <div>
         <p class="eyebrow">How it works</p>
-        <h2>One equation, guarded by 21 gates.</h2>
+        <h2>One equation, guarded by 22 gates.</h2>
         <p class="sub">Pull Kalshi's ask. Pull an independent fair value from sportsbooks and data feeds. The difference is the claimed edge. The exchange fee comes off before anything else is judged, and only then does the order meet the gates.</p>
       </div>
     </div>
@@ -755,7 +755,7 @@
         <div class="node"><div class="t">Kalshi market data <span class="m">GET</span></div><div class="d mono">api.elections.kalshi.com /markets · /orderbook</div><div class="d">live ask, bid, volume, expiry</div></div>
         <div class="node"><div class="t">Fair-value model</div><div class="d">ticker → <em>ML · SP · TO · FU · PR</em> · de-vig, CDF spreads and totals, calibrated stdevs</div></div>
         <div class="node key"><div class="t">Edge, net of fee</div><div class="d">fair − ask, with a confidence tier · <em>edge ≥ floor + fee</em></div></div>
-        <div class="node"><div class="t">21 risk gates</div><div class="d">daily loss · exposure caps · liquidity · lead time · cheap-NO rules · opposing side · dedup · 10% hard stop</div></div>
+        <div class="node"><div class="t">22 risk gates</div><div class="d">daily loss · exposure caps · liquidity · lead time · cheap-NO rules · opposing side · dedup · 10% hard stop</div></div>
         <div class="node"><div class="t">Kelly sizing</div><div class="d"><em>edge / (1 − price)</em>, fractional, divided by batch size · half-Kelly on NO at both price ends</div></div>
       </div>
       <div class="conn b" aria-hidden="true"><svg viewBox="0 0 44 120" preserveAspectRatio="none"><line x1="2" y1="60" x2="42" y2="60"/><line class="mv" x1="2" y1="60" x2="42" y2="60"/></svg></div>
@@ -781,7 +781,7 @@
     <div class="sec-head">
       <div>
         <p class="eyebrow">Risk gates</p>
-        <h2>Every order meets 21 gates. Most candidates fail here, cheaply.</h2>
+        <h2>Every order meets 22 gates. Most candidates fail here, cheaply.</h2>
         <p class="sub">The chain runs in order before any order is placed. <code>Reject</code> drops the bet, <code>Cap</code> trims it. Gates that read a market fact fail open when the fact is missing; the venue-eligibility check fails closed.</p>
       </div>
     </div>
@@ -818,7 +818,7 @@
       <div class="step"><span class="n">02</span><b>Categorize</b><span>Ticker → market type. <code>ML · SP · TO · FU · PR</code> each pick a model.</span></div>
       <div class="step"><span class="n">03</span><b>Compare</b><span>Fair value against the ask, net of fee, with a confidence tier and a composite score.</span></div>
       <div class="step"><span class="n">04</span><b>Cap</b><span>Bracket dedup keeps the sibling that can clear the gates; per-event caps apply.</span></div>
-      <div class="step"><span class="n">05</span><b>Risk</b><span>21 gates in order. Reject or trim. Preview prints the verdicts.</span></div>
+      <div class="step"><span class="n">05</span><b>Risk</b><span>22 gates in order. Reject or trim. Preview prints the verdicts.</span></div>
       <div class="step"><span class="n">06</span><b>Execute</b><span>Fractional Kelly size, shard funding, RSA-signed limit order. Dry run logs identically.</span></div>
       <div class="step"><span class="n">07</span><b>Settle</b><span>Outcomes, measured fees, Brier pair, drift and post-kickoff alarms. <code>make settle</code></span></div>
     </div>
@@ -1182,6 +1182,7 @@
   /* ── Gates ── AGENTS.md § Execution gates, one entry per row. type: reject | reject-cap | cap. */
   const GATES = [
     { id: '1',    name: 'Daily loss limit',        type: 'reject',     tags: 'portfolio', d: 'No new positions once the day\'s realised loss reaches <code>MAX_DAILY_LOSS</code>.', m: 'Hourly settlement keeps the figure current intraday, so the gate reads today\'s book rather than yesterday\'s.' },
+    { id: '1b',   name: 'Bankroll above zero (ER-43)', type: 'reject', tags: 'portfolio', d: 'No order when the balance read comes back zero or fails.', m: 'Before this gate a failed balance read left the bankroll at 0, the bankroll cap still bought one contract, and the Hard Stop skipped itself. No cash now means no sizing.' },
     { id: '2',    name: 'Open position count',     type: 'reject',     tags: 'portfolio', d: 'Open positions must stay under <code>MAX_OPEN_POSITIONS</code>.', m: 'Counts rows, not dollars. Gate 2b is the one that measures money.' },
     { id: '2b',   name: 'Open exposure (S4)',      type: 'reject-cap', tags: 'portfolio fails-open', d: 'Total at-risk below <code>MAX_OPEN_EXPOSURE_PCT</code> and per-sport below <code>MAX_SEGMENT_EXPOSURE_PCT</code>, both as fractions of equity.', m: '<b>The only gate that measures a standing total.</b> Rejects when a ceiling is already breached and trims an order to the remaining headroom otherwise. Added after 26 NFL positions reached 31% of bankroll with every other gate passing. Ships off (0); the live book sets 0.50 / 0.33.', fo: true },
     { id: '3',    name: 'Minimum edge + fee (F1)', type: 'reject',     tags: 'market', d: 'Claimed edge must clear the per-sport floor <b>plus</b> the exchange fee at that price.', m: 'Kalshi\'s taker fee is <code>ceil(0.07 · C · P · (1 − P))</code> per order, about 1c a contract against a 3–4c floor. Until it was modelled, screening passed bets on a quarter to a third less edge than it believed.' },
