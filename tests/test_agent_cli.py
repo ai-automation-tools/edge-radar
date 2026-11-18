@@ -1,6 +1,11 @@
 """agent_cli builds a real allowlist on both paths (plain claude and the AGENT_CLI adapter)."""
 
+import re
+import subprocess
+from pathlib import Path
+
 import agent_cli
+import pytest
 
 
 def _plain(monkeypatch):
@@ -21,9 +26,39 @@ def test_plain_allowlist_is_enforced_not_just_preapproved(monkeypatch):
     assert "--dangerously-skip-permissions" not in cmd
 
 
-def test_plain_without_allowlist_skips_permissions(monkeypatch):
+def test_no_allowlist_is_refused(monkeypatch):
     _plain(monkeypatch)
-    assert "--dangerously-skip-permissions" in agent_cli.agent_command(model="opus")
+    with pytest.raises(ValueError):
+        agent_cli.agent_command(model="opus")
+    monkeypatch.setenv("AGENT_CLI", "adapter.ps1")
+    with pytest.raises(ValueError):
+        agent_cli.agent_command(model="opus", allow_tools=[])
+
+
+def test_unrestricted_must_be_asked_for_by_name(monkeypatch):
+    _plain(monkeypatch)
+    assert "--dangerously-skip-permissions" in agent_cli.agent_command(unrestricted=True)
+
+
+# An argv list starting with "claude" (the audit's own criterion); prose mentioning
+# `claude -p` in docstrings and help text is fine.
+_SHELLS_CLAUDE = re.compile(r"""\[\s*["']claude["']\s*,""")
+
+
+def test_only_agent_cli_shells_claude_p():
+    """ER-09: every tracked script reaches `claude -p` through agent_cli."""
+    root = Path(__file__).resolve().parents[1]
+    tracked = subprocess.run(
+        ["git", "ls-files", "scripts", "app"], cwd=root, capture_output=True, text=True, check=True
+    ).stdout.split()
+    hits = [
+        f
+        for f in tracked
+        if f.endswith(".py")
+        and f != "scripts/shared/agent_cli.py"
+        and _SHELLS_CLAUDE.search((root / f).read_text(encoding="utf-8", errors="replace"))
+    ]
+    assert hits == []
 
 
 def test_adapter_gets_the_same_request(monkeypatch):

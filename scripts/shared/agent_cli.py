@@ -8,6 +8,10 @@ through it instead, so the provider and model mapping live in one place outside 
 Either way the prompt goes in on stdin and ``allow_tools`` is a real allowlist: only those
 tools exist, anything no rule allows is refused, and user-level settings don't apply.
 (``--allowedTools`` alone only pre-approves; other tools a user's settings allow still run.)
+
+An unrestricted session must be asked for by name (``unrestricted=True``): these run
+unattended in the live checkout, next to the order-placing code and ``.env`` (ER-09).
+This module is the only place that shells ``claude -p`` (pinned by tests/test_agent_cli.py).
 """
 
 from __future__ import annotations
@@ -37,8 +41,11 @@ def agent_command(
     allow_tools: list[str] | None = None,
     max_turns: int | None = None,
     timeout: int | None = None,
+    unrestricted: bool = False,
 ) -> list[str]:
-    """The command line for one session. Without allow_tools it runs unrestricted."""
+    """The command line for one session. Needs allow_tools, or unrestricted=True."""
+    if not allow_tools and not unrestricted:
+        raise ValueError("agent session needs allow_tools (or unrestricted=True, by name)")
     adapter = _adapter()
     if adapter:
         cmd = ["pwsh", "-NoProfile", "-File", adapter]
@@ -81,9 +88,16 @@ def run_agent(
     model: str | None = None,
     allow_tools: list[str] | None = None,
     max_turns: int | None = None,
+    unrestricted: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Run one session; raises FileNotFoundError / subprocess.TimeoutExpired like subprocess.run."""
-    cmd = agent_command(model=model, allow_tools=allow_tools, max_turns=max_turns, timeout=timeout)
+    cmd = agent_command(
+        model=model,
+        allow_tools=allow_tools,
+        max_turns=max_turns,
+        timeout=timeout,
+        unrestricted=unrestricted,
+    )
     # Through the adapter its own deadline fires first (exit 124); this one is the backstop.
     py_timeout = timeout + 120 if cmd[0] == "pwsh" else timeout
     return subprocess.run(

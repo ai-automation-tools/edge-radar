@@ -36,6 +36,7 @@ from pathlib import Path
 
 import paths  # noqa: F401 -- configures sys.path
 
+from agent_cli import run_agent  # noqa: E402
 from trade_log import load_settlement_log, load_trade_log  # noqa: E402
 
 ROOT = paths.PROJECT_ROOT
@@ -468,21 +469,11 @@ words. If nothing is wrong, say so in two lines.
 def run_analysis(status: str, md_path: Path, json_path: Path, timeout: int = 1200) -> str:
     prompt = ANALYSIS_PROMPT.format(status=status, md=md_path, js=json_path)
     try:
-        proc = subprocess.run(
-            [
-                "claude",
-                "-p",
-                prompt,
-                "--allowedTools",
-                "Read,Grep,Glob",
-                "--max-turns",
-                "40",
-            ],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=timeout,
-            cwd=ROOT,
+        # ER-09: through agent_cli, so Read/Grep/Glob are the only tools that exist.
+        # A bare `--allowedTools` only pre-approved them; anything else the user's
+        # settings allowed still ran, unattended, in the live checkout.
+        proc = run_agent(
+            prompt, cwd=ROOT, timeout=timeout, allow_tools=["Read", "Grep", "Glob"], max_turns=40
         )
     except (OSError, subprocess.TimeoutExpired) as e:
         return f"## Analysis\n\n_Analysis pass failed: {e}_\n"

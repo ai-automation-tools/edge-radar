@@ -98,6 +98,10 @@ All `.bat` wrappers live under `scripts/schedulers/` (gitignored). Execute wrapp
 performance report, and the `weekly-analysis` email opens with the audit's status, **Flags** and (when flagged)
 **Analysis** sections, then the full performance report. One Sunday email, not two.
 
+The Analysis pass is a headless session through `scripts/shared/agent_cli.py` in which only `Read`, `Grep` and
+`Glob` exist (ER-09). Every unattended session goes through `agent_cli`, which refuses to start one without an
+allowlist unless the caller passes `unrestricted=True` by name.
+
 | Property | Value |
 |:--|:--|
 | **Report** | `reports/Maintenance/betting-audit/betting_audit_<date>.md` (+ `.json`); log `logs/betting_audit.log` |

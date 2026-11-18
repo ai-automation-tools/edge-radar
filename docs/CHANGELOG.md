@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-11-17 -- Unattended agent sessions need an allowlist (ER-09)
+
+- **Fix** AI-02/SEC-14: the weekly betting audit's analysis pass shelled `claude -p` with only
+  `--allowedTools Read,Grep,Glob`. That pre-approves those tools but doesn't restrict the session:
+  anything the user's settings allowed still ran, unattended, in the live checkout. It now goes
+  through `agent_cli.run_agent`, where only the listed tools exist.
+- **Fix** AI-03: `agent_cli.agent_command` fell back to `--dangerously-skip-permissions` when a
+  caller passed no allowlist. It now raises `ValueError` unless the caller passes `unrestricted=True`
+  by name. No tracked caller does.
+- **Test** `tests/test_agent_cli.py` fails if any tracked script other than `agent_cli.py` builds a
+  `claude` argv.
+
+---
+
 ## 2026-11-17 -- Nightly ledger backup (ER-08)
 
 - **New** `scripts/shared/backup_ledger.py --dest <folder>`: zips `kalshi_trades.json`,
