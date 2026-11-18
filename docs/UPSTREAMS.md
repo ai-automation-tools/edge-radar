@@ -15,7 +15,7 @@ source. `—` means never checked.
 
 | Upstream | What the code assumes | Code | Check at | Last checked |
 |:---|:---|:---|:---|:---|
-| **Kalshi Trade API v2** | Base `api.elections.kalshi.com/trade-api/v2`; RSA-PSS request signing; fills and positions arrive as fixed-point strings (`fill_count_fp`, `position_fp`) and can be fractional (ROADMAP S28); the exchange is sharded (shard 2 Crypto & Commodities, shard 3 Tennis, Baseball & Basketball; names read live from `/exchange/status`, the shard of each market from its `exchange_index`) and cash does not follow the markets; the money path reads `*_dollars` price fields and sends whole-cent limits, which lie on every published `price_ranges` grid; the series tickers in the sport filters exist (`KXNCAAFGAME`, not `KXNCAAFBGAME`); the fee schedule | `scripts/kalshi/kalshi_client.py`, `kalshi_executor.py`, `kalshi_settler.py`, `app/config.py` · reference: `docs/kalshi/kalshi-sports-betting/KALSHI_API_REFERENCE.md` | docs.kalshi.com (API reference and changelog); kalshi.com/docs/kalshi-fee-schedule.pdf | 2026-11-16 |
+| **Kalshi Trade API v2** | Base `api.elections.kalshi.com/trade-api/v2`; RSA-PSS request signing (create keys as RSA: the web dialog defaults to Ed25519, which the client cannot sign; ROADMAP M3); `GET /portfolio/balance` allows 1 request per second, so every balance read in a process is spaced 1 s apart (K1); fills and positions arrive as fixed-point strings (`fill_count_fp`, `position_fp`) and can be fractional (ROADMAP S28); the exchange is sharded (shard 2 Crypto & Commodities, shard 3 Tennis, Baseball & Basketball; names read live from `/exchange/status`, the shard of each market from its `exchange_index`) and cash does not follow the markets; the money path reads `*_dollars` price fields and sends whole-cent limits, which lie on every published `price_ranges` grid; the series tickers in the sport filters exist (`KXNCAAFGAME`, not `KXNCAAFBGAME`); the fee schedule | `scripts/kalshi/kalshi_client.py`, `kalshi_executor.py`, `kalshi_settler.py`, `app/config.py` · reference: `docs/kalshi/kalshi-sports-betting/KALSHI_API_REFERENCE.md` | docs.kalshi.com (API reference and changelog); kalshi.com/docs/kalshi-fee-schedule.pdf | 2026-11-16 |
 
 ## Market data
 
@@ -31,7 +31,7 @@ source. `—` means never checked.
 
 | Upstream | What the code assumes | Code | Check at | Last checked |
 |:---|:---|:---|:---|:---|
-| **Resend** | REST `POST /emails` over `requests`, no SDK | `scripts/custom/Python/send_report_email.py` | resend.com/docs and resend.com/changelog | 2026-11-16 |
+| **Resend** | REST `POST /emails` over `requests`, no SDK | `scripts/schedulers/automation/send_report_email.py` | resend.com/docs and resend.com/changelog | 2026-11-16 |
 
 ## Runtime and libraries
 

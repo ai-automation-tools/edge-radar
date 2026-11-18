@@ -13,12 +13,13 @@ Welcome to the central documentation index for **Edge-Radar**. This index organi
 
 ## 🗺️ Documentation Directory
 
-Only `README.md`, `CHANGELOG.md` and `RULES-RATIONALE.md` live at the root of `docs/`. Everything else is grouped into the subfolders below.
+Only `README.md`, `ROADMAP.md`, `CHANGELOG.md`, `RULES-RATIONALE.md` and `UPSTREAMS.md` live at the root of `docs/`. Everything else is grouped into the subfolders below.
 
 ### 🚀 Setup & Architecture — [`setup/`](./setup/)
 *   [SETUP_GUIDE.md](./setup/SETUP_GUIDE.md) — Step-by-step instructions to configure API keys, venv, and RSA private credentials.
 *   [ARCHITECTURE.md](./setup/ARCHITECTURE.md) — In-depth overview of the pipeline, Kelly sizing equations, and risk gating conditions.
 *   [AUTOMATION_GUIDE.md](./setup/AUTOMATION_GUIDE.md) — Setting up the automated scanners and schedulers.
+*   [KEY_ROTATION.md](./setup/KEY_ROTATION.md) — Rotating the Kalshi API key (choose RSA; read-only checks before and after revoking).
 *   [mcp-servers.md](./setup/mcp-servers.md) — why Edge-Radar needs no MCP server.
 *   **[diagrams/](./diagrams/README.md) — the betting logic data-flow diagram the [homepage](https://edge-radar.ai-automation-tools.dev/#pipeline) shows** (interactive, every box linked to its code). Generated from one JSON; a pre-commit hook and `--check` flag it when cited code changes.
 *   [pipeline-diagram.md](./setup/pipeline-diagram.md) — End-to-end pipeline & data-flow diagram (scan → edge models → risk gating → execution → calibration feedback).
@@ -45,11 +46,12 @@ Only `README.md`, `CHANGELOG.md` and `RULES-RATIONALE.md` live at the root of `d
 *   [betting-strategy-review-2026-08-26.md](./enhancements/betting-strategy-review-2026-08-26.md) — Full review of the settled record (402 bets), the defects found (CLV never computed, no cumulative-exposure gate, taker-only fee drag), and a four-phase action plan: stop waste → install CLV measurement → remove trading cost → scale only on evidence.
 
 ### 📈 Roadmap & Changelog
-*   [ROADMAP.md](./ROADMAP.md) — Open work only, in priority order. Shipped items and findings live in the changelog.
+*   [ROADMAP.md](./ROADMAP.md) — The work list in priority order: open items first by section, done ones ticked with the date and PR. The detail behind each shipped item is in the changelog.
 *   [CHANGELOG.md](./CHANGELOG.md) — Project history since 2026-10. Older months, and the pre-2026-09-29 roadmap, are in [changelog/](./changelog/README.md).
 *   [RULES-RATIONALE.md](./RULES-RATIONALE.md) — The evidence behind each rule in `AGENTS.md`: incidents, settled-bet numbers, reasoning.
+*   [UPSTREAMS.md](./UPSTREAMS.md) — Every external API and library the code depends on, what it assumes about each, and where to check; the Upstream Check routine works from it.
 
-> Periodic performance audits live under `docs/my-documents/` (git-ignored, local-only). Their conclusions are folded into the ROADMAP findings log, which is the tracked, canonical record.
+> Periodic performance audits live under `docs/my-documents/` (git-ignored, local-only). Their conclusions are folded into the CHANGELOG and ROADMAP items, which are the tracked, canonical record.
 
 ---
 

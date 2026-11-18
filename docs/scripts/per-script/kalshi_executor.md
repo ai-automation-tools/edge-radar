@@ -102,6 +102,22 @@ Uses **Kelly with flat unit floor**: `bet = max(unit_size, kelly_fraction * trus
 
 **NO-side Kelly dampener (R1, 2026-04-21).** NO bets priced below `NO_SIDE_KELLY_PRICE_FLOOR` (default $0.35) are sized at `NO_SIDE_KELLY_MULTIPLIER` (default 0.5 = half-Kelly) of normal Kelly. Complements gate 4.6 — bets that clear the reject gate but are still on relatively heavy favorites get downsized rather than taken at full confidence.
 
+### Placing orders safely
+
+How `_place_order_batch` keeps every order it sends in the ledger, even when something fails mid-way:
+
+- **One run per profile.** An execute run holds `.execute_<profile>.lock` from reading portfolio state
+  through the last order; a second run waits up to 15 minutes, then fails (ER-13).
+- **Our own id on every order.** Each POST carries a fresh `client_order_id`. Orders are never retried;
+  after a transport error the executor looks the order up by that id and books it if Kalshi has it.
+- **A pending file before the POST.** The order's row is written to
+  `data/history/pending_orders/<client_order_id>.json` first and deleted once the outcome is recorded.
+  A run that dies mid-request leaves it, and the next `kalshi_settler.py settle` books or drops it.
+- **A journal if the log is locked.** An accepted order whose trade-log write keeps failing goes to
+  `trade_journal.jsonl`, which `settle` merges back (BUG-03).
+- **Balance reads are paced** at one per second (Kalshi's limit for that endpoint, K1); a `429` on any
+  read is retried with backoff, never on an order POST.
+
 ---
 
 ## `run` -- Legacy Scan & Execute (Deprecated)
