@@ -7,7 +7,10 @@ A build renders it with Archify (https://github.com/tt-a1i/archify) into
 betting-data-flow.html (interactive, source links go to GitHub at that commit) and
 betting-data-flow.png (the homepage image; both are copied into site/diagram/, which is
 all the homepage deploys), and records the git blob of every cited file
-at the pinned commit in betting-data-flow.sources.lock.json.
+at the pinned commit in betting-data-flow.sources.lock.json. The site copy of the HTML
+gets Edge-Radar's chrome (site_page(): favicon, source bar with a link back to the
+homepage, the homepage's theme choice, the house ground and type); docs/ keeps Archify's
+page as built.
 
 The check compares those blobs with the staged copies. Any cited file that changed since
 the pin may have moved or changed the logic a node describes, so the diagram is stale
@@ -33,6 +36,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -50,6 +54,34 @@ BUILD_DIR = DIAGRAMS / ".build"
 HOMEPAGE = ROOT / "site" / "diagram"
 SCREENSHOT = f"{STEM}.visual-check.2048x1320.dark.png"
 DEFAULT_ARCHIFY = Path.home() / ".claude" / "skills" / "archify" / "bin" / "archify.mjs"
+CHROME = Path(__file__).with_name("site_chrome.html")
+
+
+def chrome() -> dict[str, str]:
+    """The @head, @style and @bar sections of site_chrome.html."""
+    text = CHROME.read_bytes().decode("utf-8").replace("\r\n", "\n")
+    return dict(re.findall(r"<!-- @(\w+) -->(.*?)\n(?=<!-- @|\Z)", text, re.S))
+
+
+def site_page(html: str) -> str:
+    """Archify's page with Edge-Radar's chrome, as served from site/diagram/."""
+    for marker in ("<head>", "</head>", "<body>", '<div class="container">'):
+        if html.count(marker) != 1:
+            raise ValueError(f"expected one {marker} in the Archify page")
+    part = chrome()
+    return (
+        html.replace("<head>", "<head>" + part["head"], 1)
+        .replace("</head>", part["style"] + "\n</head>", 1)
+        .replace("<body>", "<body>" + part["bar"], 1)
+        .replace('<div class="container">', '<div class="container" role="main">', 1)
+    )
+
+
+def site_bytes(built: Path) -> bytes:
+    """The bytes site/diagram/ should hold for a built file."""
+    if built.suffix != ".html":
+        return built.read_bytes()
+    return site_page(built.read_bytes().decode("utf-8")).encode("utf-8")
 
 
 def git(*args: str) -> str:
@@ -87,7 +119,7 @@ def find_issues() -> list[str]:
         issues.append("the pinned revision changed since the last build; rebuild it")
     for built_file in (HTML, PNG):
         copy = HOMEPAGE / built_file.name
-        if not copy.exists() or copy.read_bytes() != built_file.read_bytes():
+        if not copy.exists() or copy.read_bytes() != site_bytes(built_file):
             issues.append(f"site/diagram/{built_file.name} differs from the build; rebuild it")
     changed = []
     for path in cited_paths(spec):
@@ -154,7 +186,7 @@ def build(pin_head: bool, script: Path) -> None:
     shutil.copyfile(shot, PNG)
     HOMEPAGE.mkdir(exist_ok=True)
     for built_file in (HTML, PNG):
-        shutil.copyfile(built_file, HOMEPAGE / built_file.name)
+        (HOMEPAGE / built_file.name).write_bytes(site_bytes(built_file))
 
     lock = {"revision": revision, "files": {p: blob(revision, p) for p in cited}}
     LOCK.write_text(json.dumps(lock, indent=2) + "\n", encoding="utf-8")

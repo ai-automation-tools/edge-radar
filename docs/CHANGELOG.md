@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-11-18 -- Homepage and diagram page in the org house style (ER-31)
+
+- **Site** The homepage stylesheet uses only tokens below its two token blocks (the GitHub button,
+  black in both themes, is the one exception), with the shared web-house-style names. The light theme
+  swaps token values instead of overriding 40 rules, and the series colours (`--c`) in markup and
+  script are token references, so they take their -700 shades in light. Lighthouse accessibility
+  stays at 100.
+  - The top-bar mark is the app icon (`site/favicon.svg`), not a letter tile.
+  - The theme switch is the last control before the phone menu; the nav shows from 760px and the
+    Jump to button from 900px.
+  - The footer's GitHub link is gone; the source bar and the hero button are the repo links.
+  - The diagram picture links to the interactive page instead of loading it into a frame that
+    trapped scrolling.
+- **Diagram page** `site/diagram/betting-data-flow.html` has the favicon, a source bar with
+  "← Edge-Radar" and View source, a main landmark, the house ground and type, and the homepage's
+  theme choice (dark by default, not the OS setting). The build script writes that copy and
+  `--check` compares against it.
+- **Tests** `tests/test_site.py` checks the token rule, the mark, the control order, the repo links
+  and the diagram page's chrome.
+
+---
+
 ## 2026-11-18 -- Homepage performance (ER-32)
 
 - **Site** Measured with Chrome DevTools traces on Slow 4G: desktop layout shift is 0.008 (the audit
