@@ -8,7 +8,7 @@
     "output": "docs/diagrams/betting-data-flow.html",
     "repository": {
       "url": "https://github.com/ai-automation-tools/edge-radar.git",
-      "revision": "edd820574b222105d082f721c7a1dbf32e775076"
+      "revision": "a899838d2598294ff191e4a1cde3b63166354e2d"
     }
   },
   "stages": [
@@ -288,8 +288,8 @@
         },
         {
           "path": "scripts/kalshi/kalshi_client.py",
-          "line": 471,
-          "end_line": 503
+          "line": 493,
+          "end_line": 525
         }
       ]
     },
