@@ -1,3 +1,6 @@
+# Bare `make` prints the target list; it never starts a scan.
+.DEFAULT_GOAL := help
+
 # Portable: use PYTHON env var if set, else try venv, else fall back to system python
 PYTHON ?= $(shell if [ -x .venv/Scripts/python.exe ]; then echo .venv/Scripts/python.exe; elif [ -x .venv/bin/python ]; then echo .venv/bin/python; else echo python; fi)
 

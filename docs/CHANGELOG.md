@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-18 -- Stale branches (ER-49)
+
+- **GitHub** Deleted 13 stale remote branches (every PR merged or abandoned; the head SHAs are in
+  the audit notes if one is ever wanted back) and turned on "delete branch on merge". The remote
+  keeps `master`, `mike_desktop`, `gh-pages` and open PR heads.
+
+---
+
 ## 2026-11-18 -- Skill links and pinned models (ER-48)
 
 - **Skills** `.gitignore` ignores `.claude/skills/` as a whole, and `link_skills.ps1` links every
@@ -12,6 +20,22 @@
   `drift_autofix.py` already named `opus`. `tests/test_agent_cli.py` fails on a `run_agent` call
   without a model. The three skills pin `model:` in their front matter. The table is in
   `docs/setup/AUTOMATION_GUIDE.md`.
+
+---
+
+## 2026-11-18 -- Repo hygiene (ER-51)
+
+- **Removed** `.claude/backup/` (old site HTML, 912 KB), `.claude/images/` (unreferenced legacy
+  diagrams, logos and a screenshot, 11 MB) and `docs/longshot/fork-evidence-window/` (the retired
+  fork's scan reports). All of it stays in git history.
+- **Added** `CONTRIBUTING.md` (setup, tests, the money path, the diagram re-pin) and
+  `.github/CODEOWNERS` over `scripts/kalshi`, `scripts/shared`, `scripts/schedulers`, `app`,
+  `.env.example` and `.github`.
+- **Makefile** Bare `make` prints the help instead of running `scan-mlb`, which hit the network.
+- **Dev container** Python 3.12, `make install` and `pre-commit install`, and a `.env` copied from
+  `.env.example` (DRY_RUN=true); it no longer looks for a `packages.txt` that never existed.
+- Kept `.env.longshot.example`: the profile mechanism is still in the code and it is the only worked
+  example of an overlay. The ROADMAP's release-gate lines were already in place.
 
 ---
 
