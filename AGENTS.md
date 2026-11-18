@@ -157,11 +157,14 @@ Edge-Radar/
 
 ### Execution gates
 
-Every gate runs before any trade executes:
+Every gate runs before any trade executes. The reject gates are one ordered list, `GATES` in
+`kalshi_executor.py`, run by the fresh scan (`size_order`), the scan preview (static gates only) and the
+`--pick`/`--ticker` cache replay (ER-19). Add or change a gate there, never in one path.
 
 | # | Gate | Type |
 |:-:|:-----|:-----|
 | 1 | Daily loss limit not breached | Reject |
+| 1b | Balance above $0 (ER-43) | Reject |
 | 2 | Open position count under max | Reject |
 | 2b | Total open exposure < `MAX_OPEN_EXPOSURE_PCT` and per-sport < `MAX_SEGMENT_EXPOSURE_PCT`, both as fractions of equity (S4) | Reject **+ Cap** |
 | 3 | Edge >= minimum threshold (per-sport or global) **+ exchange fee** (F1) | Reject |

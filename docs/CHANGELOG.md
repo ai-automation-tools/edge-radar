@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-11-17 -- One gate list for every order path (ER-19)
+
+- **Risk** The reject gates were written out three times: in `size_order` (fresh scan), in
+  `preflight_gate_status` (the scan table's Gate column) and in the `--pick`/`--ticker` cache
+  replay. The copies had drifted, which is how a replay once skipped Gates 2 and 4.8 (ER-03). They
+  are now one ordered list, `GATES` in `kalshi_executor.py`, run by all three through
+  `first_rejection()`. A new gate goes in once.
+- **Risk** A replay now runs every gate against current state and config, not a subset: a row whose
+  edge falls under a floor raised since the preview, a sport switched off, or a $0 balance is
+  dropped. Series dedup on replay now honours a per-sport `SERIES_DEDUP_HOURS_<SPORT>=0`, as the
+  fresh path always did. Drop messages use the same reason text as `size_order`, with the gate id.
+- **Unchanged** Fresh-scan verdicts and sizes: 40,000 randomized opportunities and portfolio states
+  gave identical results before and after. Gate ids and order are as before; the old docstring
+  listed them out of order and called the max-bet cap "Gate 7", which is series dedup.
+- **Tests** The suite no longer reads the operator's `.env`: conftest sets
+  `PYTHON_DOTENV_DISABLED=1` before anything imports, so every test runs on the code's defaults,
+  and the four "ignore the operator's .env" fixtures are gone. `tests/test_gate_list.py` pins one
+  added gate reaching all three paths, the replay's static gates, and the `.env` switch.
+- **Not done** A frozen `RiskConfig` passed into `size_order`. About 180 gate tests set the module
+  globals directly, so it means rewriting them; the hermetic suite already removes the failure it
+  was for (tests that passed or failed depending on one machine's `.env`).
+
+---
+
 ## 2026-11-17 -- Scheduled wrappers and the email sender are tracked (ER-27)
 
 - **Ops** The `.bat` wrappers the scheduled tasks run, five of which place orders, were gitignored,

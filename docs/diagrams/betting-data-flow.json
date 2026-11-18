@@ -216,8 +216,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 2607,
-          "end_line": 2711
+          "line": 2591,
+          "end_line": 2695
         }
       ]
     },
@@ -232,8 +232,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1420,
-          "end_line": 1600
+          "line": 870,
+          "end_line": 905
         },
         {
           "path": "scripts/kalshi/kalshi_executor.py",
@@ -252,8 +252,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1621,
-          "end_line": 1754
+          "line": 1605,
+          "end_line": 1738
         }
       ]
     },
@@ -267,8 +267,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1592,
-          "end_line": 1600
+          "line": 1575,
+          "end_line": 1584
         }
       ]
     },
@@ -283,8 +283,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 2007,
-          "end_line": 2241
+          "line": 1991,
+          "end_line": 2225
         },
         {
           "path": "scripts/kalshi/kalshi_client.py",
@@ -303,8 +303,8 @@
       "sources": [
         {
           "path": "scripts/kalshi/kalshi_executor.py",
-          "line": 1849,
-          "end_line": 1962
+          "line": 1833,
+          "end_line": 1946
         },
         {
           "path": "scripts/shared/paths.py",

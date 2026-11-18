@@ -73,10 +73,16 @@ ceiling is already breached and trims the order otherwise.
 | 8 | Max bet size | Cost can't exceed `MAX_BET_SIZE` ($100 default, live $8) — sizing cap |
 | 9 | Bet ratio cap | Single bet can't exceed `MAX_BET_RATIO` (3.0) times the batch median cost — sizing cap |
 
-**Preflight preview.** `preflight_gate_status()` predicts the per-opportunity gates for a scan
-table (`off` / `edge` / `price` / `illiq` / `far` / `score` / `conf` / `no-fav` / `pred-off` /
-`live-off`). It is **static only** — gates 1, 2, 2b, 5, 6 and 7 all need live portfolio state,
-so an `ok` verdict means the row itself has no blockers, not that execution will succeed.
+**One gate list (ER-19).** The reject gates above live once, as `GATES` in `kalshi_executor.py`,
+and `first_rejection()` runs them in order. `size_order` runs all of them; the `--pick`/`--ticker`
+cache replay runs all of them against current state and config (sizing stays locked from the
+preview, clamped to `MAX_BET_SIZE`); the preview below runs the static ones.
+
+**Preflight preview.** `preflight_gate_status()` labels each scan-table row with the first static
+gate that rejects it (`off` / `edge` / `edge-hi` / `price` / `price-hi` / `illiq` / `far` / `score` /
+`conf` / `no-fav` / `pred-off` / `live-off`). Gates 1, 1b, 2, 2b, 5, 6, 6b and 7 need live
+portfolio state, so an `ok` verdict means the row itself has no blockers, not that execution will
+succeed.
 
 ### Sizing
 
