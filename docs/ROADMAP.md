@@ -30,9 +30,8 @@ reason follows on the line). `small` marks an item a check verifies; `🔒 Needs
 Mike can do. Each item keeps its ID in bold and its effort (XS to L) in italics at the end.
 
 > [!NOTE]
-> **Where we are, 2026-11-18.** The 2026-11-16 audit is closed except for three owner actions
-> (ER-05, ER-34 and the ER-26 token revoke) and the B5 de-vig switch, which waits on settled
-> futures. Next by order: the money-path defects (B2, M2, K2), then S10 and the S15 checkpoint
+> **Where we are, 2026-11-18.** The 2026-11-16 audit is closed except for the B5 de-vig switch,
+> which waits on settled futures, and the owner's `audit-fills` review before S15 (ER-02b). Next by order: the money-path defects (B2, M2, K2), then S10 and the S15 checkpoint
 > around 2026-12-09.
 
 ## 🧭 Phase 0: Build and live trading (done 2026-03-22)
@@ -68,7 +67,7 @@ One item per PR, titled `fix(ER-xx): …`.
 - [x] **ER-10** (P1) **Risk, eligibility and responsible-gambling notice.** — done 2026-11-17: a "Risk and eligibility" block under the README hero and in the site footer (whole-stake loss, one operator's sample, Kalshi age and location rules, 1-800-GAMBLER, not affiliated with Kalshi or The Odds API), linked from the hero; disclaimer text moved to `--fg-3` (4.5:1 or better in both themes); the two ROI lines in the gate cards tagged as one operator's sample. Pinned by `tests/test_site.py`.
 - [x] **ER-11** (P1) **Halt and manual-run commands pointed at a Task Scheduler folder that no longer exists.** Every doc and the ops deck now name the current folder and put `DRY_RUN=true` first; closes **R24c** — done 2026-11-17
 - [x] **ER-12** (P1) **Say LIVE or DRY RUN everywhere, and report what was placed, not what was requested.** — done 2026-11-17: `mode_banner()` (`LIVE · REAL MONEY · PROD`, `DRY RUN · nothing sent`, `DEMO · paper orders`, `PREVIEW · …`) titles the console table, opens the execution report and is appended to the email subject. Each order carries an outcome (placed, failed, blocked, not attempted, dry run, preview); reports and the run summary count those, and a live run that placed nothing says `0 placed`. The scan report's in-play column says `in play`, not `LIVE`.
-- [ ] **ER-05** (P1) Kalshi key rotation. The runbook (H8) and the key-type choice (M3: RSA) are done; follow [`docs/setup/KEY_ROTATION.md`](setup/KEY_ROTATION.md). *(effort S)* 🔒 Needs owner
+- [x] **ER-05** (P1) **Rotate the Kalshi key that had been deployed to a hosted app.** *(effort S)* — done 2026-11-18 by the owner: a new RSA key installed per [`docs/setup/KEY_ROTATION.md`](setup/KEY_ROTATION.md) (H8, M3), the old key revoked, and `doctor.py` connecting on both profiles.
 - [x] **ER-06** (P1) **Public-repo data hygiene: stale branches and a history decision.** *(effort S / L)* — done 2026-11-18: the last personal address is out of the current files (#413), the stale branches are gone (ER-49, #407), and history is kept as it is by the owner's decision.
 - [x] **ER-22** (P2) **Report emails rendered raw HTML from report text.** — done 2026-11-17: the renderer escapes HTML (`html=False`); placeholders like `<TN>` now show instead of vanishing. Pinned by `tests/test_render_report_email.py`.
 - [x] **ER-14** (P2) **`--budget 1%` meant 100% of bankroll.** — done 2026-11-17: a trailing `%` always means percent, a bare `1` is refused as ambiguous, the executor's duplicate parser is gone, and the executor, sports and futures `--budget` help texts match the code (a bare `15` is 15%, not $15). Pinned by `tests/test_executor_cli.py`.
@@ -97,8 +96,8 @@ One item per PR, titled `fix(ER-xx): …`.
 - [x] **ER-47** (P3) **Agent docs cost ~30k tokens per session.** *(effort M)* — done 2026-11-18 (#410): `AGENTS.md` under 20 KB with the evidence in `docs/RULES-RATIONALE.md`, the skill split into references, the changelog archived by month. Pinned by `tests/test_doc_size.py`.
 - [x] **ER-16** (P2) **Gate 1's day was UTC's, rolling over mid-slate.** *(effort S)* — done 2026-11-18 (#412): the day is `DAILY_LOSS_TZ`'s (America/New_York). Pinned by `tests/test_daily_loss_window.py`.
 - [x] **ER-24** (P2) **The ops deck published live-trading posture from the public repo.** *(effort M)* — done 2026-11-18 (#413): stripped in place; it keeps the schedule view and links the public page. Pinned by `tests/test_site.py`.
-- [ ] **ER-34** (P2) **Revoke the retired Polymarket credentials** and delete their lines from the live `.env`. Done when the venue shows the key revoked and `doctor.py` still passes. *(effort XS)* 🔒 Needs owner
-- [ ] **ER-26b** **Revoke the aX platform tokens** left from the retired agent roster, and retire the user-scope `edge-radar-coordination` skill (ER-26). *(effort XS)* 🔒 Needs owner
+- [x] **ER-34** (P2) **Revoke the retired Polymarket credentials** and delete their lines from the live `.env`. Done when the venue shows the key revoked and `doctor.py` still passes. *(effort XS)* — done 2026-11-18 by the owner: the key revoked at Polymarket and the `POLYMARKET_*` lines deleted from the live `.env`; `doctor.py` still passes.
+- [x] **ER-26b** **Revoke the aX platform tokens** left from the retired agent roster, and retire the user-scope `edge-radar-coordination` skill (ER-26). *(effort XS)* — done 2026-11-18: tokens revoked by the owner; the skill removed from every agent CLI's user skills folder.
 - [ ] **ER-02b** **Before S15, review `kalshi_settler.py audit-fills`** (read-only) and correct the closed rows it names. *(effort S)* 🔒 Needs owner
 
 ### 🩹 Money-path defects: fix next
