@@ -29,10 +29,15 @@ _HELD = {
 }
 
 
-def _row(start_offset_min: int, contracts: int = 2, price: float = 0.45):
+def _row(
+    start_offset_min: int,
+    contracts: int = 2,
+    price: float = 0.45,
+    ticker: str = "KXNHLTOTAL-26NOV16BOSTOR-6",
+):
     start = (datetime.now(timezone.utc) + timedelta(minutes=start_offset_min)).isoformat()
     opp = Opportunity(
-        "KXNHLTOTAL-26NOV16BOSTOR-6",
+        ticker,
         "t",
         "total",
         "yes",
@@ -59,8 +64,17 @@ def _gates(monkeypatch):
     monkeypatch.setattr(ke, "MAX_BET_SIZE", 50.0)
 
 
-def _replay(client, rows):
-    return ke.execute_pipeline(client, [], execute=False, cached_rows=rows, cache_age_seconds=300)
+def _replay(client, rows, **kw):
+    return ke.execute_pipeline(
+        client, [], execute=False, cached_rows=rows, cache_age_seconds=300, **kw
+    )
+
+
+_MENU = [
+    "KXNHLTOTAL-26NOV16BOSTOR-6",
+    "KXNBATOTAL-26NOV16DENPHX-230",
+    "KXNFLTOTAL-26NOV16KCBUF-47",
+]
 
 
 def test_started_game_is_dropped():
@@ -82,3 +96,22 @@ def test_bet_size_reclamped_to_current_cap(monkeypatch):
 def test_clean_row_still_replays():
     out = _replay(_Client(), [_row(120)])
     assert [s.contracts for s in out] == [2]
+
+
+def test_pick_index_is_the_preview_row_even_when_an_earlier_row_drops():
+    rows = [_row(-40, ticker=_MENU[0]), _row(120, ticker=_MENU[1]), _row(120, ticker=_MENU[2])]
+    out = _replay(_Client(), rows, pick_rows="3")
+    assert [s.opportunity.ticker for s in out] == [_MENU[2]]
+
+
+def test_gate_2_counts_only_picked_rows(monkeypatch):
+    monkeypatch.setattr(ke, "MAX_OPEN_POSITIONS", 2)
+    rows = [_row(120, ticker=t) for t in _MENU]
+    out = _replay(_Client([_HELD]), rows, pick_rows="3")
+    assert [s.opportunity.ticker for s in out] == [_MENU[2]]
+
+
+def test_pick_by_ticker_on_replay():
+    rows = [_row(120, ticker=t) for t in _MENU]
+    out = _replay(_Client(), rows, pick_tickers=[_MENU[1].lower()])
+    assert [s.opportunity.ticker for s in out] == [_MENU[1]]

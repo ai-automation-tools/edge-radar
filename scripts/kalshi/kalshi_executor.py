@@ -2593,6 +2593,23 @@ def execute_pipeline(
         )
         rprint("[dim]Pass --rescan to force a fresh scan instead.[/dim]")
 
+        # ER-03: resolve --pick/--ticker against the menu the user previewed,
+        # BEFORE re-gating. Picking after it indexed the re-gated list, so any
+        # dropped row shifted the numbers and `--pick 3` could place a bet other
+        # than preview row 3; Gate 2 would also count rows never picked.
+        if pick_rows is not None or pick_tickers is not None:
+            menu_total = len(cached_rows)
+            if pick_rows is not None:
+                cached_rows = [cached_rows[i] for i in _parse_pick_rows(pick_rows, menu_total)]
+            if pick_tickers is not None:
+                pick_set = {t.upper() for t in pick_tickers}
+                cached_rows = [s for s in cached_rows if s.opportunity.ticker.upper() in pick_set]
+            pick_rows = pick_tickers = None  # applied; the later filter must not re-index
+            rprint(f"[bold]Picked {len(cached_rows)} of {menu_total} preview rows[/bold]")
+            if not cached_rows:
+                rprint("[yellow]No orders matched your --pick or --ticker selection.[/yellow]")
+                return []
+
         to_execute = []
         replay_dropped: list[tuple[str, str]] = []
         for s in cached_rows:
