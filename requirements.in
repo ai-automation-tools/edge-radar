@@ -1,0 +1,11 @@
+# Runtime dependencies (top level). requirements.txt is the hashed lock built
+# from this file; edit here, then run `make lock` (needs uv).
+python-dotenv
+requests
+cryptography          # RSA-PSS signing for Kalshi API auth
+scipy                 # normal CDF for edge probability
+numpy                 # imported directly by edge_detector and the backtests
+rich                  # terminal tables
+markdown-it-py        # render_report_email.py: report markdown -> email HTML
+filelock              # cross-process lock for trade/settlement log writes
+tzdata; sys_platform == "win32"  # zoneinfo has no system tz database on Windows (edge_detector)

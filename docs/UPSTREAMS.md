@@ -41,6 +41,6 @@ source. `—` means never checked.
 | Upstream | What the code assumes | Where | Check at | Last checked |
 |:---|:---|:---|:---|:---|
 | **Python** | 3.11+ | `pyproject.toml`, `AGENTS.md` | devguide.python.org/versions (EOL dates) | 2026-11-16 |
-| **`requests`, `cryptography`, `pandas`, `scipy`, `rich`, `filelock`, `markdown-it-py`** | Floor pins (`>=`) in `requirements.txt`; `cryptography` does the RSA-PSS signing | `requirements.txt` | PyPI release pages. Flag breaking majors and security advisories only | 2026-11-16 |
+| **`requests`, `cryptography`, `numpy`, `scipy`, `rich`, `filelock`, `markdown-it-py`** | Exact, hashed pins in `requirements.txt` (built from `requirements.in` with `make lock`); `cryptography` does the RSA-PSS signing | `requirements.in`, `requirements.txt` | PyPI release pages. Flag breaking majors and security advisories only | 2026-11-16 |
 
 *Planned, not built* (no row until code exists): Alpaca, Coinbase, Manifold.

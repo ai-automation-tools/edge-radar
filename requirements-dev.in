@@ -1,0 +1,9 @@
+# Dev and test tools on top of the runtime set. requirements-dev.txt is the
+# hashed lock built from this file and pins the same runtime versions.
+-r requirements.in
+pytest
+black
+flake8
+mypy
+pre-commit
+pillow                # scripts/make_favicon.py only

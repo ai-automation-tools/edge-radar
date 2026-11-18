@@ -6,7 +6,9 @@
 # Live-money repo: these PRs are not auto-merged by any routine. Review before merging.
 version: 2
 updates:
-  - package-ecosystem: pip
+  # requirements*.txt are `uv pip compile` hashed locks; the uv ecosystem re-locks them
+  # (re-running the header command) instead of editing pins by hand.
+  - package-ecosystem: uv
     directory: "/"
     schedule: { interval: weekly, day: monday }
     ignore:

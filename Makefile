@@ -68,8 +68,15 @@ doctor:
 	$(PYTHON) scripts/doctor.py
 
 install:
-	pip install -r requirements.txt
+	pip install --require-hashes -r requirements-dev.txt
 	pip install -e .
+
+# Re-lock after editing requirements*.in (needs uv: https://docs.astral.sh/uv/). Dependabot
+# re-runs the command recorded in each lock's header, so keep these flags in the header.
+LOCK = uv pip compile --universal --python-version 3.11 --generate-hashes --annotation-style line
+lock:
+	$(LOCK) requirements.in -o requirements.txt
+	$(LOCK) requirements-dev.in -c requirements.txt -o requirements-dev.txt
 
 hooks:
 	pip install pre-commit
@@ -107,4 +114,4 @@ help:
 	@echo "  make install           Install dependencies"
 	@echo "  make hooks             Install pre-commit hooks"
 
-.PHONY: scan-mlb scan-nba scan-nhl scan-nfl scan-sports scan-futures scan-predictions scan-all status risk settle report reconcile backtest backtest-sim test test-quick lint-config doctor install hooks help
+.PHONY: scan-mlb scan-nba scan-nhl scan-nfl scan-sports scan-futures scan-predictions scan-all status risk settle report reconcile backtest backtest-sim test test-quick lint-config doctor install lock hooks help

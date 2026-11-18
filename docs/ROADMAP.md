@@ -120,7 +120,7 @@ S8 (CLV capture) shipped 2026-09-10 and S9 (the CLV section of `betting_analysis
 - [ ] **GT2** Add one reference table of the 8 sizing-cap steps near `size_order`. *(effort XS)*
 - [ ] **H7** Move `BOOK_WEIGHTS` into config (pruned to arriving keys in B7). *(effort S)*
 - [ ] **H8** Write a runbook for rotating the Kalshi RSA key. *(effort XS)*
-- [ ] **H2 / H3** Split `requirements.txt` into core, dev and research. Separate runtime state from the source tree. *(effort S)*
+- [ ] **H2 / H3** ~~Split `requirements.txt` into core, dev and research.~~ Core/dev split done 2026-11-17 with ER-20 (hashed `requirements.txt` + `requirements-dev.txt`); nothing needs a research set yet. Still open: separate runtime state from the source tree. *(effort S)*
 - [ ] **Q6** Package `scripts/` and retire the `sys.path` hacks. *(effort L)*
 - [ ] **R19** Complete `FUTURES_ALIASES` for NBA/NHL/MLB. See the archive for the rest of the scope. *(effort M)*
 - [ ] `small` **One risk-gate count everywhere (21)** *(Docs)* — `docs/setup/ARCHITECTURE.md` says 18 (badge and pipeline table) and `skills/edge-radar/SKILL.md` says fifteen, while the README says 21. **Done when:** every count matches the gates the risk check actually runs. *(effort XS)*

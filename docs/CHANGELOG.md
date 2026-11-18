@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-11-17 -- Hashed dependency locks, Actions pinned by SHA (ER-20)
+
+- **Supply chain** `requirements.txt` held floor pins (`>=`), so every install could pull a different
+  version. It is now a hashed lock built from `requirements.in` with `uv pip compile --universal`:
+  exact versions, and pip refuses a file whose hash doesn't match. Versions match the live venv on
+  Python 3.12; numpy and scipy fork to their last 3.11 releases on 3.11. Tests and dev tools live in
+  `requirements-dev.in` / `requirements-dev.txt`, constrained to the same runtime pins. Re-lock with
+  `make lock`.
+- **Deps** Declared what the code imports: `numpy` (edge detector, backtests) and, on Windows,
+  `tzdata`. `zoneinfo` has no system time-zone data there; it only worked because pandas pulled
+  `tzdata` in. Dropped `pandas`, `pytest-asyncio` and `pytest-mock` (nothing uses them) and the block
+  of commented "planned" packages. `pillow` (for `make_favicon.py`) is a dev dependency.
+- **CI** Installs `--require-hashes -r requirements-dev.txt`. Every `uses:` in the three workflows
+  is pinned to a full commit SHA with the version in a comment; Dependabot bumps both.
+- **Dependabot** The Python updates use the `uv` ecosystem, which re-runs the command recorded in
+  each lock's header, so hashes stay in step with pins.
+- **Docs** `SETUP_GUIDE.md`, `AGENTS.md` and `UPSTREAMS.md` describe the locks. The README still
+  installs `requirements.txt`, which is all a user needs.
+
+---
+
 ## 2026-11-17 -- CI runs lint, secret scan and Python 3.11 (ER-21)
 
 - **CI** Only pytest on 3.12 ran, so nothing stopped a PR that skipped the local hooks. CI now
