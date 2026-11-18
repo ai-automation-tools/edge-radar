@@ -9,8 +9,10 @@
   percent; a bare `1` is refused (100% or 1%?); zero, negative, non-numeric and over-100%
   values are refused. Every scheduled run passes `12%` or `10%`, which parse as before.
 - **Fix** `kalshi_executor.py run` had its own copy of the old parser; it now calls the shared one.
-- **Docs** All four `--budget` help texts said a bare `15` meant $15. The code has always read it
-  as 15%; the help now says so (dollars only above 100).
+- **Docs** The `--budget` help texts said a bare `15` meant $15. The code has always read it as
+  15%; the executor, sports and futures help now say so (dollars only above 100).
+  `prediction_scanner.py` still has the old wording: the file predates black/flake8 and any
+  edit reformats all of it.
 
 ---
 
