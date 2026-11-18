@@ -4,9 +4,8 @@
 
 ## 2026-11-17 -- Money-path hardening (ER-35, 37, 38, 40, 41, 43, 44, 46)
 
-- **ER-46** The client counted any base URL containing "demo" as the demo exchange, and DRY_RUN
-  only blocks orders on live. Only the host `demo-api.kalshi.co` is demo now; everything else is
-  live and DRY_RUN applies.
+- **ER-46** Demo detection is an exact host match (`demo-api.kalshi.co`) instead of a substring
+  test on the base URL; any other URL is treated as live.
 - **ER-43** Sizing with a balance of $0 or less (or a failed read) still bought one contract,
   because the bankroll cap rounds up to 1 and the Hard Stop skipped itself. A new `no_bankroll`
   rejection runs right after Gate 1. `get_balance_dollars` reads the venue's `*_dollars` fields
