@@ -73,10 +73,10 @@ REPORT_DIR = PROJECT_ROOT / "reports" / "Performance"
 
 # ── The pre-declared rule. Changing these numbers after seeing Week 1 defeats
 #    the entire point of writing them down on 2026-08-26. ──────────────────────
-MIN_SETTLEMENTS = 20      # we expect ~26; below this, no branch can fire
-MAX_MODEL_ERR = 0.15      # mean model prob minus realised win rate
-PILOT_FLOOR = 0.08        # the capped floor branch A applies (global is 0.03)
-FROZEN_FLOOR = 1.0        # what S1 set
+MIN_SETTLEMENTS = 20  # we expect ~26; below this, no branch can fire
+MAX_MODEL_ERR = 0.15  # mean model prob minus realised win rate
+PILOT_FLOOR = 0.08  # the capped floor branch A applies (global is 0.03)
+FROZEN_FLOOR = 1.0  # what S1 set
 
 ENV_KEY = "MIN_EDGE_THRESHOLD_NFL"
 
@@ -88,8 +88,7 @@ def nfl_rows() -> list[dict]:
 
 def _settled_nfl_count() -> int:
     """Settled NFL rows in the settlement log, readable or not."""
-    return sum(1 for r in load_settlement_log()
-               if str(r.get("ticker", "")).startswith("KXNFL"))
+    return sum(1 for r in load_settlement_log() if str(r.get("ticker", "")).startswith("KXNFL"))
 
 
 def _segment_cap() -> float | None:
@@ -110,38 +109,46 @@ def _segment_cap() -> float | None:
     """
     try:
         from dotenv import load_dotenv
+
         load_dotenv(ENV_PATH)
         from app.config import get_config, reset_config
+
         reset_config()
         return get_config().risk.max_segment_exposure_pct
-    except Exception:                                        # noqa: BLE001
+    except Exception:  # noqa: BLE001
         return None
 
 
 def _segment_cap_paragraph() -> str:
     """The S4 note, told truthfully for whatever the cap actually is."""
     pct = _segment_cap()
-    tail = ("Two caveats hold either way: the pilot floor limits how many rows "
-            "qualify, not how much is staked, and **Gate 2b runs only at entry** "
-            "-- nothing re-checks a position already held, so a book that drifts "
-            "over the ceiling stays there until it runs off (S12).")
+    tail = (
+        "Two caveats hold either way: the pilot floor limits how many rows "
+        "qualify, not how much is staked, and **Gate 2b runs only at entry** "
+        "-- nothing re-checks a position already held, so a book that drifts "
+        "over the ceiling stays there until it runs off (S12)."
+    )
 
     if pct is None:
-        return ("`MAX_SEGMENT_EXPOSURE_PCT` could not be read, so this report "
-                "cannot say whether a per-sport ceiling is enforcing. **Check "
-                "`.env` before acting on this verdict.** " + tail)
+        return (
+            "`MAX_SEGMENT_EXPOSURE_PCT` could not be read, so this report "
+            "cannot say whether a per-sport ceiling is enforcing. **Check "
+            "`.env` before acting on this verdict.** " + tail
+        )
     if not pct:
-        return ("S4 shipped 2026-08-26, but `MAX_SEGMENT_EXPOSURE_PCT` is **0 "
-                "(OFF)** right now -- so **nothing mechanically stops NFL "
-                "exposure re-accumulating** the way it did to 31% of bankroll. "
-                "Set it before unfreezing, or watch NFL exposure manually. "
-                + tail)
-    return (f"S4 shipped 2026-08-26, so the per-sport ceiling this script once "
-            f"said did not exist is now live: Gate 2b binds NFL exposure at "
-            f"**{pct:.0%} of equity**, rejecting when NFL is already at the "
-            f"ceiling and trimming an order to the remaining headroom "
-            f"otherwise. The 31%-of-bankroll pileup could not repeat silently. "
-            + tail)
+        return (
+            "S4 shipped 2026-08-26, but `MAX_SEGMENT_EXPOSURE_PCT` is **0 "
+            "(OFF)** right now -- so **nothing mechanically stops NFL "
+            "exposure re-accumulating** the way it did to 31% of bankroll. "
+            "Set it before unfreezing, or watch NFL exposure manually. " + tail
+        )
+    return (
+        f"S4 shipped 2026-08-26, so the per-sport ceiling this script once "
+        f"said did not exist is now live: Gate 2b binds NFL exposure at "
+        f"**{pct:.0%} of equity**, rejecting when NFL is already at the "
+        f"ceiling and trimming an order to the remaining headroom "
+        f"otherwise. The 31%-of-bankroll pileup could not repeat silently. " + tail
+    )
 
 
 def roi_context() -> dict:
@@ -174,9 +181,14 @@ def roi_context() -> dict:
         staked += float(cost or 0.0)
         net += float(s.get("net_pnl") or 0.0)
         wins += 1 if s.get("won") else 0
-    return {"n": n, "staked": staked, "net": net, "wins": wins,
-            "missing_cost": missing_cost,
-            "roi": (net / staked) if staked > 0 else None}
+    return {
+        "n": n,
+        "staked": staked,
+        "net": net,
+        "wins": wins,
+        "missing_cost": missing_cost,
+        "roi": (net / staked) if staked > 0 else None,
+    }
 
 
 def decide(rows: list[dict]) -> dict:
@@ -194,10 +206,11 @@ def decide(rows: list[dict]) -> dict:
         settled = _settled_nfl_count()
         detail = f"only {n} usable settled NFL bets, need {MIN_SETTLEMENTS}"
         if settled > n:
-            detail += (f" ({settled} settled, {settled - n} dropped for a "
-                       "missing model probability or entry price)")
-        return {"branch": "C", "action": "stay_frozen", "n": n,
-                "reason": detail}
+            detail += (
+                f" ({settled} settled, {settled - n} dropped for a "
+                "missing model probability or entry price)"
+            )
+        return {"branch": "C", "action": "stay_frozen", "n": n, "reason": detail}
 
     ys = [r["y"] for r in rows]
     pm = [r["p_model"] for r in rows]
@@ -207,31 +220,57 @@ def decide(rows: list[dict]) -> dict:
     model_err = (sum(pm) / n) - realised
     lo, hi = bootstrap_ci(
         rows,
-        lambda rs: (brier([r["p_market"] for r in rs], [r["y"] for r in rs])
-                    - brier([r["p_model"] for r in rs], [r["y"] for r in rs])),
+        lambda rs: (
+            brier([r["p_market"] for r in rs], [r["y"] for r in rs])
+            - brier([r["p_model"] for r in rs], [r["y"] for r in rs])
+        ),
     )
 
-    base = {"n": n, "brier_model": b_model, "brier_market": b_market,
-            "realised": realised, "model_err": model_err,
-            "brier_diff": b_market - b_model, "diff_ci": (lo, hi)}
+    base = {
+        "n": n,
+        "brier_model": b_model,
+        "brier_market": b_market,
+        "realised": realised,
+        "model_err": model_err,
+        "brier_diff": b_market - b_model,
+        "diff_ci": (lo, hi),
+    }
 
     if b_model > b_market:
-        return {**base, "branch": "B", "action": "stay_frozen",
-                "reason": (f"market prices NFL better than the model "
-                           f"({b_market:.4f} vs {b_model:.4f}) -- the pattern in 6 of 6 "
-                           f"months overall. Re-judge on CLV when S8 ships.")}
+        return {
+            **base,
+            "branch": "B",
+            "action": "stay_frozen",
+            "reason": (
+                f"market prices NFL better than the model "
+                f"({b_market:.4f} vs {b_model:.4f}) -- the pattern in 6 of 6 "
+                f"months overall. Re-judge on CLV when S8 ships."
+            ),
+        }
 
     if model_err > MAX_MODEL_ERR:
-        return {**base, "branch": "C", "action": "stay_frozen",
-                "reason": (f"model over-claims by {model_err:+.1%} (claimed "
-                           f"{sum(pm) / n:.1%}, realised {realised:.1%}), above the "
-                           f"{MAX_MODEL_ERR:.0%} bar -- a good Brier here would be luck, "
-                           f"not calibration")}
+        return {
+            **base,
+            "branch": "C",
+            "action": "stay_frozen",
+            "reason": (
+                f"model over-claims by {model_err:+.1%} (claimed "
+                f"{sum(pm) / n:.1%}, realised {realised:.1%}), above the "
+                f"{MAX_MODEL_ERR:.0%} bar -- a good Brier here would be luck, "
+                f"not calibration"
+            ),
+        }
 
-    return {**base, "branch": "A", "action": "pilot",
-            "reason": (f"model Brier {b_model:.4f} beats market {b_market:.4f} over "
-                       f"{n} settled bets, model error {model_err:+.1%} within the "
-                       f"{MAX_MODEL_ERR:.0%} bar")}
+    return {
+        **base,
+        "branch": "A",
+        "action": "pilot",
+        "reason": (
+            f"model Brier {b_model:.4f} beats market {b_market:.4f} over "
+            f"{n} settled bets, model error {model_err:+.1%} within the "
+            f"{MAX_MODEL_ERR:.0%} bar"
+        ),
+    }
 
 
 def apply_pilot(env_path: Path = ENV_PATH) -> tuple[bool, str]:
@@ -249,16 +288,20 @@ def apply_pilot(env_path: Path = ENV_PATH) -> tuple[bool, str]:
         return False, f"{ENV_KEY} not found in .env -- nothing changed"
     current = float(m.group(1))
     if current != FROZEN_FLOOR:
-        return False, (f"{ENV_KEY} is {current}, not the {FROZEN_FLOOR} freeze value "
-                       f"-- someone changed it already; nothing changed")
+        return False, (
+            f"{ENV_KEY} is {current}, not the {FROZEN_FLOOR} freeze value "
+            f"-- someone changed it already; nothing changed"
+        )
     stamp = date.today().isoformat()
-    line = (f"{ENV_KEY}={PILOT_FLOOR}"
-            f"{' ' * max(1, 32 - len(ENV_KEY) - len(str(PILOT_FLOOR)) - 1)}"
-            f"# S1b PILOT {stamp}: Week 1 branch A. Was 1.0 (S1 freeze 2026-08-26).\n"
-            f"{' ' * 36}#   Capped lane, ~2.7x the global floor, so only strong NFL rows\n"
-            f"{' ' * 36}#   clear Gate 3. This high floor is the ONLY per-sport volume cap\n"
-            f"{' ' * 36}#   available until S4 ships -- watch NFL exposure manually.")
-    env_path.write_text(text[:m.start()] + line + text[m.end():], encoding="utf-8")
+    line = (
+        f"{ENV_KEY}={PILOT_FLOOR}"
+        f"{' ' * max(1, 32 - len(ENV_KEY) - len(str(PILOT_FLOOR)) - 1)}"
+        f"# S1b PILOT {stamp}: Week 1 branch A. Was 1.0 (S1 freeze 2026-08-26).\n"
+        f"{' ' * 36}#   Capped lane, ~2.7x the global floor, so only strong NFL rows\n"
+        f"{' ' * 36}#   clear Gate 3. This high floor is the ONLY per-sport volume cap\n"
+        f"{' ' * 36}#   available until S4 ships -- watch NFL exposure manually."
+    )
+    env_path.write_text(text[: m.start()] + line + text[m.end() :], encoding="utf-8")
     return True, f"{ENV_KEY}: {FROZEN_FLOOR} -> {PILOT_FLOOR}"
 
 
@@ -329,8 +372,11 @@ def render(d: dict, roi: dict, applied: str | None) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="S1b NFL Week 1 freeze review.")
-    ap.add_argument("--apply", action="store_true",
-                    help="Apply branch A (pilot floor) if it fires. Default: report only.")
+    ap.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply branch A (pilot floor) if it fires. Default: report only.",
+    )
     ap.add_argument("--json", action="store_true", help="Emit the verdict as JSON.")
     ap.add_argument("--self-check", action="store_true", help="Run the branch-logic asserts.")
     args = ap.parse_args(argv)
@@ -344,8 +390,12 @@ def main(argv: list[str] | None = None) -> int:
         verdict = decide(rows)
         roi = roi_context()
     except Exception as exc:  # fail closed: any error leaves NFL frozen
-        verdict = {"branch": "C", "action": "stay_frozen", "n": 0,
-                   "reason": f"review failed ({type(exc).__name__}: {exc}) -- staying frozen"}
+        verdict = {
+            "branch": "C",
+            "action": "stay_frozen",
+            "n": 0,
+            "reason": f"review failed ({type(exc).__name__}: {exc}) -- staying frozen",
+        }
         roi = {"n": 0, "staked": 0.0, "net": 0.0, "wins": 0, "roi": 0.0}
 
     applied = None
@@ -372,9 +422,17 @@ def main(argv: list[str] | None = None) -> int:
 
 def _demo() -> None:
     """The branch table, exercised. `python nfl_week1_review.py --self-check`."""
+
     def rows(n, p_model, p_market, wins):
-        return [{"sport": "nfl", "p_model": p_model, "p_market": p_market,
-                 "y": 1.0 if i < wins else 0.0} for i in range(n)]
+        return [
+            {
+                "sport": "nfl",
+                "p_model": p_model,
+                "p_market": p_market,
+                "y": 1.0 if i < wins else 0.0,
+            }
+            for i in range(n)
+        ]
 
     # Too few settlements -> C, whatever the numbers look like.
     assert decide(rows(5, 0.6, 0.5, 5))["branch"] == "C"
@@ -396,6 +454,7 @@ def _demo() -> None:
 
     # apply_pilot is fail-closed on every shape of unexpected .env.
     import tempfile
+
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / ".env"
         p.write_text("FOO=1\n", encoding="utf-8")

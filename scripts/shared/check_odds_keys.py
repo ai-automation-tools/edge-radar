@@ -32,8 +32,12 @@ if str(_SHARED) not in sys.path:
 
 load_dotenv()
 from odds_api import (  # noqa: E402
-    _keys, _load_keys, _remaining, _QUOTA_CACHE_PATH,
-    mark_exhausted, report_remaining,
+    _keys,
+    _load_keys,
+    _remaining,
+    _QUOTA_CACHE_PATH,
+    mark_exhausted,
+    report_remaining,
 )
 
 PROBE_URL = "https://api.the-odds-api.com/v4/sports"
@@ -122,7 +126,8 @@ def main():
         description="Inspect Odds API key quota (cache view by default; --live to probe).",
     )
     parser.add_argument(
-        "--live", action="store_true",
+        "--live",
+        action="store_true",
         help="Probe each key via /v4/sports (costs 1 request per key) and update the cache.",
     )
     args = parser.parse_args()

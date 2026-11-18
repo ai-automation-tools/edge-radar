@@ -52,13 +52,21 @@ PROJECT_ROOT = Path(paths.PROJECT_ROOT)
 # routed through `_detect_sport`: this reads historical rows whose tickers may
 # predate any given mapping change.
 SPORT_PREFIX = {
-    "mlb": "KXMLB", "nba": "KXNBA", "nhl": "KXNHL", "nfl": "KXNFL",
-    "ncaab": "KXNCAAB", "ncaaf": "KXNCAAF", "mls": "KXMLS",
+    "mlb": "KXMLB",
+    "nba": "KXNBA",
+    "nhl": "KXNHL",
+    "nfl": "KXNFL",
+    "ncaab": "KXNCAAB",
+    "ncaaf": "KXNCAAF",
+    "mls": "KXMLS",
 }
 
-_MONTHS = {m: i + 1 for i, m in enumerate(
-    ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT",
-     "NOV", "DEC"])}
+_MONTHS = {
+    m: i + 1
+    for i, m in enumerate(
+        ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+    )
+}
 
 _EXHAUSTION = re.compile(r"All \d+ Odds API keys returned 401/429")
 _LOG_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2}) ")
@@ -115,20 +123,23 @@ def _rows_for(sport: str) -> list[dict]:
         if not str(r.get("ticker", "")).upper().startswith(prefix):
             continue
         won = r.get("won")
-        out.append({
-            "ticker": r.get("ticker"),
-            "date": game_date(r.get("ticker")),
-            "cost": float(r.get("cost") or 0.0),
-            "net": float(r.get("net_pnl") or 0.0),
-            "fv": r.get("fair_value"),
-            "mp": r.get("market_price_at_entry"),
-            "y": (1.0 if won else 0.0) if won is not None else None,
-            "n_books": r.get("n_books"),
-        })
+        out.append(
+            {
+                "ticker": r.get("ticker"),
+                "date": game_date(r.get("ticker")),
+                "cost": float(r.get("cost") or 0.0),
+                "net": float(r.get("net_pnl") or 0.0),
+                "fv": r.get("fair_value"),
+                "mp": r.get("market_price_at_entry"),
+                "y": (1.0 if won else 0.0) if won is not None else None,
+                "n_books": r.get("n_books"),
+            }
+        )
     return out
 
 
 # ── statistics ──────────────────────────────────────────────────────────────
+
 
 def roi(rows: list[dict]) -> float | None:
     staked = sum(r["cost"] for r in rows)
@@ -143,8 +154,7 @@ def brier_gap(rows: list[dict]) -> float | None:
     predicted=fair_value is the thing under test, and printing either alone
     under one label is how 0.169 got reported where the truth was 0.077.
     """
-    v = [r for r in rows
-         if r["fv"] is not None and r["mp"] is not None and r["y"] is not None]
+    v = [r for r in rows if r["fv"] is not None and r["mp"] is not None and r["y"] is not None]
     if not v:
         return None
     bm = sum((float(r["fv"]) - r["y"]) ** 2 for r in v) / len(v)
@@ -152,8 +162,9 @@ def brier_gap(rows: list[dict]) -> float | None:
     return bm - bk
 
 
-def bootstrap_diff(a: list[dict], b: list[dict], stat, n: int = 8000,
-                   seed: int = 20260910) -> tuple[float, float] | None:
+def bootstrap_diff(
+    a: list[dict], b: list[dict], stat, n: int = 8000, seed: int = 20260910
+) -> tuple[float, float] | None:
     """95% CI on stat(a) - stat(b), resampling each arm independently."""
     if not a or not b:
         return None
@@ -171,8 +182,9 @@ def bootstrap_diff(a: list[dict], b: list[dict], stat, n: int = 8000,
     return diffs[int(0.025 * len(diffs))], diffs[int(0.975 * len(diffs))]
 
 
-def split(rows: list[dict], *, proxy: bool, exh: set[str],
-          days_before: int, thin: int) -> tuple[list[dict], list[dict], list[dict]]:
+def split(
+    rows: list[dict], *, proxy: bool, exh: set[str], days_before: int, thin: int
+) -> tuple[list[dict], list[dict], list[dict]]:
     """-> (suspect, control, undatable/unknown)."""
     lo, hi, skip = [], [], []
     for r in rows:
@@ -180,8 +192,7 @@ def split(rows: list[dict], *, proxy: bool, exh: set[str],
             if r["date"] is None:
                 skip.append(r)
                 continue
-            days = [(r["date"] - dt.timedelta(days=k)).isoformat()
-                    for k in range(days_before + 1)]
+            days = [(r["date"] - dt.timedelta(days=k)).isoformat() for k in range(days_before + 1)]
             (lo if any(d in exh for d in days) else hi).append(r)
         else:
             nb = r["n_books"]
@@ -198,27 +209,32 @@ def _fmt(rows: list[dict]) -> str:
         return "n=0"
     wins = sum(1 for r in rows if r["y"] == 1.0)
     r_, g = roi(rows), brier_gap(rows)
-    return (f"n={n:4} W-L {wins:3}-{n - wins:<3} staked ${sum(x['cost'] for x in rows):7.2f} "
-            f"net ${sum(x['net'] for x in rows):+7.2f} "
-            f"ROI {(f'{r_:+.1%}' if r_ is not None else 'n/a'):>8} "
-            f"model-market Brier {(f'{g:+.4f}' if g is not None else 'n/a'):>8}")
+    return (
+        f"n={n:4} W-L {wins:3}-{n - wins:<3} staked ${sum(x['cost'] for x in rows):7.2f} "
+        f"net ${sum(x['net'] for x in rows):+7.2f} "
+        f"ROI {(f'{r_:+.1%}' if r_ is not None else 'n/a'):>8} "
+        f"model-market Brier {(f'{g:+.4f}' if g is not None else 'n/a'):>8}"
+    )
 
 
 def report(sport: str, *, proxy: bool, days_before: int, thin: int) -> dict:
     rows = _rows_for(sport)
     exh = exhaustion_days() if proxy else set()
-    lo, hi, skip = split(rows, proxy=proxy, exh=exh,
-                         days_before=days_before, thin=thin)
+    lo, hi, skip = split(rows, proxy=proxy, exh=exh, days_before=days_before, thin=thin)
 
     lo_name = "EXHAUSTED" if proxy else f"THIN (<{thin})"
     hi_name = "CLEAN" if proxy else f"WIDE (>={thin})"
 
     print(f"\n=== {sport.upper()} — {'exhaustion-day proxy' if proxy else 'book width'} ===")
     if proxy:
-        print(f"exhaustion days on record: {len(exh)}   "
-              f"window: game day{f' or up to {days_before}d before' if days_before else ''}")
-        print("PROXY, and a weak one: an exhaustion line dates the SCAN, not the "
-              "book behind any one edge.")
+        print(
+            f"exhaustion days on record: {len(exh)}   "
+            f"window: game day{f' or up to {days_before}d before' if days_before else ''}"
+        )
+        print(
+            "PROXY, and a weak one: an exhaustion line dates the SCAN, not the "
+            "book behind any one edge."
+        )
     print(f"settled {sport.upper()} rows: {len(rows)}")
     print(f"  {lo_name:14} {_fmt(lo)}")
     print(f"  {hi_name:14} {_fmt(hi)}")
@@ -226,9 +242,14 @@ def report(sport: str, *, proxy: bool, days_before: int, thin: int) -> dict:
         why = "no parseable game date" if proxy else "no n_books recorded"
         print(f"  {'excluded':14} n={len(skip):4} ({why})")
 
-    out = {"sport": sport, "mode": "proxy" if proxy else "n_books",
-           "n": len(rows), "n_low": len(lo), "n_high": len(hi),
-           "n_excluded": len(skip)}
+    out = {
+        "sport": sport,
+        "mode": "proxy" if proxy else "n_books",
+        "n": len(rows),
+        "n_low": len(lo),
+        "n_high": len(hi),
+        "n_excluded": len(skip),
+    }
 
     if lo and hi:
         print(f"\nDIFFERENCE ({lo_name} - {hi_name}), 95% bootstrap CI:")
@@ -243,7 +264,10 @@ def report(sport: str, *, proxy: bool, days_before: int, thin: int) -> dict:
             verdict = "EXCLUDES 0" if (ci[0] > 0) == (ci[1] > 0) else "straddles 0"
             print(f"  {label:10} {f(d):>9}   CI [{f(ci[0])}, {f(ci[1])}]   {verdict}")
             out[label.lower().replace(" ", "_")] = {
-                "diff": d, "ci": list(ci), "significant": verdict == "EXCLUDES 0"}
+                "diff": d,
+                "ci": list(ci),
+                "significant": verdict == "EXCLUDES 0",
+            }
 
     # Per-month, because a pooled difference that flips sign is not a finding.
     bym = collections.defaultdict(lambda: {"lo": [], "hi": []})
@@ -251,21 +275,24 @@ def report(sport: str, *, proxy: bool, days_before: int, thin: int) -> dict:
         if r["date"]:
             bym[r["date"].strftime("%Y-%m")]["lo" if r in lo else "hi"].append(r)
     if bym:
-        print(f"\nPER MONTH — does the sign hold? (Simpson's-paradox check)")
+        print("\nPER MONTH — does the sign hold? (Simpson's-paradox check)")
         print(f"  {'month':9}{lo_name:>13} n{'':>4}{hi_name:>13} n")
         flips = 0
         for m in sorted(bym):
             a, b = roi(bym[m]["lo"]), roi(bym[m]["hi"])
             if a is not None and b is not None and (a - b > 0):
                 flips += 1
-            print(f"  {m:9} {(f'{a:+.1%}' if a is not None else '-'):>12} "
-                  f"{len(bym[m]['lo']):4} {(f'{b:+.1%}' if b is not None else '-'):>12} "
-                  f"{len(bym[m]['hi']):4}")
-        both = [m for m in bym if roi(bym[m]["lo"]) is not None
-                and roi(bym[m]["hi"]) is not None]
+            print(
+                f"  {m:9} {(f'{a:+.1%}' if a is not None else '-'):>12} "
+                f"{len(bym[m]['lo']):4} {(f'{b:+.1%}' if b is not None else '-'):>12} "
+                f"{len(bym[m]['hi']):4}"
+            )
+        both = [m for m in bym if roi(bym[m]["lo"]) is not None and roi(bym[m]["hi"]) is not None]
         if both:
-            print(f"\n  {lo_name} worse in {len(both) - flips}/{len(both)} months, "
-                  f"better in {flips}/{len(both)}.")
+            print(
+                f"\n  {lo_name} worse in {len(both) - flips}/{len(both)} months, "
+                f"better in {flips}/{len(both)}."
+            )
             out["months_compared"] = len(both)
             out["months_low_worse"] = len(both) - flips
     return out
@@ -274,12 +301,20 @@ def report(sport: str, *, proxy: bool, days_before: int, thin: int) -> dict:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="S20b book-width / quota-starvation check.")
     ap.add_argument("--sport", default="mlb", help="mlb, nba, nhl, ... (default mlb)")
-    ap.add_argument("--proxy", action="store_true",
-                    help="Use Odds-API exhaustion days instead of recorded n_books.")
-    ap.add_argument("--days-before", type=int, default=1,
-                    help="Proxy window: also count exhaustion N days before the game (default 1).")
-    ap.add_argument("--thin", type=int, default=5,
-                    help="n_books below this counts as thin (default 5).")
+    ap.add_argument(
+        "--proxy",
+        action="store_true",
+        help="Use Odds-API exhaustion days instead of recorded n_books.",
+    )
+    ap.add_argument(
+        "--days-before",
+        type=int,
+        default=1,
+        help="Proxy window: also count exhaustion N days before the game (default 1).",
+    )
+    ap.add_argument(
+        "--thin", type=int, default=5, help="n_books below this counts as thin (default 5)."
+    )
     ap.add_argument("--json", action="store_true", help="Emit the summary as JSON.")
     a = ap.parse_args(argv)
 
