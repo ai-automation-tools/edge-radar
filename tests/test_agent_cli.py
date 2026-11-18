@@ -1,5 +1,6 @@
 """agent_cli builds a real allowlist on both paths (plain claude and the AGENT_CLI adapter)."""
 
+import ast
 import re
 import subprocess
 from pathlib import Path
@@ -70,3 +71,22 @@ def test_adapter_gets_the_same_request(monkeypatch):
     assert cmd[cmd.index("-AllowTools") + 1] == "Read,Grep"
     assert cmd[cmd.index("-Timeout") + 1] == "900s"
     assert "claude" not in cmd
+
+
+def test_every_agent_call_pins_a_model():
+    """ER-48: no call site inherits whatever model the CLI defaults to."""
+    root = Path(__file__).resolve().parents[1]
+    tracked = subprocess.run(
+        ["git", "ls-files", "scripts", "app"], cwd=root, capture_output=True, text=True, check=True
+    ).stdout.split()
+    calls = []
+    for f in tracked:
+        if not f.endswith(".py") or f == "scripts/shared/agent_cli.py":
+            continue
+        tree = ast.parse((root / f).read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "run_agent":
+                kw = {k.arg for k in node.keywords}
+                calls.append((f, node.lineno, "model" in kw))
+    assert calls, "found no run_agent call sites"
+    assert [c for c in calls if not c[2]] == []

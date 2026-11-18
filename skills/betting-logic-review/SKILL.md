@@ -3,6 +3,7 @@ name: betting-logic-review
 description: Audit Edge-Radar's betting math, risk gates, sizing, sport-specific models, and market-data handling for errors that can lose money, then save a dated findings report to docs/my-documents/repo-reviews/. Verifies every claim against the live trade log and cached odds rather than trusting docs or comments. Use for "review the betting logic", "check for betting errors", "audit the edge model", "is the sizing right", "check the sport/API data", or a periodic quant health check. Complements /repo-review, which covers structure, docs, and cruft.
 argument-hint: '[focus area] — e.g. "spreads", "sizing", "fees", "mlb", "futures", or empty for full'
 user-invocable: true
+model: opus
 allowed-tools: Read, Bash, Glob, Grep, Write
 ---
 

@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-11-18 -- Stale branches (ER-49)
+
+- **GitHub** Deleted 13 stale remote branches (every PR merged or abandoned; the head SHAs are in
+  the audit notes if one is ever wanted back) and turned on "delete branch on merge". The remote
+  keeps `master`, `mike_desktop`, `gh-pages` and open PR heads.
+
+---
+
+## 2026-11-18 -- Skill links and pinned models (ER-48)
+
+- **Skills** `.gitignore` ignores `.claude/skills/` as a whole, and `link_skills.ps1` links every
+  `skills/*` folder with a `SKILL.md`, so a new skill needs no edit in either. The script re-points a
+  junction whose target differs only in case (the clones made before the `Edge-Radar` to
+  `edge-radar` rename) and removes an old junction without following it into the skill folder.
+- **Models** `betting_audit.py --analyze` runs on `opus` and `integration_drift.py` on `sonnet`;
+  `drift_autofix.py` already named `opus`. `tests/test_agent_cli.py` fails on a `run_agent` call
+  without a model. The three skills pin `model:` in their front matter. The table is in
+  `docs/setup/AUTOMATION_GUIDE.md`.
+
+---
+
 ## 2026-11-18 -- Repo hygiene (ER-51)
 
 - **Removed** `.claude/backup/` (old site HTML, 912 KB), `.claude/images/` (unreferenced legacy

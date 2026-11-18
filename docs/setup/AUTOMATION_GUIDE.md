@@ -195,6 +195,25 @@ Edit `same_day_execute.bat` and change the scan line:
 
 ---
 
+## Claude models
+
+Every unattended Claude session goes through `scripts/shared/agent_cli.py` and names its model, so
+none inherits whatever the CLI defaults to (`tests/test_agent_cli.py` fails on a call site without
+one). With `AGENT_CLI` set in `.env`, the adapter maps these names to a provider.
+
+| Call site | Model | Tools | Why that model |
+|:--|:--|:--|:--|
+| `scripts/kalshi/drift_autofix.py` | `opus` | Read, Grep, Glob; Edit `scripts/` and `tests/`, Write `tests/` (in a scratch worktree) | Writes code that runs on the money path |
+| `scripts/backtest/betting_audit.py` (`--analyze`) | `opus` | Read, Grep, Glob | Judges the live book's betting logic |
+| `scripts/kalshi/integration_drift.py` | `sonnet` | Read, Grep, Glob, WebFetch, WebSearch | Read-only triage of API and docs drift |
+
+The repo's skills pin a model too, in their `SKILL.md` front matter: `edge-radar` and
+`betting-logic-review` use `opus` (they place or judge bets), `edge-radar-analysis` uses `sonnet`
+(a report over local data). Skills live in `skills/`; `scripts/setup/link_skills.ps1` links every
+folder there that has a `SKILL.md` into `.claude/skills/`, which git ignores as a whole.
+
+---
+
 ## Monitoring
 
 After automation is running:

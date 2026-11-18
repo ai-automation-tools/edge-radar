@@ -3,6 +3,7 @@ name: edge-radar-analysis
 description: Generate a comprehensive post-hoc betting performance report from local Kalshi settlement data. Trade ledger + slices by sport, category, side (YES/NO), edge bucket, confidence, market price, predicted-probability calibration, longshots, streaks, and daily P&L. Ad-hoc or scheduled. Also handles snapshot mode — interactive Plotly account-growth chart at docs/my-documents/account-graph/<M-D-YY>/ — triggered by "snapshot the account", "regenerate the account graph", "build the account chart" or after a Kalshi balance pull.
 argument-hint: [days] [--save] [--out PATH] — or "snapshot --cash X --portfolio Y --positions N"
 user-invocable: true
+model: sonnet
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
