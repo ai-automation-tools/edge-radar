@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-11-17 -- Nightly ledger backup (ER-08)
+
+- **New** `scripts/shared/backup_ledger.py --dest <folder>`: zips `kalshi_trades.json`,
+  `kalshi_settlements.json`, the trade journal and `shadow_book.json` into a dated zip, keeps 30 days.
+  The trade and settlement logs are read under the trade-log lock. Each JSON member is re-parsed from
+  the finished zip; a source that doesn't parse is still kept, and the run exits 1. Fixes OPS-02: the
+  ledger was in no backup, and its trade-side context can't be rebuilt from Kalshi.
+- **Ops** Runs as the second action of the `Reconcile` task. Restore steps and a quarterly drill:
+  `data/history/README.md`.
+
+---
+
 ## 2026-11-17 -- Failed live-execute runs email [FAILED] (ER-07)
 
 - **Fix** OPS-01: a crashed live-execute scan was invisible. Its `.bat` dropped the exit code and its
