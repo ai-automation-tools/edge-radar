@@ -7,7 +7,21 @@ Without one, the paired email task finds no report and silently skips sending
 a valid "0 orders" report rather than bailing out.
 """
 
-from report_writer import save_execution_report, save_scan_report
+from datetime import datetime, timezone
+
+from report_writer import plural, save_execution_report, save_scan_report, time_line
+
+
+def test_times_read_in_utc_pt_and_et():
+    """ER-33: a UTC-only stamp left the operator converting every report time."""
+    noon = datetime(2026, 11, 16, 20, 5, tzinfo=timezone.utc)
+    assert time_line(noon) == "08:05 PM UTC · 12:05 PM PT · 03:05 PM ET"
+
+
+def test_counts_are_pluralised():
+    assert plural(1, "order") == "1 order" and plural(0, "order") == "0 orders"
+    assert plural(1, "opportunity", "opportunities") == "1 opportunity"
+    assert plural(2, "opportunity", "opportunities") == "2 opportunities"
 
 
 class TestEmptyExecutionReport:

@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-11-17 -- Report emails answer "did it trade?" from the inbox (ER-33)
+
+- **Email** Subjects carry the outcome and the date:
+  `Edge-Radar | Same-Day | LIVE · 2 placed · 1 failed · $2.08 | Mon Nov 16`. The old fixed subjects
+  (`Edge-Radar | Same Day Execution Report`) threaded every day's report into one Gmail conversation, and the
+  ER-12 mode line had no cost. Placed cost on a live run, sized cost otherwise. Reports with a
+  `**Status: X**` line show X; a failed run shows its reason after `[FAILED]`. The label is short per preset
+  (`Same-Day`, `Midday`, `Next-Day`, `Drift Check`, ...).
+- **Email** A three-cell banner opens every email (mode, orders, cost; or report, status, time), coloured
+  green for a live run that placed orders, amber when any order failed or was blocked or a report says WARN,
+  red for a failed run, grey otherwise. Its text is also the preheader, the line an inbox shows after the
+  subject, and the first line of the plain-text part.
+- **Email** Phones: tables wider than six columns (the 11-column Orders table) get a stacked copy, one card
+  per row, that a media query swaps in below 600px; checked at 390px with no sideways scroll. Clients that
+  drop `<style>` keep the table, as before.
+- **Reports** Scan and execution reports stamp times as `08:05 PM UTC · 12:05 PM PT · 03:05 PM ET`
+  (`report_writer.time_line`), as does the email footer. Counts are pluralised ("1 order", "1 opportunity").
+  The footer text is `#6b7280` (4.8:1), up from `#888` (3.5:1).
+
+---
+
 ## 2026-11-17 -- One gate list for every order path (ER-19)
 
 - **Risk** The reject gates were written out three times: in `size_order` (fresh scan), in
