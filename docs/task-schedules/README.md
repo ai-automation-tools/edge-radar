@@ -170,7 +170,7 @@ MLB starters announced, NHL morning skate done, weather stable, before sharp mon
 
 ### 4. `Shadow-Book-NCAAF` — Daily 6:00 AM PT
 
-Runs `maintenance\shadow_book.bat`: `shadow_book.py settle`, then `collect --filter ncaafb` and `collect --filter KXMLBSPREAD` (log `logs/shadow_book.log`). **Places no orders.** A freeze stops orders and so stops the settlements that would justify lifting it; a Brier head-to-head needs only model probability, market price and outcome. Taps `scan_all_markets()` **upstream of the risk gates** (`last_scan.json` is post-gate and holds nothing at a 1.0 floor). Read it with `shadow_book.py review --sport ncaaf --save`. Despite the name it also tracks MLB spreads (frozen 2026-10-03).
+Runs `maintenance\shadow_book.bat`: `shadow_book.py settle`, then `collect --filter ncaafb` and `collect --filter KXMLBSPREAD` (log `logs/shadow_book.log`). **Places no orders.** A freeze stops orders and so stops the settlements that would justify lifting it; a Brier head-to-head needs only model probability, market price and outcome. Taps `scan_all_markets()` **upstream of the risk gates** (`last_scan.json` is post-gate and holds nothing at a 1.0 floor). Read it with `shadow_book.py review --sport ncaaf --save`. Despite the name it also tracks MLB spreads (frozen 2026-10-03), and on Saturdays `collect --futures` logs every priced futures market under both de-vig methods for the ER-42 A/B (`shadow_book.py devig-review`).
 
 ### 5. `Weekly-Futures-Execution` ⚠️ — Sat 9:00 AM PT (12:00 PM ET)
 

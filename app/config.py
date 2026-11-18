@@ -282,6 +282,12 @@ class GateThresholds:
     # so nothing captured them post-trade either). Kalshi's published rate; it
     # has changed before, hence the knob. 0 disables fee awareness entirely.
     kalshi_fee_rate: float = 0.07
+    # ER-42 / B5: how futures outrights are de-vigged. `proportional` (the
+    # shipped behaviour) spreads the overround evenly, which leaves longshots
+    # too much of it; `power` removes more from longshots and skips books whose
+    # raw implied total is under 1.05 (an incomplete field). The shadow book
+    # records both until one wins on settled Brier; switch only on that evidence.
+    futures_devig: str = "proportional"
 
     @classmethod
     def from_env(cls) -> "GateThresholds":
@@ -309,6 +315,7 @@ class GateThresholds:
             min_market_volume_24h=_int("MIN_MARKET_VOLUME_24H", 0),
             max_days_to_event_for_game_markets=_int("MAX_DAYS_TO_EVENT_FOR_GAME_MARKETS", 0),
             kalshi_fee_rate=_float("KALSHI_FEE_RATE", 0.07),
+            futures_devig=_str("FUTURES_DEVIG", "proportional").strip().lower() or "proportional",
         )
 
 
@@ -607,6 +614,10 @@ class Config:
             raise ValueError(
                 f"MIN_CONFIDENCE must be one of {sorted(_CONFIDENCE_LEVELS)}, "
                 f"got {self.gates.min_confidence!r}"
+            )
+        if self.gates.futures_devig not in ("proportional", "power"):
+            raise ValueError(
+                f"FUTURES_DEVIG must be proportional or power, got {self.gates.futures_devig!r}"
             )
         if not 0.0 <= self.kelly.kelly_fraction <= 1.0:
             raise ValueError(f"KELLY_FRACTION must be in [0, 1], got {self.kelly.kelly_fraction}")

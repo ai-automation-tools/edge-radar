@@ -244,36 +244,70 @@ def fetch_outrights(sport_key: str) -> list:
 # ── N-Way De-Vigging ─────────────────────────────────────────────────────────
 
 
-def devig_nway(outcomes: list[dict]) -> dict[str, float]:
-    """
-    De-vig N-way outright market by normalizing implied probabilities.
+#: A complete outright field carries an overround; a raw implied total under
+#: this is a book quoting only part of the field (B5). Power de-vig skips it.
+MIN_BOOK_TOTAL = 1.05
 
-    Proportional: it spreads the overround evenly, so longshots keep too much
-    of it and their fair values come out high (ER-42). ROADMAP B5 tracks
-    switching to power or Shin de-vig, A/B'd in the shadow book first.
+
+def _implied(outcomes: list[dict]) -> dict[str, float]:
+    out = {}
+    for o in outcomes:
+        price = o.get("price", 0)
+        out[o["name"]] = 1.0 / price if price > 1.0 else 0.0
+    return out
+
+
+def devig_power(implied: dict[str, float]) -> dict[str, float]:
+    """Power de-vig: the k with sum(p_i ** k) == 1, then p_i ** k (ER-42 / B5).
+
+    Raising every implied probability to the same power takes proportionally
+    more of the overround from longshots than from favourites, which is where
+    a proportional de-vig leaves too much of it. Bisection on k: the sum is
+    strictly decreasing in k for probabilities in (0, 1).
+    """
+    live = {n: p for n, p in implied.items() if 0 < p < 1}
+    if not live:
+        return {}
+    lo, hi = 0.01, 50.0
+    for _ in range(100):
+        k = (lo + hi) / 2
+        if sum(p**k for p in live.values()) > 1.0:
+            lo = k
+        else:
+            hi = k
+    k = (lo + hi) / 2
+    return {n: (live[n] ** k if n in live else 0.0) for n in implied}
+
+
+def devig_nway(outcomes: list[dict], method: str | None = None) -> dict[str, float]:
+    """
+    De-vig an N-way outright market.
+
+    `proportional` (the default, `FUTURES_DEVIG`) divides each implied
+    probability by the total. It spreads the overround evenly, so longshots
+    keep too much of it and their fair values come out high (ER-42).
+    `power` uses `devig_power` and skips a book whose raw implied total is
+    under `MIN_BOOK_TOTAL`. The shadow book records both (`collect --futures`).
 
     Args:
         outcomes: list of {"name": "Team A", "price": 3.5, ...}
+        method: "proportional" or "power"; None reads FUTURES_DEVIG
 
     Returns:
         dict mapping team name -> fair probability
     """
-    implied = {}
-    for o in outcomes:
-        price = o.get("price", 0)
-        if price > 1.0:
-            implied[o["name"]] = 1.0 / price
-        else:
-            implied[o["name"]] = 0.0
-
+    if method is None:
+        method = get_config().gates.futures_devig
+    implied = _implied(outcomes)
     total = sum(implied.values())
     if total <= 0:
         return {}
-
+    if method == "power":
+        return devig_power(implied) if total >= MIN_BOOK_TOTAL else {}
     return {name: prob / total for name, prob in implied.items()}
 
 
-def consensus_outright_fair_values(events: list) -> dict[str, dict]:
+def consensus_outright_fair_values(events: list, method: str | None = None) -> dict[str, dict]:
     """
     Build consensus fair probabilities across all bookmakers for an outright market.
 
@@ -293,7 +327,7 @@ def consensus_outright_fair_values(events: list) -> dict[str, dict]:
             for market in bookmaker.get("markets", []):
                 if market["key"] != "outrights":
                     continue
-                fair = devig_nway(market.get("outcomes", []))
+                fair = devig_nway(market.get("outcomes", []), method)
                 for name, prob in fair.items():
                     team_probs.setdefault(name, []).append((prob, book_key))
 
@@ -389,6 +423,13 @@ def _futures_name_match(odds_name: str, kalshi_name: str) -> bool:
 # ── Edge Detection ───────────────────────────────────────────────────────────
 
 
+def _match_fair(fair_values: dict[str, dict], candidate: str) -> tuple[str | None, dict | None]:
+    for odds_name, fv in fair_values.items():
+        if _futures_name_match(odds_name, candidate):
+            return odds_name, fv
+    return None, None
+
+
 def detect_edge_futures(
     market: dict, fair_values: dict[str, dict], label: str = ""
 ) -> Opportunity | None:
@@ -418,14 +459,7 @@ def detect_edge_futures(
         return None
 
     # Match to Odds API fair value
-    matched_fair = None
-    matched_name = None
-    for odds_name, fv in fair_values.items():
-        if _futures_name_match(odds_name, candidate):
-            matched_fair = fv
-            matched_name = odds_name
-            break
-
+    matched_name, matched_fair = _match_fair(fair_values, candidate)
     if not matched_fair:
         log.debug("No match for '%s' in %d outright outcomes", candidate, len(fair_values))
         return None
@@ -533,65 +567,9 @@ def scan_futures_markets(
         ticker_filter: Filter shortcut (futures, nba-futures, etc.) or raw prefix
         top_n: Max opportunities to return
     """
-    # Resolve filter
-    if ticker_filter:
-        shortcut = ticker_filter.lower()
-        if shortcut in FUTURES_FILTER_SHORTCUTS:
-            prefixes = FUTURES_FILTER_SHORTCUTS[shortcut]
-            rprint(f"[bold]Futures filter: {shortcut} -> {', '.join(prefixes)}[/bold]")
-        elif shortcut in FUTURES_MAP:
-            prefixes = [shortcut.upper()]
-        else:
-            prefixes = [ticker_filter.upper()]
-            rprint(f"[bold]Futures filter: {prefixes[0]}[/bold]")
-    else:
-        prefixes = list(FUTURES_MAP.keys())
-        rprint(f"[bold]Scanning all futures markets ({len(prefixes)} series)[/bold]")
-
-    # Fetch markets from Kalshi
-    rprint("[bold]Fetching Kalshi futures markets...[/bold]")
-    all_markets = []
-    for prefix in prefixes:
-        cursor = None
-        for _ in range(3):
-            resp = client.get_markets(
-                limit=1000, status="open", series_ticker=prefix, cursor=cursor
-            )
-            batch = resp.get("markets", [])
-            all_markets.extend(batch)
-            cursor = resp.get("cursor", "")
-            if not cursor:
-                break
-    rprint(f"  Found {len(all_markets)} futures markets")
-
-    if not all_markets:
+    sports_needed, market_labels = _markets_by_sport(client, ticker_filter)
+    if not sports_needed:
         return []
-
-    # Determine which Odds API sport keys we need.
-    # Match on the series ticker (everything before the first '-') so that
-    # e.g. KXMLBPLAYOFFS-26-LAD doesn't collide with the KXMLB prefix and
-    # get priced against World Series winner odds. Unmapped series are
-    # silently skipped — see the FUTURES_MAP "intentionally NOT mapped"
-    # block for the rationale.
-    sports_needed: dict[str, list] = {}  # odds_sport_key -> [market, ...]
-    market_labels: dict[str, str] = {}  # ticker -> human label
-    for m in all_markets:
-        ticker = m["ticker"]
-        series = ticker.split("-", 1)[0]
-        entry = FUTURES_MAP.get(series)
-        if entry is None:
-            continue
-        sport_key, _, label = entry
-        # Golf: KXPGATOUR spans the full tour, but only the 4 majors have an
-        # Odds API outright feed. Resolve the specific major from the title;
-        # skip weekly stops + qualifiers (no sportsbook field to price against).
-        if series == "KXPGATOUR":
-            resolved = _golf_major_key(m.get("title", ""))
-            if resolved is None:
-                continue
-            sport_key, label = resolved
-        sports_needed.setdefault(sport_key, []).append(m)
-        market_labels[ticker] = label
 
     # Fetch outright odds and build fair values
     opportunities: list[Opportunity] = []
@@ -625,6 +603,111 @@ def scan_futures_markets(
 
     opportunities.sort(key=lambda o: o.composite_score, reverse=True)
     return opportunities[:top_n]
+
+
+def devig_ab_rows(client, ticker_filter: str | None = None) -> list[dict]:
+    """ER-42: every priced futures market under BOTH de-vig methods, pre-gate.
+
+    For the shadow book's A/B. One row per Kalshi market with a matched
+    outright: the YES ask and the proportional and power fair values. No edge
+    filter and no side choice, so the comparison is not judged on rows a gate
+    or an edge sign picked (S21c: never fit on gate-selected rows).
+    """
+    sports_needed, market_labels = _markets_by_sport(client, ticker_filter)
+    rows = []
+    if not sports_needed or not get_current_key():
+        return rows
+    for sport_key, markets in sports_needed.items():
+        events = fetch_outrights(sport_key)
+        if not events:
+            continue
+        prop = consensus_outright_fair_values(events, "proportional")
+        powr = consensus_outright_fair_values(events, "power")
+        for m in markets:
+            candidate = (m.get("yes_sub_title") or m.get("subtitle") or "").strip()
+            yes_ask = float(m.get("yes_ask_dollars") or 0)
+            if not candidate or not 0 < yes_ask < 1:
+                continue
+            name, fp = _match_fair(prop, candidate)
+            if not fp:
+                continue
+            fw = powr.get(name)
+            rows.append(
+                {
+                    "ticker": m["ticker"],
+                    "title": f"{market_labels.get(m['ticker'], '')}: {candidate}",
+                    "market_price": yes_ask,
+                    "fair_proportional": round(fp["fair_value"], 4),
+                    "fair_power": round(fw["fair_value"], 4) if fw else None,
+                    "n_books": fp["n_books"],
+                    "n_books_power": fw["n_books"] if fw else 0,
+                }
+            )
+    return rows
+
+
+def _markets_by_sport(client, ticker_filter: str | None) -> tuple[dict, dict]:
+    """Open Kalshi futures markets grouped by Odds API sport key, plus labels."""
+    # Resolve filter
+    if ticker_filter:
+        shortcut = ticker_filter.lower()
+        if shortcut in FUTURES_FILTER_SHORTCUTS:
+            prefixes = FUTURES_FILTER_SHORTCUTS[shortcut]
+            rprint(f"[bold]Futures filter: {shortcut} -> {', '.join(prefixes)}[/bold]")
+        elif shortcut in FUTURES_MAP:
+            prefixes = [shortcut.upper()]
+        else:
+            prefixes = [ticker_filter.upper()]
+            rprint(f"[bold]Futures filter: {prefixes[0]}[/bold]")
+    else:
+        prefixes = list(FUTURES_MAP.keys())
+        rprint(f"[bold]Scanning all futures markets ({len(prefixes)} series)[/bold]")
+
+    # Fetch markets from Kalshi
+    rprint("[bold]Fetching Kalshi futures markets...[/bold]")
+    all_markets = []
+    for prefix in prefixes:
+        cursor = None
+        for _ in range(3):
+            resp = client.get_markets(
+                limit=1000, status="open", series_ticker=prefix, cursor=cursor
+            )
+            batch = resp.get("markets", [])
+            all_markets.extend(batch)
+            cursor = resp.get("cursor", "")
+            if not cursor:
+                break
+    rprint(f"  Found {len(all_markets)} futures markets")
+
+    if not all_markets:
+        return {}, {}
+
+    # Determine which Odds API sport keys we need.
+    # Match on the series ticker (everything before the first '-') so that
+    # e.g. KXMLBPLAYOFFS-26-LAD doesn't collide with the KXMLB prefix and
+    # get priced against World Series winner odds. Unmapped series are
+    # silently skipped — see the FUTURES_MAP "intentionally NOT mapped"
+    # block for the rationale.
+    sports_needed: dict[str, list] = {}  # odds_sport_key -> [market, ...]
+    market_labels: dict[str, str] = {}  # ticker -> human label
+    for m in all_markets:
+        ticker = m["ticker"]
+        series = ticker.split("-", 1)[0]
+        entry = FUTURES_MAP.get(series)
+        if entry is None:
+            continue
+        sport_key, _, label = entry
+        # Golf: KXPGATOUR spans the full tour, but only the 4 majors have an
+        # Odds API outright feed. Resolve the specific major from the title;
+        # skip weekly stops + qualifiers (no sportsbook field to price against).
+        if series == "KXPGATOUR":
+            resolved = _golf_major_key(m.get("title", ""))
+            if resolved is None:
+                continue
+            sport_key, label = resolved
+        sports_needed.setdefault(sport_key, []).append(m)
+        market_labels[ticker] = label
+    return sports_needed, market_labels
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────

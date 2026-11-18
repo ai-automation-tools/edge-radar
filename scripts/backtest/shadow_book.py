@@ -42,6 +42,8 @@ Usage:
     python scripts/backtest/shadow_book.py collect --filter ncaafb
     python scripts/backtest/shadow_book.py settle
     python scripts/backtest/shadow_book.py review --sport ncaaf
+    python scripts/backtest/shadow_book.py collect --futures      # ER-42 de-vig A/B
+    python scripts/backtest/shadow_book.py devig-review
     python scripts/backtest/shadow_book.py --self-check
 """
 
@@ -156,6 +158,103 @@ def collect(ticker_filter: str, date_filter: str | None = None, min_edge: float 
 
     save_shadow(rows)
     return {"scanned": len(opps), "added": added, "total": len(rows)}
+
+
+def collect_futures(ticker_filter: str | None = None) -> dict:
+    """ER-42 / B5: log every priced futures market under both de-vig methods.
+
+    Rows are YES-side, pre-gate and unfiltered by edge (see
+    `futures_edge.devig_ab_rows`), with the proportional fair value as
+    `fair_value` and the power one in `details["fair_power"]`. First sighting
+    wins, like `collect`. `settle` fills them in when the season resolves.
+    """
+    from kalshi_client import KalshiClient
+    from futures_edge import devig_ab_rows
+
+    found = devig_ab_rows(KalshiClient(), ticker_filter)
+    rows = load_shadow()
+    seen = {_key(r) for r in rows}
+    now = datetime.now(timezone.utc).isoformat()
+    added = 0
+    for f in found:
+        row = {
+            "ticker": f["ticker"],
+            "title": f["title"],
+            "category": "futures",
+            "side": "yes",
+            "market_price": f["market_price"],
+            "fair_value": f["fair_proportional"],
+            "edge": round(f["fair_proportional"] - f["market_price"], 4),
+            "edge_source": "outrights_consensus",
+            "details": {
+                "devig_ab": True,
+                "fair_power": f["fair_power"],
+                "n_books": f["n_books"],
+                "n_books_power": f["n_books_power"],
+            },
+            "observed_at": now,
+            "result": None,
+            "won": None,
+        }
+        if _key(row) in seen:
+            continue
+        rows.append(row)
+        seen.add(_key(row))
+        added += 1
+    save_shadow(rows)
+    return {"scanned": len(found), "added": added, "total": len(rows)}
+
+
+def devig_review(rows: list[dict] | None = None) -> str:
+    """ER-42: Brier of proportional vs power de-vig on settled futures rows."""
+    from calibration_study import bootstrap_ci, brier
+
+    rows = load_shadow() if rows is None else rows
+    ab = [
+        r
+        for r in rows
+        if (r.get("details") or {}).get("devig_ab")
+        and r.get("won") is not None
+        and (r.get("details") or {}).get("fair_power") is not None
+    ]
+    open_n = sum(
+        1 for r in (rows or []) if (r.get("details") or {}).get("devig_ab") and r.get("won") is None
+    )
+    out = ["# Futures de-vig A/B (ER-42 / B5)", ""]
+    if not ab:
+        out.append(
+            f"No settled A/B rows yet ({open_n} open). Futures resolve with their season; "
+            "keep `collect --futures` running."
+        )
+        return "\n".join(out)
+    ys = [1.0 if r["won"] else 0.0 for r in ab]
+    prop = [r["fair_value"] for r in ab]
+    powr = [r["details"]["fair_power"] for r in ab]
+    mkt = [r["market_price"] for r in ab]
+    b_prop, b_pow, b_mkt = brier(prop, ys), brier(powr, ys), brier(mkt, ys)
+    lo, hi = bootstrap_ci(
+        [{"a": a, "b": b, "y": y} for a, b, y in zip(prop, powr, ys)],
+        lambda rs: (
+            brier([r["a"] for r in rs], [r["y"] for r in rs])
+            - brier([r["b"] for r in rs], [r["y"] for r in rs])
+        ),
+    )
+    out += [
+        f"{len(ab)} settled rows ({open_n} still open). **No money was at risk on any of them.**",
+        "",
+        f"- MARKET Brier (Kalshi YES ask)      : **{b_mkt:.4f}**",
+        f"- PROPORTIONAL Brier (in code today) : **{b_prop:.4f}**",
+        f"- POWER Brier                        : **{b_pow:.4f}**",
+        f"- proportional - power (>0 favours power): {b_prop - b_pow:+.4f}, "
+        f"95% CI [{lo:+.4f}, {hi:+.4f}]"
+        + (" -- straddles zero; keep collecting." if lo <= 0 <= hi else " -- excludes zero."),
+        "",
+        f"Mean fair value: proportional {sum(prop) / len(prop):.1%}, power "
+        f"{sum(powr) / len(powr):.1%}; realised {sum(ys) / len(ys):.1%}.",
+        "",
+        "Switch with `FUTURES_DEVIG=power` only once the CI excludes zero in power's favour.",
+    ]
+    return "\n".join(out)
 
 
 # -- settle -------------------------------------------------------------------
@@ -534,6 +633,11 @@ def main() -> int:
         default=0.0,
         help="0.0 (default) logs every scored row, not just edges",
     )
+    c.add_argument(
+        "--futures",
+        action="store_true",
+        help="ER-42: log futures under both de-vig methods (--filter defaults to all futures)",
+    )
 
     s = sub.add_parser("settle", help="fill in outcomes from Kalshi")
     s.add_argument("--limit", type=int, default=None)
@@ -542,12 +646,23 @@ def main() -> int:
     r.add_argument("--sport", default="ncaaf")
     r.add_argument("--save", action="store_true")
 
+    sub.add_parser("devig-review", help="ER-42: proportional vs power de-vig Brier on futures")
+
     a = p.parse_args()
     if a.self_check:
         self_check()
         return 0
 
-    if a.cmd == "collect":
+    if a.cmd == "collect" and a.futures:
+        flt = None if a.filter == "ncaafb" else a.filter  # ncaafb is the sports default
+        st = collect_futures(flt)
+        print(
+            f"priced {st['scanned']} futures, added {st['added']} new, "
+            f"{st['total']} in the shadow book"
+        )
+    elif a.cmd == "devig-review":
+        print(devig_review())
+    elif a.cmd == "collect":
         st = collect(a.filter, a.date, a.min_edge)
         print(
             f"scanned {st['scanned']}, added {st['added']} new, "
