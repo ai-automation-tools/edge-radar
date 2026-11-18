@@ -80,6 +80,13 @@
 
 
     /* ── Topbar ─────────────────────────────── */
+    /* Org source bar: full width, top of the page, in flow. */
+    .src-bar { position: relative; z-index: 2; display: flex; align-items: center; gap: 16px; height: 34px; padding: 0 16px;
+               background: var(--bg-2); border-bottom: 1px solid var(--line); font-size: 12px; }
+    .src-note { margin: 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--fg-4); }
+    .src-note strong { font-weight: 600; color: var(--accent); }
+    .src-link { margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 24px; color: var(--fg-3); text-decoration: none; }
+    .src-link:hover { color: var(--fg); }
     .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 40; height: 56px; background: rgba(6,6,6,0.72); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(39,39,42,0.7); }
     .topbar .wrap { height: 100%; display: flex; align-items: center; gap: 14px; }
     .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; letter-spacing: -.01em; }
@@ -92,15 +99,11 @@
     .kbd-btn { display: none; align-items: center; gap: 8px; height: 32px; padding: 0 10px 0 12px; border: 1px solid var(--line-2); border-radius: var(--r-md); background: rgba(24,24,27,.4); color: var(--fg-4); font-size: 13px; cursor: pointer; font-family: inherit; transition: border-color .2s, color .2s; }
     .kbd-btn:hover { border-color: #52525b; color: var(--fg-2); }
     kbd { font-family: var(--mono); font-size: 10.5px; padding: 2px 5px; border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 4px; color: var(--fg-3); background: #0e0e11; }
-    .gh-btn { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: var(--r-md); color: var(--fg-2); font-size: 13px; font-weight: 500; transition: border-color .2s, background .2s; }
-    .gh-btn:hover { border-color: #52525b; background: rgba(24,24,27,.7); }
-    .gh-btn svg { width: 15px; height: 15px; }
-    .gh-btn span { display: none; }
     .menu-btn { display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border: 1px solid var(--line-2); border-radius: var(--r-md); background: transparent; color: var(--fg-2); cursor: pointer; }
     .mobile-nav { display: none; border-bottom: 1px solid var(--line); background: rgba(10,10,12,.96); }
     .mobile-nav.open { display: block; }
     .mobile-nav a { display: block; padding: 12px 20px; font-size: 15px; color: var(--fg-2); border-top: 1px solid rgba(39,39,42,.5); }
-    @media (min-width: 860px) { .nav { display: flex; } .kbd-btn { display: inline-flex; } .gh-btn span { display: inline; } .menu-btn { display: none; } }
+    @media (min-width: 860px) { .nav { display: flex; } .kbd-btn { display: inline-flex; } .menu-btn { display: none; } }
 
     /* Atmosphere: one emerald glow behind the hero, a faint violet counterweight, nothing else lit at rest. */
     .glow { position: absolute; inset: 0 0 auto 0; height: 760px; pointer-events: none; z-index: 0;
@@ -157,10 +160,6 @@
     .note { margin: 14px 0 0; font-size: 12.5px; color: var(--fg-4); max-width: 80ch; }
 
     /* Equation line */
-    .eq { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; margin-top: 26px; padding: 14px 16px; border: 1px dashed var(--line-2); border-radius: var(--r-lg); font-family: var(--mono); font-size: 14px; color: var(--fg-4); }
-    .eq b { font-weight: 500; }
-    .eq .fv { color: var(--sky); } .eq .ask { color: var(--amber); } .eq .edge { color: var(--accent); } .eq .fee { color: var(--rose); }
-    .eq small { font-family: var(--sans); font-size: 12.5px; color: var(--fg-4); }
 
     /* Gate lab */
     .lab { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 18px; }
@@ -205,35 +204,6 @@
     .gchip.na { opacity: .55; }
 
     /* Three-column flow */
-    .flow { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 26px; }
-    @media (min-width: 900px) { .flow { grid-template-columns: 1fr 44px 1.08fr 44px 1fr; align-items: stretch; } }
-    .col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-    .col-h { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: color-mix(in srgb, var(--c) var(--cm, 85%), var(--cm-to, #fff)); }
-    .col-h i { width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
-    .col-s { font-size: 12px; color: var(--fg-4); margin: -4px 0 2px; }
-    .node { --mx: 50%; --my: 50%; position: relative; border: 1px solid color-mix(in srgb, var(--c) 18%, var(--line)); border-radius: var(--r-md); background: color-mix(in srgb, var(--c) 4%, var(--surface)); padding: 10px 12px; overflow: hidden; transition: border-color .3s, background .3s, transform .3s var(--ease); }
-    .node:hover { border-color: color-mix(in srgb, var(--c) 40%, var(--line)); background: color-mix(in srgb, var(--c) 7%, var(--surface-2)); transform: translateY(-1px); }
-    .node::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s; background: radial-gradient(260px circle at var(--mx) var(--my), color-mix(in srgb, var(--c) 10%, transparent), transparent 60%); }
-    .node:hover::after { opacity: 1; }
-    .node.key { border-color: color-mix(in srgb, var(--c) 40%, var(--line)); background: color-mix(in srgb, var(--c) 9%, var(--surface)); }
-    .node .t { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; color: var(--fg); }
-    .node .t .m { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: color-mix(in srgb, var(--c) var(--cm, 80%), var(--cm-to, #fff)); }
-    .node .d { font-size: 11.5px; color: var(--fg-4); margin-top: 2px; line-height: 1.5; }
-    .node .d.mono { font-size: 10.5px; color: var(--fg-4); }
-    .node .d em { font-style: normal; color: color-mix(in srgb, var(--c) var(--cm, 80%), var(--cm-to, #fff)); font-family: var(--mono); font-size: 10.5px; }
-    .conn { display: none; align-items: center; justify-content: center; }
-    @media (min-width: 900px) { .conn { display: flex; } }
-    .conn svg { width: 44px; height: 100%; min-height: 120px; overflow: visible; }
-    .conn line { stroke: var(--line-2); stroke-width: 1.2; }
-    .conn .mv { stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 6 60; animation: travel 2.6s linear infinite; }
-    @keyframes travel { to { stroke-dashoffset: -66; } }
-    .conn.b .mv { animation-delay: -1.3s; stroke: var(--amber); }
-    .conn-m { display: flex; justify-content: center; color: var(--fg-4); }
-    @media (min-width: 900px) { .conn-m { display: none; } }
-    .loop { margin-top: 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--fg-4); }
-    .loop span.l { display: inline-flex; align-items: center; gap: 8px; }
-    .loop svg { width: 14px; height: 14px; color: var(--accent); }
-    .loop code { font-family: var(--mono); font-size: 11.5px; color: #a7f3d0; }
 
     /* Filter rail */
     .rail { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 26px; }
@@ -278,21 +248,6 @@
     .pr span { color: var(--fg-3); font-size: 13px; }
 
     /* Pipeline stepper */
-    .steps { position: relative; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 26px; }
-    @media (min-width: 640px) { .steps { grid-template-columns: repeat(4, 1fr); } }
-    @media (min-width: 980px) { .steps { grid-template-columns: repeat(7, 1fr); } }
-    .steps::before { content: ""; position: absolute; left: 4%; right: 4%; top: 27px; height: 1px; background: var(--line-2); display: none; }
-    .steps::after { content: ""; position: absolute; left: 4%; top: 27px; height: 1px; width: 0; background: linear-gradient(90deg, var(--accent), var(--sky)); transition: width 1.6s var(--ease); display: none; }
-    .steps.in::after { width: 92%; }
-    @media (min-width: 980px) { .steps::before, .steps::after { display: block; } }
-    .step { --mx: 50%; --my: 50%; position: relative; z-index: 1; display: flex; flex-direction: column; gap: 4px; padding: 14px 14px 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; transition: transform .3s var(--ease), border-color .3s, background .3s; }
-    .step:hover { transform: translateY(-2px); background: var(--surface-2); border-color: rgba(52,211,153,.35); }
-    .step::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s; background: radial-gradient(220px circle at var(--mx) var(--my), rgba(52,211,153,.10), transparent 60%); }
-    .step:hover::after { opacity: 1; }
-    .step .n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(52,211,153,.35); background: #0a0a0c; font-family: var(--mono); font-size: 11px; color: var(--accent); }
-    .step b { margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--fg); }
-    .step span { font-size: 11.5px; color: var(--fg-4); line-height: 1.5; }
-    .step code { font-family: var(--mono); font-size: 10.5px; color: var(--fg-4); }
 
     /* Coverage cards */
     .cov { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 26px; }
@@ -352,9 +307,6 @@
     .act-primary { background: color-mix(in srgb, var(--c, var(--accent)) 14%, transparent); color: color-mix(in srgb, var(--c, var(--accent)) var(--cm, 85%), var(--cm-to, #fff)); border-color: color-mix(in srgb, var(--c, var(--accent)) 28%, transparent); }
     .act-primary:hover { background: color-mix(in srgb, var(--c, var(--accent)) 24%, transparent); border-color: color-mix(in srgb, var(--c, var(--accent)) 50%, transparent); }
     .term-aside .act { align-self: flex-start; margin-top: auto; }
-    .copy { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 5px; border: 1px solid var(--line-2); background: transparent; color: var(--fg-3); font: 11px var(--mono); cursor: pointer; letter-spacing: 0; text-transform: none; transition: all .2s; }
-    .copy:hover { color: var(--fg); border-color: #52525b; }
-    .copy svg { width: 12px; height: 12px; }
 
     /* Docs links */
     .docs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 26px; }
@@ -392,15 +344,11 @@
     .pal-empty { padding: 28px; text-align: center; color: var(--fg-4); font-size: 14px; }
 
     /* ── Toast ──────────────────────────────── */
-    .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); z-index: 70; padding: 9px 14px; border-radius: 999px; background: #18181b; border: 1px solid var(--line-2); color: var(--fg); font-size: 13px; opacity: 0; pointer-events: none; transition: all .25s var(--ease); display: inline-flex; gap: 8px; align-items: center; }
-    .toast.on { opacity: 1; transform: translate(-50%, 0); }
-    .toast i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
 
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
       .ln { opacity: 1; transform: none; }
-      .steps.in::after { width: 92%; }
     }
 
     /* ── Ops deck additions ─────────────────── */
@@ -451,10 +399,10 @@
     .tl .tick.m { height: 10px; }
     .tl .lbl { position: absolute; top: 44px; transform: translateX(-50%); font-family: var(--mono); font-size: 10px; color: var(--fg-4); }
     .tl .mk { position: absolute; top: 30px; width: 12px; height: 12px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--c); border: 2px solid #09090b; box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 50%, transparent); cursor: pointer; transition: transform .2s var(--ease); padding: 0; }
+    .tl .mk::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; }  /* 24px hit area (WCAG 2.5.8) */
     .tl .mk.weekly { background: #0a0a0c; border-color: var(--c); }
     .tl .mk.off { opacity: .35; }
     .tl .mk:hover, .tl .mk.hot { transform: translate(-50%, -50%) scale(1.35); z-index: 2; }
-    .tl .mk.money::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--c) 40%, transparent); }
     .tl .now { position: absolute; top: 12px; bottom: 20px; width: 1px; background: var(--sky); box-shadow: 0 0 8px rgba(56,189,248,.8); z-index: 1; }
     .tl .now::before { content: "now"; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--sky); }
     .tl .done { position: absolute; left: 0; top: 30px; height: 1px; background: linear-gradient(90deg, rgba(56,189,248,.15), rgba(56,189,248,.6)); }
@@ -485,7 +433,6 @@
     .sched .num { font-family: var(--mono); font-size: 12px; color: var(--fg-4); width: 32px; }
     .sched .nm { font-family: var(--mono); font-size: 12.5px; color: var(--fg); white-space: nowrap; }
     .sched .nm i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--c); margin-right: 8px; vertical-align: 0; }
-    .sched .nm .money { margin-left: 8px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--amber); border: 1px solid rgba(251,191,36,.35); border-radius: 4px; padding: 1px 5px; vertical-align: 1px; }
     .sched .cad span { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 5px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid color-mix(in srgb, var(--c) 30%, transparent); color: color-mix(in srgb, var(--c) var(--cm, 85%), var(--cm-to, #fff)); background: color-mix(in srgb, var(--c) 8%, transparent); white-space: nowrap; }
     .sched .tm { font-family: var(--mono); font-size: 12.5px; color: var(--fg-2); white-space: nowrap; }
     .sched .tm small { display: block; font-size: 10.5px; color: var(--fg-4); }
@@ -493,20 +440,11 @@
     .sched .what code { font-family: var(--mono); font-size: 11.5px; color: var(--fg-2); background: rgba(6,6,6,.6); padding: 1px 5px; border-radius: 4px; }
     .sched .what .em { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-family: var(--mono); font-size: 10.5px; color: var(--fg-4); }
     .sched .what .em svg { width: 11px; height: 11px; }
-    .sched .act-cell { white-space: nowrap; }
-    .sched .copy { height: 26px; }
-    @media (max-width: 760px) { .sched .cad, .sched th.cad, .sched .act-cell, .sched th.act-cell { display: none; } }
+    @media (max-width: 760px) { .sched .cad, .sched th.cad { display: none; } }
 
-    /* Manual triggers + halt */
+    /* Halt */
     .ops2 > * { min-width: 0; }
     .ops2 { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 18px; }
-    @media (min-width: 900px) { .ops2 { grid-template-columns: 1.4fr 1fr; } }
-    .codebox { border: 1px solid var(--line-2); border-radius: var(--r-lg); background: #09090b; overflow: hidden; }
-    .codebox .bar { display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 40px; border-bottom: 1px solid var(--line); background: #0c0c0f; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-4); }
-    .codebox .bar .copy { margin-left: auto; }
-    .codebox pre { margin: 0; padding: 14px 16px 16px; font: 12.5px/1.75 var(--mono); color: var(--fg-2); overflow-x: auto; }
-    .codebox pre .c { color: var(--fg-4); }
-    .codebox pre .p { color: var(--sky); }
     .halt { border: 1px solid rgba(251,113,133,.3); border-radius: var(--r-lg); background: rgba(251,113,133,.05); padding: 16px 18px; }
     .halt h3 { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: #fecdd3; display: flex; align-items: center; gap: 8px; }
     .halt h3 svg { width: 16px; height: 16px; }
@@ -558,27 +496,24 @@
     .light .mobile-nav a, .light section, .light footer { border-color: var(--line); }
     .light .kbd-btn, .light .search, .light .btn-ghost { background: var(--surface); }
     .light kbd { background: var(--bg-2); }
-    .light .gh-btn:hover, .light .btn-ghost:hover, .light .strip a:hover, .light .sched tr.r:hover { background: var(--bg-2); }
-    .light .kbd-btn:hover, .light .gh-btn:hover, .light .btn-ghost:hover, .light .copy:hover, .light .chip:hover { border-color: #a1a1aa; }
+    .light .btn-ghost:hover, .light .strip a:hover, .light .sched tr.r:hover { background: var(--bg-2); }
+    .light .kbd-btn:hover, .light .btn-ghost:hover, .light .chip:hover { border-color: #a1a1aa; }
     .light .glow { opacity: .55; }
     .light h1 em { background-image: linear-gradient(90deg, #047857, #059669 55%, #0369a1); }
     .light h1 em.sky { background-image: linear-gradient(90deg, #0369a1, #0284c7 55%, #047857); }
     .light .btn-primary:hover { background: #065f46; box-shadow: 0 0 20px -8px rgba(4,120,87,.5); }
     .light .strip, .light .tl-wrap { background: var(--surface); }
     .light .sub code, .light .note code, .light .sched .what code, .light .halt pre { background: var(--bg-2); }
-    .light .loop code { color: var(--accent); }
     .light .chip[aria-pressed="true"] { color: #fff; }
-    .light .step .n { background: var(--surface); }
-    .light .next, .light .codebox { background: var(--surface); box-shadow: 0 20px 50px -36px rgba(0,0,0,.35); }
-    .light .next .bar, .light .codebox .bar, .light .sched th { background: var(--bg-2); }
+    .light .next { background: var(--surface); box-shadow: 0 20px 50px -36px rgba(0,0,0,.35); }
+    .light .next .bar, .light .sched th { background: var(--bg-2); }
     .light .tl .mk { background: color-mix(in srgb, var(--c) 65%, #000); border-color: var(--surface); }
     .light .tl .mk.weekly { background: var(--surface); border-color: color-mix(in srgb, var(--c) 65%, #000); }
     .light .tl .now { box-shadow: none; }
     .light .tl .done { background: linear-gradient(90deg, rgba(3,105,161,.1), rgba(3,105,161,.5)); }
-    .light .tl .tip, .light .pal, .light .toast { background: var(--surface); box-shadow: 0 10px 30px -12px rgba(0,0,0,.25); }
+    .light .tl .tip, .light .pal { background: var(--surface); box-shadow: 0 10px 30px -12px rgba(0,0,0,.25); }
     .light .pal-bg { background: rgba(24,24,27,.35); }
     .light .pal-item.sel { background: rgba(4,120,87,.1); color: var(--fg); }
-    .light .sched .nm .money { border-color: rgba(180,83,9,.4); }
     .light .halt { border-color: rgba(190,18,60,.3); background: rgba(190,18,60,.04); }
     .light .halt h3 { color: var(--rose); }
 
@@ -589,14 +524,12 @@
       .search input, select, .pal-in input { font-size: 16px; }
       .search, select { height: 40px; }
       .theme-tg button { width: 36px; height: 32px; }
-      .gh-btn { height: 40px; }
       .menu-btn { width: 40px; height: 40px; }
       .chip, .seg button, .presets button, .ttab, .strip a, .strip span.pill { height: 36px; }
-      .copy, .act { height: 36px; }
+      .act { height: 36px; }
       footer .row a { display: inline-block; padding-block: 9px; }
       .later a { min-height: 40px; }
-      /* 12px timeline dots: widen the tap area without moving them */
-      .tl .mk::before { content: ""; position: absolute; inset: -10px; }
+      .tl .mk::before { inset: -10px; }  /* 32px on touch */
       /* The 4-column table pushed Time and "What it does" off-screen behind a sideways scroll (nowrap
          task names); on phones each row becomes a card: # | task | time, then the description below. */
       .sched thead { display: none; }
@@ -615,6 +548,14 @@
 
 <a href="#main" class="skip">Skip to content</a>
 
+<div class="src-bar">
+  <p class="src-note"><strong>Open source</strong> &middot; the schedule view for Edge-Radar's scheduled tasks.</p>
+  <a class="src-link" href="https://github.com/ai-automation-tools/edge-radar" target="_blank" rel="noopener">
+    <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+    View source
+  </a>
+</div>
+
 <header class="topbar">
   <div class="wrap">
     <a class="brand" href="#top" aria-label="Edge-Radar ops deck">
@@ -624,8 +565,7 @@
     <nav class="nav" aria-label="Sections" id="nav">
       <a href="#schedulers" data-spy="schedulers">Schedulers</a>
       <a href="#links" data-spy="links">Quick links</a>
-      <a href="#how" data-spy="how">How it works</a>
-      <a href="#pipeline" data-spy="pipeline">Pipeline</a>
+      <a href="https://edge-radar.ai-automation-tools.dev/#how" target="_blank" rel="noopener">How it works ↗</a>
       <span class="ind" id="ind" aria-hidden="true"></span>
     </nav>
     <div class="topbar-right">
@@ -638,17 +578,13 @@
         </button>
       </div>
       <button class="kbd-btn" id="palOpen" type="button" aria-label="Open command palette">Jump to… <kbd>⌘K</kbd></button>
-      <a class="gh-btn" href="https://github.com/ai-automation-tools/edge-radar" target="_blank" rel="noopener noreferrer">
-        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-        <span>Repo</span>
-      </a>
       <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-expanded="false">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
       </button>
     </div>
   </div>
   <div class="mobile-nav" id="mobileNav">
-    <a href="#schedulers">Schedulers</a><a href="#links">Quick links</a><a href="#how">How it works</a><a href="#pipeline">Pipeline</a>
+    <a href="#schedulers">Schedulers</a><a href="#links">Quick links</a><a href="https://edge-radar.ai-automation-tools.dev/#how" target="_blank" rel="noopener">How it works ↗</a>
     <a href="https://mikesailab.com">mikesailab.com</a>
     <a href="#" id="palOpenMobile">Jump to…</a>
   </div>
@@ -665,7 +601,7 @@
       <h1>Edge-Radar <em class="sky">command deck</em>.</h1>
       <p class="lede">
         One pane for the pipeline: <b>what is scheduled, what fires next</b>, and where to click when something needs attention.
-        The schedule below is the live Task Scheduler inventory; the clock on the right reads it.
+        The schedule below mirrors the task inventory in the repo; the clock on the right reads it.
       </p>
       <div class="cta">
         <a class="btn btn-primary" href="#schedulers">
@@ -713,9 +649,8 @@
     <a role="listitem" href="#schedulers" style="--c:#38bdf8"><i class="dot"></i>16 scheduled tasks</a>
     <a role="listitem" href="#schedulers" style="--c:#fbbf24"><i class="dot"></i>5 place orders</a>
     <a role="listitem" href="https://github.com/ai-automation-tools/edge-radar/blob/master/AGENTS.md#execution-gates" target="_blank" rel="noopener" style="--c:#fb7185"><i class="dot"></i>21 risk gates</a>
-    <a role="listitem" href="#pipeline" style="--c:#34d399"><i class="dot"></i>7 pipeline stages</a>
+    <a role="listitem" href="https://edge-radar.ai-automation-tools.dev/#pipeline" target="_blank" rel="noopener" style="--c:#34d399"><i class="dot"></i>7 pipeline stages</a>
     <a role="listitem" href="https://github.com/ai-automation-tools/edge-radar/blob/master/docs/task-schedules/README.md" target="_blank" rel="noopener" style="--c:#a78bfa"><i class="dot"></i>task-schedules README</a>
-    <span class="meta">\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\</span>
   </div>
 
   <!-- ── Schedulers ── -->
@@ -723,8 +658,8 @@
     <div class="sec-head">
       <div>
         <p class="eyebrow">Schedulers</p>
-        <h2>Sixteen tasks. Five of them move money.</h2>
-        <p class="sub">The Windows Task Scheduler inventory under <code>\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\</code>. Every execute task emails its report as a second action the moment the scan finishes. Times are PT, system local.</p>
+        <h2>Sixteen tasks. Five of them place orders.</h2>
+        <p class="sub">The Windows Task Scheduler inventory, as documented in <code>docs/task-schedules/README.md</code>. Every execute task emails its report as a second action the moment the scan finishes. Times are PT, system local.</p>
       </div>
     </div>
     <div class="rail" role="toolbar" aria-label="Filter tasks">
@@ -738,30 +673,18 @@
     </div>
     <div class="sched">
       <table>
-        <thead><tr><th>#</th><th>Task</th><th class="cad">Cadence</th><th>Time (PT)</th><th>What it does</th><th class="act-cell"><span class="sr-only">Run</span></th></tr></thead>
+        <thead><tr><th>#</th><th>Task</th><th class="cad">Cadence</th><th>Time (PT)</th><th>What it does</th></tr></thead>
         <tbody id="schedBody"></tbody>
       </table>
     </div>
     <p class="empty" id="sEmpty">No task matches that. Clear the filter or try another word.</p>
 
     <div class="ops2">
-      <div class="codebox">
-        <div class="bar">Manual trigger · Git Bash <button class="copy" type="button" id="copyTrig"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V4a1 1 0 011-1h7"/></svg>copy all</button></div>
-        <pre id="trigPre"><span class="c"># Prepend MSYS_NO_PATHCONV=1 so Git Bash leaves /tn alone. The ▸ button on a row copies that one line.</span>
-<span class="p">$</span> MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\All-Sports-SameDay-Execution"
-<span class="p">$</span> MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\All-Sports-NoDateFilter-Midday-Execution"
-<span class="p">$</span> MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\All-Sports-SameDay-Late-Execution"
-<span class="p">$</span> MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\All-Sports-NextDay-Execution"
-<span class="p">$</span> MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\Weekly-Futures-Execution"
-<span class="c"># PowerShell equivalent, no MSYS prefix</span>
-<span class="p">&gt;</span> Start-ScheduledTask -TaskPath '\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\' -TaskName 'All-Sports-NextDay-Execution'</pre>
-      </div>
       <div class="halt">
-        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.6 17.2A2 2 0 004.3 20h15.4a2 2 0 001.7-2.8L13.7 3.9a2 2 0 00-3.4 0z"/></svg>Halting live orders</h3>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.6 17.2A2 2 0 004.3 20h15.4a2 2 0 001.7-2.8L13.7 3.9a2 2 0 00-3.4 0z"/></svg>Halting orders</h3>
         <p><strong>First, stop everything:</strong> set <code>DRY_RUN=true</code> in <code>.env</code>. The CLI re-reads <code>.env</code> per run, so the next fire of every execute task is already dry.</p>
-        <p style="margin-top:10px">To stop one task instead, disable it (copy as of 2026-11-17; check the folder with <code>Get-ScheduledTask</code> if it has moved):</p>
-<pre>Disable-ScheduledTask -TaskPath '\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\' `
-  -TaskName '&lt;task&gt;'</pre>
+        <p style="margin-top:10px">To stop one task instead, disable it:</p>
+<pre>Get-ScheduledTask -TaskName '&lt;task&gt;' | Disable-ScheduledTask</pre>
         <p style="margin-top:10px">Positions already open are held, not flattened: exiting a 5–20c-wide book pays exactly the illiquidity penalty Gate 3.6 exists to avoid.</p>
       </div>
     </div>
@@ -784,78 +707,11 @@
       <a class="doc" style="--c:#2dd4bf" href="https://github.com/ai-automation-tools/edge-radar/blob/master/docs/task-schedules/README.md" target="_blank" rel="noopener"><small>Schedule</small><b>Task schedules</b><span>docs/task-schedules/README.md</span></a>
       <a class="doc" style="--c:#22d3ee" href="https://github.com/ai-automation-tools/edge-radar/blob/master/docs/ROADMAP.md" target="_blank" rel="noopener"><small>Open work</small><b>ROADMAP</b><span>docs/ROADMAP.md</span></a>
       <a class="doc" style="--c:#34d399" href="https://edge-radar.ai-automation-tools.dev" target="_blank" rel="noopener"><small>Public</small><b>edge-radar.ai-automation-tools.dev</b><span>the public page</span></a>
+      <a class="doc" style="--c:#38bdf8" href="https://edge-radar.ai-automation-tools.dev/#how" target="_blank" rel="noopener"><small>Explainer</small><b>How it works</b><span>the equation, sources, gates, pipeline</span></a>
+      <a class="doc" style="--c:#fb7185" href="https://edge-radar.ai-automation-tools.dev/diagram/" target="_blank" rel="noopener"><small>Diagram</small><b>Betting data flow</b><span>every stage, pinned to the code</span></a>
     </div>
   </section>
 
-  <!-- ── How it works ── -->
-  <section id="how">
-    <div class="sec-head">
-      <div>
-        <p class="eyebrow">How it works</p>
-        <h2>One equation, guarded by 21 gates.</h2>
-        <p class="sub">Pull Kalshi's ask. Pull an independent fair value from sportsbooks and data feeds. The difference is the claimed edge; the fee comes off before anything else is judged, then the order meets the gates.</p>
-      </div>
-    </div>
-    <div class="eq" aria-label="The core equation">
-      <b class="fv">fair_value</b> − <b class="ask">market_ask</b> = <b class="edge">edge</b>
-      <small>·</small>
-      <b class="edge">edge</b> − <b class="fee">fee(price)</b> ≥ <b>floor</b> <small>and every gate passes → bet</small>
-    </div>
-    <div class="flow">
-      <div class="col" style="--c:#38bdf8">
-        <div class="col-h"><i></i>Reference price</div>
-        <div class="col-s">independent fair values from public APIs</div>
-        <div class="node"><div class="t">The Odds API <span class="m">GET</span></div><div class="d mono">api.the-odds-api.com /v4/sports/…/odds</div><div class="d">8–20 sportsbook lines → no-vig consensus</div></div>
-        <div class="node"><div class="t">Sports stats</div><div class="d mono">statsapi.mlb.com · api-web.nhle.com · site.api.espn.com</div></div>
-        <div class="node"><div class="t">Crypto · weather · equity</div><div class="d mono">api.coingecko.com · api.weather.gov · query1.finance.yahoo.com</div></div>
-      </div>
-      <div class="conn a" aria-hidden="true"><svg viewBox="0 0 44 120" preserveAspectRatio="none"><line x1="2" y1="60" x2="42" y2="60"/><line class="mv" x1="2" y1="60" x2="42" y2="60"/></svg></div>
-      <div class="conn-m" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M10 14l-4-4h8l-4 4z"/></svg></div>
-      <div class="col" style="--c:#34d399">
-        <div class="col-h"><i></i>Edge engine</div>
-        <div class="col-s">finds the gap, nets the fee, sizes the bet</div>
-        <div class="node"><div class="t">Kalshi market data <span class="m">GET</span></div><div class="d mono">api.elections.kalshi.com /markets · /orderbook</div><div class="d">live ask, bid, volume, expiry</div></div>
-        <div class="node"><div class="t">Fair-value model</div><div class="d">ticker → <em>ML · SP · TO · FU · PR</em> · de-vig, CDF spreads and totals, calibrated stdevs</div></div>
-        <div class="node key"><div class="t">Edge, net of fee</div><div class="d">fair − ask, with a confidence tier · <em>edge ≥ floor + fee</em></div></div>
-        <div class="node"><div class="t">21 risk gates</div><div class="d">daily loss · exposure caps · liquidity · lead time · cheap-NO rules · opposing side · dedup · 10% hard stop</div></div>
-        <div class="node"><div class="t">Kelly sizing</div><div class="d"><em>edge / (1 − price)</em>, fractional, divided by batch size · half-Kelly on NO at both price ends</div></div>
-      </div>
-      <div class="conn b" aria-hidden="true"><svg viewBox="0 0 44 120" preserveAspectRatio="none"><line x1="2" y1="60" x2="42" y2="60"/><line class="mv" x1="2" y1="60" x2="42" y2="60"/></svg></div>
-      <div class="conn-m" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M10 14l-4-4h8l-4 4z"/></svg></div>
-      <div class="col" style="--c:#fbbf24">
-        <div class="col-h"><i></i>Execute &amp; track</div>
-        <div class="col-s">orders, settlement, the calibration loop</div>
-        <div class="node"><div class="t">Kalshi trade API <span class="m">POST</span></div><div class="d mono">api.elections.kalshi.com /portfolio/orders</div><div class="d">RSA-PSS signed limit order · venue eligibility checked first, fails closed</div></div>
-        <div class="node"><div class="t">Positions &amp; fills <span class="m">GET</span></div><div class="d mono">/portfolio/positions · /fills</div><div class="d">exposure, resting-order cleanup, measured fees</div></div>
-        <div class="node"><div class="t">Settle &amp; calibrate</div><div class="d">27-field settlement record · model-vs-market Brier pair · stdev refit · Hourly-Settle keeps Gate 1 current</div></div>
-        <div class="node"><div class="t">Watch</div><div class="d">Daily-Summary 4:50 AM · Integration-Drift-Check 4:15 AM · post-kickoff order alarm</div></div>
-      </div>
-    </div>
-    <div class="loop">
-      <span class="l"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 8a6 6 0 0 1 10.5-4M14 8a6 6 0 0 1-10.5 4" stroke-linecap="round"/><path d="M11 1.5L12.5 4L10 4.5M5 14.5L3.5 12L6 11.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Outcomes loop back: Sunday's Calibration task re-fits the stdevs; Backtest and Weekly-Analysis re-judge the thresholds.</span>
-      <span><code>DRY_RUN=false</code> on the main profile · <a href="https://github.com/ai-automation-tools/edge-radar/blob/master/AGENTS.md#execution-gates" target="_blank" rel="noopener">gate spec ↗</a></span>
-    </div>
-  </section>
-
-  <!-- ── Pipeline ── -->
-  <section id="pipeline">
-    <div class="sec-head">
-      <div>
-        <p class="eyebrow">Pipeline</p>
-        <h2>Seven stages. Scan, size, execute, settle.</h2>
-        <p class="sub">One entry point, <code>scripts/scan.py</code>, runs the chain. The scheduled execute tasks call it with <code>--execute</code>, a budget and a max-bets cap; the preview you run by hand stops after the gates.</p>
-      </div>
-    </div>
-    <div class="steps" id="steps">
-      <div class="step"><span class="n">01</span><b>Fetch</b><span>Kalshi markets and order books, plus the Odds API and data feeds, through a short-TTL cache.</span></div>
-      <div class="step"><span class="n">02</span><b>Categorize</b><span>Ticker → market type. <code>ML · SP · TO · FU · PR</code> each pick a model.</span></div>
-      <div class="step"><span class="n">03</span><b>Compare</b><span>Fair value against the ask, net of fee, with a confidence tier and a composite score.</span></div>
-      <div class="step"><span class="n">04</span><b>Cap</b><span>Bracket dedup keeps the sibling that can clear the gates; per-event caps apply.</span></div>
-      <div class="step"><span class="n">05</span><b>Risk</b><span>21 gates in order. Reject or trim. Preview prints the verdicts.</span></div>
-      <div class="step"><span class="n">06</span><b>Execute</b><span>Fractional Kelly size, shard funding, RSA-signed limit order. Dry run logs identically.</span></div>
-      <div class="step"><span class="n">07</span><b>Settle</b><span>Outcomes, measured fees, Brier pair, drift and post-kickoff alarms. <code>make settle</code></span></div>
-    </div>
-  </section>
 
 </main>
 
@@ -888,15 +744,13 @@
   </div>
 </div>
 
-<div class="toast" id="toast" role="status"><i></i><span>Copied</span></div>
-
 <script>
 (function () {
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const REPO = 'https://github.com/ai-automation-tools/edge-radar';
-  const TZ = 'America/Los_Angeles', FOLDER = '\\AI-Automation-Tools-Org-LocalApps\\Edge-Radar-MikesAILab\\';
+  const TZ = 'America/Los_Angeles';
   const KIND = { orders: ['places orders', '#fbbf24'], report: ['report', '#38bdf8'], maint: ['maintenance', '#a78bfa'], cont: ['continuous', '#71717a'] };
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -943,17 +797,7 @@
   const fmt12 = hhmm => { const [h, m] = hhmm.split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
   const mins = hhmm => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
   const runsOn = (t, day) => t.days === 'daily' || (Array.isArray(t.days) && t.days.includes(day));
-  const trig = t => `MSYS_NO_PATHCONV=1 schtasks /run /tn "${FOLDER}${t.id}"`;
 
-  /* ── Toast + copy ── */
-  const toast = $('#toast'); let toastT;
-  function say(msg) { toast.querySelector('span').textContent = msg; toast.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => toast.classList.remove('on'), 1600); }
-  function copyText(text) {
-    const done = () => say('Copied to clipboard');
-    const fail = () => { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { say('Select the text to copy'); } ta.remove(); };
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fail); else fail();
-  }
-  document.addEventListener('click', e => { const b = e.target.closest('[data-copy]'); if (b) copyText(b.dataset.copy); });
 
   /* ── Mobile menu ── */
   const menuBtn = $('#menuBtn'), mobileNav = $('#mobileNav');
@@ -970,17 +814,15 @@
     ind.style.left = (r.left - nr.left + 11) + 'px'; ind.style.width = (r.width - 22) + 'px'; ind.style.opacity = 1;
   }
   const spy = new IntersectionObserver(es => { es.forEach(en => { if (en.isIntersecting) setActive(en.target.id); }); }, { rootMargin: '-45% 0px -50% 0px' });
-  ['schedulers', 'links', 'how', 'pipeline'].forEach(id => spy.observe(document.getElementById(id)));
+  ['schedulers', 'links'].forEach(id => spy.observe(document.getElementById(id)));
   addEventListener('resize', () => { const a = links.find(l => l.classList.contains('active')); if (a) setActive(a.dataset.spy); });
 
   /* ── Spotlight tracking ── */
   document.addEventListener('pointermove', e => {
-    const el = e.target.closest('.card, .step, .node, .doc'); if (!el) return;
+    const el = e.target.closest('.card, .doc'); if (!el) return;
     const r = el.getBoundingClientRect();
     el.style.setProperty('--mx', (e.clientX - r.left) + 'px'); el.style.setProperty('--my', (e.clientY - r.top) + 'px');
   });
-  const steps = $('#steps');
-  new IntersectionObserver((es, io) => { es.forEach(en => { if (en.isIntersecting) { steps.classList.add('in'); io.disconnect(); } }); }, { threshold: .3 }).observe(steps);
 
   /* ── Pacific time ── */
   function ptNow() {
@@ -1029,7 +871,7 @@
     for (let h = 0; h <= 24; h += 1) { const x = h / 24 * 100; html += `<div class="tick ${h % 6 === 0 ? 'm' : ''}" style="left:${x}%"></div>`; if (h % 3 === 0) html += `<div class="lbl" style="left:${x}%">${h === 0 || h === 24 ? '12a' : h < 12 ? h + 'a' : h === 12 ? '12p' : (h - 12) + 'p'}</div>`; }
     SCHED.filter(t => t.days !== null).forEach(t => {
       const weekly = Array.isArray(t.days), today = runsOn(t, now.day);
-      html += `<button type="button" class="mk ${weekly ? 'weekly' : ''} ${today ? '' : 'off'} ${t.kind === 'orders' ? 'money' : ''}" style="left:${mins(t.time) / 1440 * 100}%;--c:${KIND[t.kind][1]}" data-id="${t.id}" data-n="${t.n}" aria-label="${t.id} at ${fmt12(t.time)}"></button>`;
+      html += `<button type="button" class="mk ${weekly ? 'weekly' : ''} ${today ? '' : 'off'}" style="left:${mins(t.time) / 1440 * 100}%;--c:${KIND[t.kind][1]}" data-id="${t.id}" data-n="${t.n}" aria-label="${t.id} at ${fmt12(t.time)}"></button>`;
     });
     html += '<div class="now"></div>';
     tl.innerHTML = html; tl.appendChild(ttip);
@@ -1046,11 +888,10 @@
   const body = $('#schedBody');
   body.innerHTML = SCHED.map(t => `<tr class="r" id="row-${t.n}" data-id="${t.id}" data-tags="${t.kind} ${Array.isArray(t.days) ? 'weekly' : t.days === 'daily' ? 'daily' : 'cont'}" style="--c:${KIND[t.kind][1]}">
       <td class="num">${t.n}</td>
-      <td class="nm"><i></i>${t.id}${t.kind === 'orders' ? '<span class="money">live</span>' : ''}</td>
+      <td class="nm"><i></i>${t.id}</td>
       <td class="cad"><span>${cadence(t)}</span></td>
       <td class="tm">${t.days === null ? t.time : fmt12(t.time)}${t.days !== null ? `<small>${cadence(t)}</small>` : ''}</td>
       <td class="what">${t.what}${t.email ? '<span class="em"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="9" rx="1.5"/><path d="M2 5l6 4 6-4"/></svg>email</span>' : ''}</td>
-      <td class="act-cell">${t.days !== null ? `<button class="copy" type="button" data-copy="${trig(t).replace(/"/g, '&quot;')}" title="Copy the manual trigger"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3l7 5-7 5z"/></svg>run</button>` : ''}</td>
     </tr>`).join('');
   const chips = $$('#schedulers .chip'), sq = $('#sq'), rows = $$('tr.r', body), sEmpty = $('#sEmpty');
   let filter = 'all';
@@ -1072,7 +913,6 @@
     el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
   }
   later.addEventListener('click', e => { const a = e.target.closest('a[href^="#row-"]'); if (a) { e.preventDefault(); jumpRow(+a.getAttribute('href').slice(5)); } });
-  $('#copyTrig').addEventListener('click', () => copyText(SCHED.filter(t => t.kind === 'orders').map(trig).join('\n')));
 
   buildTimeline(); renderNext(); setInterval(renderNext, 15000);
   // Rebuild the markers at midnight PT so "weekly, not today" stays right on a deck left open.
@@ -1084,11 +924,8 @@
   function go(h) { document.querySelector(h).scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' }); }
   const ITEMS = [
     ...SCHED.map(t => ({ g: 'Tasks', label: t.id, hint: t.days === null ? t.time : `${fmt12(t.time)} · ${cadence(t)}`, c: KIND[t.kind][1], go: () => jumpRow(t.n) })),
-    ...SCHED.filter(t => t.kind === 'orders').map(t => ({ g: 'Copy trigger', label: 'Copy: run ' + t.id, hint: 'schtasks /run', c: '#fbbf24', go: () => copyText(trig(t)) })),
     { g: 'Sections', label: 'Schedulers', hint: '#schedulers', c: '#38bdf8', go: () => go('#schedulers') },
     { g: 'Sections', label: 'Quick links', hint: '#links', c: '#38bdf8', go: () => go('#links') },
-    { g: 'Sections', label: 'How it works', hint: '#how', c: '#34d399', go: () => go('#how') },
-    { g: 'Sections', label: 'Pipeline', hint: '#pipeline', c: '#34d399', go: () => go('#pipeline') },
     ...$$('#linkGrid a').map(a => ({ g: 'Links', label: a.querySelector('b').textContent, hint: a.querySelector('span').textContent, c: a.style.getPropertyValue('--c'), go: () => open(a.href) })),
     { g: 'Links', label: 'mikesailab.com', hint: 'the lab', go: () => open('https://mikesailab.com') },
   ];
