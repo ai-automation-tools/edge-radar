@@ -20,7 +20,13 @@ None of these files are in git, and the trade-side context (edge, fair value, sc
 from Kalshi. The `Reconcile` task's second action runs
 `scripts/shared/backup_ledger.py --dest <folder>` nightly: one `edge-radar-ledger_<UTC stamp>.zip` per night,
 30 days kept, holding `kalshi_trades.json`, `kalshi_settlements.json`, `trade_journal.jsonl` (if any) and
-`shadow_book.json`. The trade and settlement logs are copied under the trade-log lock.
+the shadow book (`shadow_book/YYYY-MM.jsonl`, stored in the zip under `shadow_book/`). The trade and
+settlement logs are copied under the trade-log lock.
+
+The shadow book (`scripts/backtest/shadow_book.py`) is one JSONL file per month of `observed_at`, and a
+save rewrites only the months it changed (ER-28). Until 2026-11-18 it was a single `shadow_book.json`; the
+first save after the change splits it and renames the old file to `shadow_book.json.migrated`, which you
+can delete once a backup has run.
 
 **Restore** (stop the scheduled tasks first, so nothing writes mid-restore):
 

@@ -9,7 +9,7 @@ REM  NCAAF was frozen holding nothing, so without this its settled count is
 REM  pinned at 11 forever, permanently under nfl_week1_review's bar of 20.
 REM
 REM  PLACES NO ORDERS AND RISKS NO MONEY. `collect` calls the scanner and
-REM  writes rows to data\history\shadow_book.json; `settle` calls get_market()
+REM  writes rows to data\history\shadow_book\YYYY-MM.jsonl; `settle` calls get_market()
 REM  read-only. Neither touches .env, the trade log, or the executor, and the
 REM  freeze stays fully in force throughout -- these rows are scored, never bet.
 REM

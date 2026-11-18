@@ -41,7 +41,10 @@ PREFIX = "edge-radar-ledger_"
 def ledger_files() -> tuple[list[Path], list[Path]]:
     """(files written under trade_log_lock, other history files)."""
     locked = [trade_log.TRADE_LOG_PATH, trade_log.SETTLEMENT_LOG_PATH, trade_log.journal_path()]
-    other = [paths.DATA_DIR / "history" / "shadow_book.json"]
+    history = paths.DATA_DIR / "history"
+    # ER-28: the shadow book is one JSONL file per month (the old single JSON
+    # until its first save migrates it).
+    other = [history / "shadow_book.json", *sorted((history / "shadow_book").glob("*.jsonl"))]
     return [p for p in locked if p.exists()], [p for p in other if p.exists()]
 
 
@@ -57,7 +60,7 @@ def backup(dest: Path, keep_days: float, now: float | None = None) -> tuple[Path
             for p in locked:
                 zf.write(p, p.name)
         for p in other:
-            zf.write(p, p.name)
+            zf.write(p, p.relative_to(paths.DATA_DIR / "history").as_posix())
     tmp.replace(out)
 
     bad = []
@@ -65,11 +68,15 @@ def backup(dest: Path, keep_days: float, now: float | None = None) -> tuple[Path
         if zf.testzip() is not None:
             bad.append("zip CRC")
         for name in zf.namelist():
-            if name.endswith(".json"):
-                try:
+            try:
+                if name.endswith(".json"):
                     json.loads(zf.read(name))
-                except ValueError:
-                    bad.append(name)
+                elif name.endswith(".jsonl"):
+                    for line in zf.read(name).decode("utf-8").splitlines():
+                        if line.strip():
+                            json.loads(line)
+            except ValueError:
+                bad.append(name)
 
     cutoff = (now or time.time()) - keep_days * 86400
     for old in dest.glob(f"{PREFIX}*.zip"):

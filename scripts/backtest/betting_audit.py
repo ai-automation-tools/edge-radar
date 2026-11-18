@@ -45,7 +45,6 @@ from trade_log import load_settlement_log, load_trade_log  # noqa: E402
 ROOT = paths.PROJECT_ROOT
 REPORT_DIR = ROOT / "reports" / "Maintenance" / "betting-audit"
 DRIFT_DIR = ROOT / "reports" / "Maintenance" / "drift"
-SHADOW_PATH = paths.DATA_DIR / "history" / "shadow_book.json"
 STDEV_PATH = paths.DATA_DIR / "cache" / "calibration_stdevs.json"
 
 # Rest-day data is an NBA/NHL input; on any other sport it is a leak (2026-10-27).
@@ -145,11 +144,9 @@ def calibration_by_series(settlements: list[dict], since: datetime | None) -> li
 
 
 def load_shadow() -> list[dict]:
-    try:
-        d = json.loads(SHADOW_PATH.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return []
-    return d if isinstance(d, list) else []
+    from shadow_book import load_shadow as _load  # ER-28: monthly JSONL
+
+    return _load()
 
 
 def candidate_skew(shadow: list[dict], since: datetime, min_edge: float = 0.03) -> list[dict]:

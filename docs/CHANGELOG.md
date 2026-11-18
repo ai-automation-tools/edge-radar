@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-11-18 -- Shadow book stored as monthly JSONL (ER-28 leftover)
+
+- `data/history/shadow_book.json` was one indented JSON array (33 MB, 16.6k rows), rewritten in full
+  by every `collect` and `settle`. It is now `data/history/shadow_book/YYYY-MM.jsonl`, one file per
+  month of `observed_at`, and `save_shadow` rewrites only the months whose rows changed (atomic per
+  file). The same rows come to 22.5 MB.
+- **Migration is automatic:** with no `shadow_book/` folder, `load_shadow` reads the old file; the
+  first save writes the months and renames it to `shadow_book.json.migrated`. Checked against a copy
+  of the live file: all 16,614 rows round-trip unchanged.
+- A bad line is skipped with a warning instead of emptying the whole book.
+- `betting_audit.py` reads through `shadow_book.load_shadow()`; `backup_ledger.py` zips the monthly
+  files under `shadow_book/` and validates each JSONL line.
+- Tests: `tests/test_shadow_book_store.py`, `tests/test_backup_ledger.py`.
+
+---
+
 ## 2026-11-18 -- Balance reads paced to Kalshi's 1/s bucket (K1, ER-44 leftover)
 
 - Since 2026-10-15 `GET /portfolio/balance` allows 1 request per second with no burst. A batch that

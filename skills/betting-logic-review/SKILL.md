@@ -232,11 +232,11 @@ grep -ho "Rest day signal for KX[A-Z]*" logs/edge_detector_*.log | sort | uniq -
 ```
 
 Anything other than NBA/NHL is a leak (fixed 2026-10-27). Do the same for any new
-`details[...]` input: look for it on a ticker from the wrong sport in `shadow_book.json`.
+`details[...]` input: look for it on a ticker from the wrong sport in the shadow book (`shadow_book.load_shadow()`).
 
 ### B11 — One-directional candidates, before money is placed
 
-From `data/history/shadow_book.json` (pre-gate), compute per series the share of
+From the shadow book (`data/history/shadow_book/*.jsonl`, pre-gate; `shadow_book.load_shadow()`), compute per series the share of
 edge >= 0.03 rows pointing one way (Over/Under, cover/no-cover). At >= 90% one way, the
 model is disagreeing with the market on a single parameter (S21), usually a stdev.
 Compare the shadow Brier pair, then fit the parameter on the shadow rows, never on

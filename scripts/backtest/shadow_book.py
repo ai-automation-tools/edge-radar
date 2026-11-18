@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import sys
 from datetime import datetime, timezone
@@ -63,7 +64,17 @@ import paths  # noqa: F401  -- adds scripts/shared to sys.path
 
 from scipy.stats import norm  # noqa: E402
 
-SHADOW_LOG = Path(paths.DATA_DIR) / "history" / "shadow_book.json"
+# ER-28: one JSONL file per month of `observed_at`, so a collect or settle
+# rewrites only the months it touched instead of one ever-growing JSON file
+# (33 MB by 2026-11). The single file it replaces is read once, then renamed
+# to `shadow_book.json.migrated` by the first save.
+SHADOW_DIR = Path(paths.DATA_DIR) / "history" / "shadow_book"
+LEGACY_LOG = Path(paths.DATA_DIR) / "history" / "shadow_book.json"
+log = logging.getLogger("shadow_book")
+
+#: month -> file text as last read or written; `save_shadow` skips a month
+#: whose text is unchanged.
+_on_disk: dict[str, str] = {}
 
 #: Multiples of each row's OWN stdev the sweep re-projects at. Relative, not
 #: absolute: a fixed 7-18 grid (sized for football's 15.0) is meaningless for
@@ -78,27 +89,66 @@ MIN_SWEEP_ROWS = 25
 # -- Store --------------------------------------------------------------------
 
 
+def _month(row: dict) -> str:
+    return str(row.get("observed_at") or "")[:7] or "undated"
+
+
+def _month_text(rows: list[dict]) -> str:
+    return "".join(json.dumps(r) + "\n" for r in rows)
+
+
 def load_shadow() -> list[dict]:
-    """Rows logged so far. A missing or corrupt file reads as empty, never raises.
+    """Rows logged so far, oldest month first. Never raises.
 
     Mirrors `scan_cache`/`odds_cache`: this is an evidence log, and a parse
     error on it must never take down the scan that is trying to append to it.
+    An unreadable line is skipped with a warning (and dropped by the next save
+    of its month); an unreadable file reads as empty.
     """
-    if not SHADOW_LOG.exists():
-        return []
-    try:
-        data = json.loads(SHADOW_LOG.read_text(encoding="utf-8"))
-        return data if isinstance(data, list) else []
-    except (json.JSONDecodeError, OSError):
-        return []
+    if not SHADOW_DIR.is_dir():
+        try:
+            data = json.loads(LEGACY_LOG.read_text(encoding="utf-8"))
+            return data if isinstance(data, list) else []
+        except (ValueError, OSError):
+            return []
+    rows: list[dict] = []
+    for path in sorted(SHADOW_DIR.glob("*.jsonl")):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as e:
+            log.warning("shadow book %s unreadable: %s", path.name, e)
+            continue
+        _on_disk[path.stem] = text
+        for n, line in enumerate(text.splitlines(), 1):
+            if line.strip():
+                try:
+                    rows.append(json.loads(line))
+                except ValueError:
+                    log.warning("shadow book %s line %d unparseable; skipped", path.name, n)
+    return rows
 
 
 def save_shadow(rows: list[dict]) -> None:
-    """Atomic replace -- a crash mid-write must not truncate the log."""
-    SHADOW_LOG.parent.mkdir(parents=True, exist_ok=True)
-    tmp = SHADOW_LOG.with_suffix(".tmp")
-    tmp.write_text(json.dumps(rows, indent=2), encoding="utf-8")
-    os.replace(tmp, SHADOW_LOG)
+    """Write each month whose rows changed; atomic per file.
+
+    Rows are never deleted from the book, so a month absent from `rows` is
+    left alone rather than removed.
+    """
+    by_month: dict[str, list[dict]] = {}
+    for r in rows:
+        by_month.setdefault(_month(r), []).append(r)
+    SHADOW_DIR.mkdir(parents=True, exist_ok=True)
+    for month, month_rows in by_month.items():
+        text = _month_text(month_rows)
+        if _on_disk.get(month) == text:
+            continue
+        path = SHADOW_DIR / f"{month}.jsonl"
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, path)
+        _on_disk[month] = text
+    if LEGACY_LOG.exists():
+        LEGACY_LOG.replace(LEGACY_LOG.with_name(LEGACY_LOG.name + ".migrated"))
 
 
 def _key(row: dict) -> tuple[str, str]:
