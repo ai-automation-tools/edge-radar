@@ -232,6 +232,8 @@ Late-breaking news on tonight's slate: scratches, goalie confirmations, afternoo
 
 `maintenance\reconcile.bat` → `kalshi_settler.py reconcile`. Runs 55 minutes after the 10:35 PM settle pass, so drift it reports is real: a missed settlement, API lag, or local-log corruption.
 
+Then `scripts/shared/prune_logs.py` (ER-28) keeps `logs/` bounded: it deletes `<name>_<date>.log` files more than 90 days old and cuts any fixed-name log (`clv_capture.log`, `shadow_book.log`, `scan_*.log`, ...) over 5 MB down to its newest 1 MB. The wrapper exits with the reconcile's code, not the prune's.
+
 **Action 2 (ER-08):** `scripts/shared/backup_ledger.py --dest <backed-up folder>` zips `data/history/`'s ledger
 files (trades, settlements, journal, shadow book) into `edge-radar-ledger_<UTC stamp>.zip` and deletes zips older
 than 30 days. Point `--dest` at a folder a sync client backs up; the owner uses a OneDrive folder. Exits 1 if a

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-11-18 -- logs/ stays bounded (ER-28)
+
+- **Ops** new `scripts/shared/prune_logs.py`, run by `maintenance\reconcile.bat` after the nightly
+  reconcile: deletes `<name>_<date>.log` files more than 90 days old and cuts fixed-name logs over 5 MB
+  to their newest 1 MB at a line break. The wrapper still exits with the reconcile's code.
+- **Tests** `tests/test_prune_logs.py`.
+
+---
+
 ## 2026-11-17 -- Roadmap catches up with the audit fixes
 
 - **Docs** `docs/ROADMAP.md` now lists every audit item merged so far, including ER-18, ER-20, ER-21,

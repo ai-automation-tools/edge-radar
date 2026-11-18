@@ -13,3 +13,8 @@ echo  %date% %time%
 echo ============================================================
 
 .venv\Scripts\python.exe scripts\kalshi\kalshi_settler.py reconcile
+set RC=%ERRORLEVEL%
+
+REM ER-28: keep logs\ bounded (dated logs past 90 days, fixed-name logs over 5 MB).
+.venv\Scripts\python.exe scripts\shared\prune_logs.py
+exit /b %RC%
