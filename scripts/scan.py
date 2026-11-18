@@ -153,7 +153,7 @@ Common flags (all scanners):
   --mode X         preview (no orders) or execute (same as --execute)
   --unit-size N    Dollar amount per bet
   --max-bets N     Max bets to place (default 5)
-  --budget X       Max total cost per batch (e.g. '10%' or '15')
+  --budget X       Max total cost per batch ('10%' of bankroll, or '150' dollars)
   --date X         Filter by date (today, tomorrow, YYYY-MM-DD, mar31)
   --exclude-open   Skip markets with open positions
   --pick X         Comma-separated row numbers to execute

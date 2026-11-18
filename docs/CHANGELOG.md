@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-11-17 -- `--budget` percent parsing (ER-14)
+
+- **Fix** `parse_budget_arg` stripped the `%` before its range check, so `--budget 1%` and
+  `--budget 1` meant 100% of bankroll and `0.5%` meant 50%. A trailing `%` now always means
+  percent; a bare `1` is refused (100% or 1%?); zero, negative, non-numeric and over-100%
+  values are refused. Every scheduled run passes `12%` or `10%`, which parse as before.
+- **Fix** `kalshi_executor.py run` had its own copy of the old parser; it now calls the shared one.
+- **Docs** The `--budget` help texts said a bare `15` meant $15. The code has always read it as
+  15%; the executor, sports and futures help now say so (dollars only above 100).
+  `prediction_scanner.py` still has the old wording: the file predates black/flake8 and any
+  edit reformats all of it.
+
+---
+
 ## 2026-11-17 -- Report emails escape HTML (ER-22)
 
 - **Security** `render_report_email.py` used markdown-it's `commonmark` preset, which passes raw
