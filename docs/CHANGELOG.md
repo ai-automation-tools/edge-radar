@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-11-17 -- Execute prompts wait for go (ER-25)
+
+- **Safety** Nine prompts under `prompts/` place orders. Most ran a fresh `scan.py ... --execute`
+  as their first command, which places orders immediately, even where the text said "wait for my
+  confirmation"; `multi-sport-execute.md` bet up to ten rows nobody had seen. Each now ends with
+  one "Placing orders" block: run the sizing preview (no `--execute`), wait for **go**, then place
+  exactly the chosen rows. Sports use `--execute --pick '<rows>'`, which replays the cached
+  preview; futures and predictions use `--execute --ticker`, because those scanners don't cache
+  and a fresh scan can renumber rows.
+- **Docs** `prompts/README.md` described the old promise; it now describes the rule.
+- `tests/test_prompts.py` fails on any `scripts/scan.py ... --execute` line without `--pick` or
+  `--ticker`, and on any order-placing prompt that doesn't wait for **go**.
+
+---
+
 ## 2026-11-17 -- Risk and eligibility notice (ER-10)
 
 - **Docs** The README and the public site carried only "Not financial advice". Both now have a

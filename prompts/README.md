@@ -90,7 +90,7 @@ Outright/futures markets priced via N-way de-vigging. Edges are small (0.5–2% 
 
 ## Conventions
 
-- **Preview before execute.** Scan prompts stop at a table; execute prompts show the preview, wait for confirmation, then place orders.
+- **Preview before execute.** Scan prompts stop at a table. Execute prompts size a preview without `--execute`, wait for **go**, then place exactly the chosen rows: `--pick` for sports (it replays the cached preview), `--ticker` for futures and predictions. `tests/test_prompts.py` enforces this.
 - **`--exclude-open`** skips markets where you already hold a position (avoids doubling up).
 - **`--save`** writes a markdown report under `reports/` (Sports/, Futures/, etc.).
 - **`--date today|tomorrow|YYYY-MM-DD`** scopes sports scans to a slate.
