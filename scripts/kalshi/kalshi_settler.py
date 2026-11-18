@@ -33,6 +33,7 @@ from trade_log import (
     get_filled_contracts,
     get_filled_cost,
     recover_journal,
+    recover_pending,
     set_row_fills,
 )
 
@@ -527,6 +528,13 @@ def audit_closed_fills(client: KalshiClient) -> list[dict]:
     return found
 
 
+def _order_by_client_id(client: KalshiClient, ticker: str, client_order_id: str) -> dict | None:
+    """The venue's order with this client_order_id, or None. Raises if the read fails."""
+    resp = client.get_orders(ticker=ticker, limit=100)
+    orders = resp.get("orders", []) if isinstance(resp, dict) else []
+    return next((o for o in orders if o.get("client_order_id") == client_order_id), None)
+
+
 def settle_trades(client: KalshiClient) -> dict:
     """
     Fetch settlements from Kalshi and update the trade log.
@@ -539,6 +547,10 @@ def settle_trades(client: KalshiClient) -> dict:
     applies the settlements, and saves.
     """
     # ── Phase 1: fetch everything from Kalshi (no lock) ────────────────────────
+    # ER-13: an order a crashed execute run sent but never logged.
+    pending = recover_pending(lambda ticker, cid: _order_by_client_id(client, ticker, cid))
+    if pending:
+        rprint(f"  [yellow]Booked {pending} order(s) left pending by a crashed run[/yellow]")
     # BUG-03: an accepted order whose log write failed sits in the journal.
     recovered = recover_journal()
     if recovered:

@@ -113,3 +113,84 @@ class _null:
 
     def __exit__(self, *a):
         return False
+
+
+# ── Pending file before the POST (ER-13 leftover) ────────────────────────────
+
+import json  # noqa: E402
+
+import trade_log  # noqa: E402
+
+
+class _CheckingVenue(_Venue):
+    """Asserts the pending file exists at the moment of the POST."""
+
+    def create_order(self, **kw):
+        cid = kw["client_order_id"]
+        assert (trade_log.pending_dir() / f"{cid}.json").is_file(), "no pending file before POST"
+        return super().create_order(**kw)
+
+
+def test_pending_file_exists_during_post_and_is_cleared_after():
+    venue = _CheckingVenue()
+    assert len(ke._place_order_batch(venue, [_sized()], [])) == 1
+    assert not list(trade_log.pending_dir().glob("*.json"))
+
+
+def test_transport_error_not_found_keeps_the_pending_file():
+    venue = _Venue(raise_first=True, landed=False)
+    ke._place_order_batch(venue, [_sized()], [])
+    (f,) = trade_log.pending_dir().glob("*.json")
+    rec = json.loads(f.read_text(encoding="utf-8"))
+    assert rec["client_order_id"] == venue.sent[0]["client_order_id"] == f.stem
+    assert rec["requested_contracts"] == 2 and rec["filled_contracts"] == 0
+
+
+def _stale_pending(cid="c1", ticker="KXNBAGAME-26APR04T1-A"):
+    s = _sized(ticker)
+    trade_log.write_pending(
+        cid, {**ke._trade_record({"order": {"status": "pending"}}, s), "client_order_id": cid}
+    )
+    return trade_log.pending_dir() / f"{cid}.json"
+
+
+def test_recover_pending_books_a_found_order_once():
+    f = _stale_pending()
+    order = {
+        "order_id": "o9",
+        "client_order_id": "c1",
+        "status": "resting",
+        "fill_count_fp": "1.00",
+        "remaining_count_fp": "1.00",
+    }
+    assert trade_log.recover_pending(lambda t, c: order, now=f.stat().st_mtime + 1000) == 1
+    (row,) = trade_log.load_trade_log()
+    assert (
+        row["order_id"] == "o9"
+        and row["filled_contracts"] == 1.0
+        and row["fill_status"] == "partial"
+    )
+    assert not f.exists()
+    _stale_pending()  # the same order again: not booked twice
+    assert trade_log.recover_pending(lambda t, c: order, now=f.stat().st_mtime + 1000) == 0
+    assert len(trade_log.load_trade_log()) == 1
+
+
+def test_recover_pending_drops_unknown_and_dead_orders_keeps_unreadable_venue():
+    f = _stale_pending()
+    later = f.stat().st_mtime + 1000
+
+    def boom(t, c):
+        raise RuntimeError("venue down")
+
+    assert trade_log.recover_pending(boom, now=later) == 0 and f.exists()  # can't tell: kept
+    assert (
+        trade_log.recover_pending(lambda t, c: None, now=f.stat().st_mtime + 10) == 0 and f.exists()
+    )  # too young
+    assert (
+        trade_log.recover_pending(lambda t, c: None, now=later) == 0 and not f.exists()
+    )  # never landed
+    f = _stale_pending("c2")
+    dead = {"order_id": "o2", "status": "canceled", "fill_count_fp": "0.00"}
+    assert trade_log.recover_pending(lambda t, c: dead, now=later) == 0 and not f.exists()
+    assert trade_log.load_trade_log() == []
