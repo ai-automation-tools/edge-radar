@@ -45,8 +45,7 @@ The pipeline already weights sharp books higher when calculating consensus proba
 
 | Bookmaker | Weight | Why |
 |---|---|---|
-| Pinnacle / Circa | 3.0x | Sharpest lines, lowest vig |
-| Bookmaker.eu | 2.5x | Sharp market |
+| Pinnacle | 3.0x | Sharpest lines, lowest vig (live runs only) |
 | LowVig | 2.0x | Low-margin book |
 | BetOnline / Bovada | 1.5x | Accepts sharp action |
 | DraftKings / FanDuel / BetMGM | 0.7x | Recreational-skewed lines |

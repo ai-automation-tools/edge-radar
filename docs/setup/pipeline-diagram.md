@@ -9,7 +9,7 @@ The diagram below outlines how the Edge-Radar pipeline runs dynamically, from ma
 flowchart TD
     %% Nodes definition
     Markets["📡 Open Kalshi Markets"]
-    Consensus["🏀 Sportsbooks Consensus\n(8-12 Odds Feeds)"]
+    Consensus["🏀 Sportsbooks Consensus\n(9 US books + Pinnacle)"]
     Models["🧠 Edge Models\n(Normal CDF, Devig, Volatility)"]
 
     Scan["🔍 Unified Scanner\n(scripts/scan.py)"]

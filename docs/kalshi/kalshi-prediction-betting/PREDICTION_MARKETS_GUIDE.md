@@ -256,7 +256,7 @@ Currently limited availability. Kalshi periodically adds markets for awards show
 | **Edge detection** | Sportsbook odds (The Odds API) | CoinGecko, NWS, VIX, historical rates, time-decay models |
 | **Settlement speed** | Hours (after game ends) | Varies: daily, monthly, or event-driven |
 | **Liquidity** | Generally high for major sports | Varies widely by market |
-| **Data sources** | 8-12 sportsbooks de-vigged | Asset prices, weather forecasts, vol models, settlement history |
+| **Data sources** | 9 US sportsbooks + Pinnacle, de-vigged | Asset prices, weather forecasts, vol models, settlement history |
 | **Volatility** | Game outcomes are one-shot | Prices move continuously until settlement |
 | **Strategy** | Statistical edge from de-vigged odds | Probability modeling against strike prices |
 

@@ -159,9 +159,9 @@ Edge detection only works for market types with a mapped external odds source (s
 
 The system estimates "fair value" for Kalshi markets by cross-referencing sportsbook odds:
 
-1. **Fetch** odds from 8-12 US sportsbooks via The Odds API
+1. **Fetch** odds from nine US sportsbooks (Pinnacle joins on live runs) via The Odds API
 2. **De-vig** each book's line to remove the house edge
-3. **Weighted median** -- sharp books (Pinnacle, Circa) count 3x more than recreational books (DraftKings, FanDuel at 0.7x)
+3. **Weighted median** -- Pinnacle counts 3x more than recreational books (DraftKings, FanDuel at 0.7x)
 4. **Compare** to Kalshi's current ask price
 5. **Edge** = fair value - market price
 6. **Validate** with team stats -- win% from ESPN/NHL/MLB APIs adjusts confidence
