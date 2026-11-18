@@ -415,7 +415,7 @@ Unregister-ScheduledTask -TaskPath $F -TaskName '<task>' -Confirm:$false
 From Git Bash, prefix `schtasks` with `MSYS_NO_PATHCONV=1` or the `/TN` path is mangled into a filesystem path:
 
 ```bash
-MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\Daily-Summary"
+MSYS_NO_PATHCONV=1 schtasks /run /tn "\AI-Automation-Tools-Org-LocalApps\Edge-Radar-MikesAILab\Daily-Summary"  # pragma: allowlist secret
 ```
 
 ---
