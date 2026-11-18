@@ -43,6 +43,8 @@ from trade_log import (
     for_profile,
     mark_cancelled,
     persist_trade,
+    write_pending,
+    clear_pending,
 )
 
 from dotenv import load_dotenv
@@ -1833,8 +1835,8 @@ def _order_count(order: dict, *keys: str) -> float:
     return float(_order_field(order, *keys) or "0")
 
 
-def log_trade(order_response: dict, sized: SizedOrder, trade_log: list) -> dict:
-    """Log an executed trade with fill-accurate accounting.
+def _trade_record(order_response: dict, sized: SizedOrder) -> dict:
+    """The trade-log row for an order response, with fill-accurate accounting.
 
     Records both *requested* values (what we asked for) and *filled* values
     (what Kalshi actually executed).  The primary accounting fields
@@ -1940,7 +1942,12 @@ def log_trade(order_response: dict, sized: SizedOrder, trade_log: list) -> dict:
         # and nothing downstream could filter simulated rows out of real ones.
         "dry_run": api_status == "dry_run_blocked",
     }
+    return trade_record
 
+
+def log_trade(order_response: dict, sized: SizedOrder, trade_log: list) -> dict:
+    """Log an executed trade (`_trade_record`) to the ledger and the caller's snapshot."""
+    trade_record = _trade_record(order_response, sized)
     # Persist through the fresh-read-under-lock path so a concurrent writer
     # (settler / another execute run) can't clobber this new position; mirror
     # into the caller's in-memory snapshot for the rest of the batch.
@@ -2105,6 +2112,9 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
         # ER-13: our own id, so an order whose response was lost can be found
         # again (`_find_order_by_client_id`) instead of guessed at.
         client_order_id = str(uuid.uuid4())
+        # ER-13: True when the venue accepted an order we could not book; the
+        # pending file is then the only trace, so `settle` must see it.
+        keep_pending = False
         try:
             # Sharding (2026-08-24): sizing is whole-account, but an order can
             # only spend its own shard's cash. Move the shortfall across first,
@@ -2141,6 +2151,18 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
             else:
                 kwargs["no_price_cents"] = s.price_cents
 
+            # ER-13: written before the POST and deleted once the outcome is
+            # recorded (`finally` below). A run killed mid-request leaves the
+            # file, and `kalshi_settler.py settle` books or drops it
+            # (`recover_pending`). No file, no POST: a failed write lands in
+            # the generic handler and the order is recorded as failed.
+            write_pending(
+                client_order_id,
+                {
+                    **_trade_record({"order": {"status": "pending"}}, s),
+                    "client_order_id": client_order_id,
+                },
+            )
             order_resp = client.create_order(**kwargs)
             consecutive_conn_errors = 0  # a response arrived — transport is healthy
             blocked = (order_resp.get("order", order_resp) or {}).get("status") == "dry_run_blocked"
@@ -2153,6 +2175,7 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
                 # the ledger as a failed order and hide a real position from the
                 # settler and Gate 1. `log_trade` already retries and journals a
                 # failed write, so this only catches the unexpected.
+                keep_pending = True
                 log.exception("Order for %s accepted but not booked", opp.ticker)
                 rprint(
                     f"  [red bold]ACCEPTED, NOT BOOKED[/red bold] {opp.ticker}: {e} "
@@ -2179,9 +2202,13 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
                 try:
                     results.append(_book_accepted({"order": found}, s, trade_log, opp_venue))
                 except Exception as be:  # noqa: BLE001 -- same rule as BUG-03 above
+                    keep_pending = True
                     log.exception("Order for %s found but not booked", opp.ticker)
                     rprint(f"  [red bold]FOUND, NOT BOOKED[/red bold] {opp.ticker}: {be}")
                 continue
+            # ER-13: keep the pending file too; if the order lands late,
+            # `settle` finds it by client_order_id and books it.
+            keep_pending = True
             _record_failure(
                 opp.ticker,
                 opp.side,
@@ -2222,6 +2249,10 @@ def _place_order_batch(client: KalshiClient, to_execute: list, trade_log: list) 
             _record_failure(opp.ticker, opp.side, str(e), venue=opp_venue)
             if _handle_structural(opp, str(e), opp_venue, len(to_execute) - len(results)):
                 break
+
+        finally:
+            if not keep_pending:
+                clear_pending(client_order_id)
 
     for s in to_execute:
         s.outcome = s.outcome or "not attempted"
