@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-11-17 -- Idempotent orders, resting-aware gates, one execute run per profile (ER-13)
+
+- **Fix** Orders went out without a `client_order_id`, so an order whose response was lost (a
+  timeout after Kalshi accepted it) was written off as "placement UNKNOWN" and never reconciled.
+  Every POST now carries one, and on a transport error the executor asks `get_orders` for it: found
+  means it is booked like any accepted order; not found keeps the UNKNOWN row, which now names the
+  id.
+- **Fix** Gate 5 (duplicate ticker) and Gate 6 (per-event count) read positions only, and a resting
+  zero-fill order is not a position, so a second order could go onto the same market before the
+  first filled. Resting orders with a logged side now count for both.
+- **Fix** Two overlapping execute runs each read positions before either placed, so both passed
+  Gates 5, 6 and 2b on the same state. An execute run now holds `.execute_<profile>.lock` (next to
+  the trade log) from state gathering through placement; a second run waits up to 15 minutes, then
+  raises `ExecuteRunBusy` (a scheduled run emails `[FAILED]`). Previews don't take it.
+- **Not done:** a pending ledger row written before the POST, which would also cover a process that
+  dies mid-request.
+
+---
+
 ## 2026-11-17 -- Void and scalar settlements (ER-15)
 
 - **Fix** `calculate_pnl` paid $1.00 on a matching yes/no and $0 on anything else, so a void on a
