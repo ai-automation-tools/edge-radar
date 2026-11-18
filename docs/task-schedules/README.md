@@ -38,7 +38,7 @@ Task Scheduler is the only active scheduling mechanism. Every action launches th
 | 10 | `Calibration` | Sun 7:00 PM | Brier refresh + C8 stdev recalibration (`--days 30`) |
 | 11 | `Backtest` | Sun 7:30 PM | Equity curve, drawdown, Sharpe, strategy comparison |
 | 12 | `All-Sports-NextDay-Execution` ⚠️ | Sun–Thu 8:30 PM | Tomorrow's games — max 5 bets, 12% budget |
-| 13 | `Reconcile` | Daily 11:30 PM | Local trade log vs Kalshi positions; flags drift |
+| 13 | `Reconcile` | Daily 11:30 PM | Local trade log vs Kalshi positions; flags drift; then zips the ledger to a backed-up folder (ER-08) |
 | 14 | `Weekly-Analysis` | Sun 11:45 PM | Weekly betting audit (every sport, read-only) + 7-day performance report; one email, audit flags first |
 | 15 | `Hourly-Settle` | Hourly at :35 | `kalshi_settler.py settle` — keeps Gate 1 (daily loss) current intraday |
 | 16 | `CLV-Capture` | Every 5 min | S8: samples the closing book before each open position's event. Read-only at the venue |
@@ -220,6 +220,12 @@ Late-breaking news on tonight's slate: scratches, goalie confirmations, afternoo
 ### 13. `Reconcile` — Daily 11:30 PM PT
 
 `maintenance\reconcile.bat` → `kalshi_settler.py reconcile`. Runs 55 minutes after the 10:35 PM settle pass, so drift it reports is real: a missed settlement, API lag, or local-log corruption.
+
+**Action 2 (ER-08):** `scripts/shared/backup_ledger.py --dest <backed-up folder>` zips `data/history/`'s ledger
+files (trades, settlements, journal, shadow book) into `edge-radar-ledger_<UTC stamp>.zip` and deletes zips older
+than 30 days. Point `--dest` at a folder a sync client backs up; the owner uses a OneDrive folder. Exits 1 if a
+JSON file in the zip doesn't parse. Log: `logs/backup_ledger_<date>.log`. Restore steps:
+[`data/history/README.md`](../../data/history/README.md#backups-and-restore).
 
 ### 14. `Weekly-Analysis` — Sun 11:45 PM PT
 
