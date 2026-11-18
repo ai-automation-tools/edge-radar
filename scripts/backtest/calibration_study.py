@@ -88,7 +88,7 @@ def load_rows(settlements: list[dict] | None = None) -> list[dict]:
     out = []
     for s in settlements:
         fv, mp = s.get("fair_value"), s.get("market_price_at_entry")
-        if fv is None or mp is None:
+        if fv is None or mp is None or s.get("won") is None:  # ER-15: void/scalar
             continue
         try:
             p_model, p_market = float(fv), float(mp)

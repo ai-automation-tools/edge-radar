@@ -250,6 +250,8 @@ def rolling_7d_context(rows: list[dict], now: datetime) -> dict | None:
     #   model  — our fair value, the thing under test
     market_terms, model_terms = [], []
     for r in in_window:
+        if r.get("won") is None:  # ER-15: void/scalar is not a prediction outcome
+            continue
         outcome = 1.0 if r.get("won") else 0.0
         price = r.get("market_price_at_entry")
         if price is not None:
