@@ -44,7 +44,8 @@ load_dotenv(paths.PROJECT_ROOT / ".env")
 
 import edge_detector as ed  # noqa: E402
 from agent_cli import run_agent  # noqa: E402
-from kalshi_client import KalshiClient  # noqa: E402
+import requests  # noqa: E402
+from app.config import get_config  # noqa: E402
 from ticker_display import _detect_sport  # noqa: E402
 from trade_log import load_trade_log  # noqa: E402
 
@@ -78,7 +79,24 @@ def _worst(*levels: str) -> str:
     return max(levels, key=_RANK.__getitem__, default=OK)
 
 
-def fetch_series(client: KalshiClient, prefix: str) -> list[dict]:
+class PublicMarkets:
+    """Unsigned `GET /markets`: the probe's only venue call, and a public endpoint.
+
+    ER-04: the probe holds no credentials, so the copy drift_autofix runs on an
+    agent-edited worktree has none to hand to the code it is testing.
+    """
+
+    def __init__(self, base_url: str | None = None):
+        self.base_url = (base_url or get_config().kalshi.base_url).rstrip("/")
+
+    def get_markets(self, **params) -> dict:
+        params = {k: v for k, v in params.items() if v is not None}
+        resp = requests.get(f"{self.base_url}/markets", params=params, timeout=15)
+        resp.raise_for_status()
+        return resp.json()
+
+
+def fetch_series(client: PublicMarkets, prefix: str) -> list[dict]:
     out, cursor = [], None
     for _ in range(5):
         resp = client.get_markets(limit=1000, status="open", series_ticker=prefix, cursor=cursor)
@@ -227,7 +245,7 @@ def last_bet_by_sport() -> dict[str, str]:
 def run(
     save: bool, update_baseline: bool, analyze: str, autofix: bool = False, json_out: str = ""
 ) -> int:
-    client = KalshiClient()
+    client = PublicMarkets()
     try:
         baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -304,6 +322,7 @@ def run(
             analyze == "auto" and (status != OK or datetime.now().weekday() == 0)
         ):
             analysis = run_analysis(status, md_path, json_path)
+            probe_report = report  # ER-04: the auto-fix never sees the web-capable analysis
             report += "\n" + analysis
             md_path.write_text(report, encoding="utf-8")
             print(analysis)
@@ -312,7 +331,7 @@ def run(
             if autofix and status != OK:
                 import drift_autofix
 
-                section = drift_autofix.attempt(md_path, json_path, analysis)
+                section = drift_autofix.attempt(md_path, json_path, probe_report)
                 md_path.write_text(report + "\n" + section, encoding="utf-8")
                 print(section)
     print(f"DRIFT_STATUS={status}")

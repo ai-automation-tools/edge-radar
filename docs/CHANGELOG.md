@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-11-17 -- Drift auto-fix contained (ER-04)
+
+- **Security** The daily drift auto-fix runs agent-written code before any review. Hardened:
+  - `kalshi_client.py` removed from the paths a fix may touch.
+  - The fix session reads only inside its worktree (`Read(./**)` etc.). A bare `Read`/`Grep`
+    rule approved reads anywhere; checked against the CLI before the change.
+  - The fix prompt gets the probe report and JSON, copied into the worktree, never the analysis
+    section (that session has WebFetch/WebSearch).
+  - The worktree's tests and probe run with an allowlisted environment: no `.env`, no keys or
+    tokens, `DRY_RUN=true`.
+  - The public commit and draft PR carry a diff stat instead of the session's summary, which
+    stays in the owner's email.
+- **Change** `integration_drift.py` reads markets with an unsigned `GET /markets` (`PublicMarkets`)
+  instead of a signed `KalshiClient`, in the daily run too. Same data; no credentials needed.
+  Verified: an in-tree probe with the scrubbed environment returned OK on all 40 series.
+- **Test** `tests/test_integration_drift.py`: allowlist rejects `kalshi_client.py`; no credentials in
+  the worktree's environment; a planted script run by `--in-tree` sees no `KALSHI_API_KEY`;
+  fix-session reads are scoped; the probe sends no auth headers.
+
+---
+
 ## 2026-11-17 -- Unattended agent sessions need an allowlist (ER-09)
 
 - **Fix** AI-02/SEC-14: the weekly betting audit's analysis pass shelled `claude -p` with only

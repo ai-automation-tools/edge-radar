@@ -117,12 +117,94 @@ def test_autofix_allowlist():
         assert ALLOWED.match(ok)
     for bad in (
         "scripts/kalshi/kalshi_executor.py",
+        "scripts/kalshi/kalshi_client.py",  # ER-04: it places orders
         "scripts/kalshi/integration_drift.py",
         "app/config.py",
         ".env",
         "scripts/schedulers/maintenance/drift_check.bat",
     ):
         assert not ALLOWED.match(bad)
+
+
+# ── ER-04: the auto-fix's containment ───────────────────────────────────────
+
+
+def test_tree_env_carries_no_credentials(monkeypatch):
+    import drift_autofix as da
+
+    for k in (
+        "KALSHI_API_KEY",
+        "KALSHI_PRIVATE_KEY_PATH",
+        "RESEND_API_KEY",
+        "GH_TOKEN",
+        "AGENT_CLI",
+    ):
+        monkeypatch.setenv(k, "planted")
+    env = da._tree_env()
+    assert not {"KALSHI_API_KEY", "KALSHI_PRIVATE_KEY_PATH", "RESEND_API_KEY", "GH_TOKEN"} & set(
+        env
+    )
+    assert (
+        "AGENT_CLI" not in env and env["DRY_RUN"] == "true" and "PATH" in {k.upper() for k in env}
+    )
+
+
+def test_planted_test_in_tree_sees_no_key(tmp_path, monkeypatch):
+    """The audit's acceptance check: code run by _in_tree finds no Kalshi key."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    import drift_autofix as da
+
+    monkeypatch.setenv("KALSHI_API_KEY", "planted")
+    (tmp_path / "planted.py").write_text(
+        "import os, sys\n"
+        "ok = os.environ.get('KALSHI_API_KEY') is None and os.environ.get('DRY_RUN') == 'true'\n"
+        "sys.exit(0 if ok else 3)\n"
+    )
+    root = Path(da.__file__).resolve().parents[2]
+    env = da._tree_env()
+    env["PYTHONPATH"] = os.pathsep.join(str(root / d) for d in ("scripts/shared", "scripts/kalshi"))
+    res = subprocess.run(
+        [sys.executable, da.__file__, "--in-tree", str(tmp_path), "planted.py"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert res.returncode == 0, res.stderr[-800:]
+
+
+def test_fix_session_reads_only_inside_the_worktree():
+    import drift_autofix as da
+
+    reads = [t for t in da.FIX_TOOLS if t.split("(")[0] in ("Read", "Grep", "Glob")]
+    assert sorted(reads) == ["Glob(./**)", "Grep(./**)", "Read(./**)"]
+    assert "{analysis}" not in da.FIX_PROMPT  # the web-capable analysis never reaches it
+
+
+def test_probe_reads_markets_unsigned(monkeypatch):
+    import integration_drift as idr
+
+    seen = {}
+
+    class _Resp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"markets": [], "cursor": ""}
+
+    def fake_get(url, params=None, timeout=None, **kw):
+        seen.update(url=url, params=params, kw=kw)
+        return _Resp()
+
+    monkeypatch.setattr(idr.requests, "get", fake_get)
+    idr.fetch_series(idr.PublicMarkets("https://example.invalid/v2/"), "KXNBAGAME")
+    assert seen["url"] == "https://example.invalid/v2/markets"
+    assert "cursor" not in seen["params"] and seen["params"]["series_ticker"] == "KXNBAGAME"
+    assert "headers" not in seen["kw"]
 
 
 def test_college_in_a_real_team_name_is_not_filler():
