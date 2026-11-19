@@ -64,13 +64,14 @@ Fair value is a sport-specific normal-CDF model over a weighted-median consensus
 
 ## 🚦 Risk & Position Sizing
 
-### 21 Risk Gates
+### 22 Risk Gates
 
 Every order runs the gates in order. Gates 2b, 8 and 9 trim the size; every other gate rejects. The thresholds live in `.env`, and the defaults are in the [`AGENTS.md`](AGENTS.md) gate table.
 
 | # | Gate | Action |
 |:-:|:-----|:-------|
 | 1 | Daily loss limit | Reject |
+| 1b | Bankroll: cash balance at or below $0, or the balance read failed | Reject |
 | 2 | Open position count | Reject |
 | 2b | Total and per-sport open exposure, as a fraction of equity | Reject + cap |
 | 3 | Edge threshold, per sport or global, **plus the exchange fee** | Reject |
