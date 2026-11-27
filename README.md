@@ -200,12 +200,14 @@ Analyzes settled trades for win rate, ROI, profit factor, Sharpe ratio, equity c
 
 ## 🤖 Claude Code Integration
 
-Edge-Radar ships with two slash commands for [Claude Code](https://claude.ai/claude-code):
+Edge-Radar ships these skills for [Claude Code](https://claude.ai/claude-code):
 
 | Skill | Definition | Description |
 |:------|:-----------|:------------|
 | [`/edge-radar`](skills/edge-radar/SKILL.md) | `skills/edge-radar/SKILL.md` | Unified command center — scan, bet, status, settle, risk, detail, backtest across Kalshi sports and futures markets. |
 | [`/edge-radar-analysis`](skills/edge-radar-analysis/SKILL.md) | `skills/edge-radar-analysis/SKILL.md` | Post-hoc performance report — trade ledger + slices by sport, category, side, edge bucket, confidence, price, calibration, longshots, streaks, daily P&L. |
+| [`edge-radar-strategy-profiles`](skills/edge-radar-strategy-profiles/SKILL.md) | `skills/edge-radar-strategy-profiles/SKILL.md` | Design, launch, compare and retire a strategy as a `.env.<name>` profile overlay rather than a fork. |
+| [`edge-radar-strategy-evidence`](skills/edge-radar-strategy-evidence/SKILL.md) | `skills/edge-radar-strategy-evidence/SKILL.md` | Decide whether a strategy, sport, parameter or claimed edge is actually supported by settled outcomes. |
 
 > The skill source of truth lives in [`skills/`](skills/). Claude Code loads them from `.claude/skills/`, which on Windows are directory junctions to `skills/` (git-ignored, since `core.symlinks=false`). After a fresh clone, recreate the junctions once: `pwsh -File scripts/setup/link_skills.ps1`.
 

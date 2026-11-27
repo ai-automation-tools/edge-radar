@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-11-27 -- Strategy skills live here
+
+- `edge-radar-strategy-profiles` and `edge-radar-strategy-evidence` move from
+  `agent-skills/skills/projects/edge-radar/` into `skills/`, unchanged. This repo is now their
+  source: `agent-skills` stops keeping project skills (org skills landscape audit, decision D1).
+  `link_skills.ps1` links every folder in `skills/`, so they load like the other three.
+
+---
+
 ## 2026-11-18 -- Owner credential actions closed (ER-05, ER-26b, ER-34)
 
 - The owner rotated the Kalshi API key that had been deployed to a hosted app: a new RSA key
