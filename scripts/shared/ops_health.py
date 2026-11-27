@@ -111,6 +111,10 @@ def task_checks(rows: list[dict] | None, now: datetime) -> list[Check]:
         )
         if r.get("state") == "Disabled":
             status, why = ("FAIL" if live else "WARN"), "disabled"
+        elif r.get("state") == "Running":
+            # LastTaskResult is mid-flight while a task runs (Daily-Summary reads its
+            # own row as 0x800710E0), so trust the next finished run instead.
+            status, why = "OK", "running now"
         elif result == _NEVER_RAN or last is None:
             status, why = "WARN", "has not run yet"
         elif result not in _OK_RESULTS:

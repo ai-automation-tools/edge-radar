@@ -47,6 +47,12 @@ def test_failing_result_is_fail_running_is_ok():
     assert _status(checks, "CLV-Capture") == "OK"
 
 
+def test_task_reading_its_own_row_mid_run_is_ok():
+    # Daily-Summary sees itself as Running with a stale 0x800710E0 result.
+    checks = task_checks([_task("Daily-Summary", state="Running", result=0x800710E0)], NOW)
+    assert _status(checks, "Daily-Summary") == "OK"
+
+
 def test_never_ran_and_missed_start_are_warnings():
     checks = task_checks(
         [
