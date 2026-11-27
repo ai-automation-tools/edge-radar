@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-27 -- AGENTS.md is the only agent doc
+
+- `CLAUDE.md` is gone: Claude Code reads `AGENTS.md` directly, and its Claude-only notes are the closing *Claude Code only* section of `AGENTS.md`.
+
 ## 2026-11-27 -- Strategy skills live here
 
 - `edge-radar-strategy-profiles` and `edge-radar-strategy-evidence` move from

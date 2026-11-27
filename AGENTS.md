@@ -7,7 +7,7 @@
 
 ## How to Use This File
 
-- This file (`AGENTS.md`) is read by every coding agent. `CLAUDE.md` imports it and adds the Claude Code-only notes (skill junctions).
+- This file (`AGENTS.md`) is read by every coding agent, Claude Code included; its own notes (skill junctions) are under [*Claude Code only*](#claude-code-only) at the end.
 - **This file holds the rules, one or two lines each.** The evidence behind each one (incidents, settled-bet numbers, reasoning) is in **[docs/RULES-RATIONALE.md](docs/RULES-RATIONALE.md)**, and the dated entry it cites (*S4*, *2026-08-26*) is in `docs/CHANGELOG.md`, or in `docs/changelog/<YYYY-MM>.md` for entries before 2026-10. When a rule changes, update all three. Do not reverse a rule without new settled evidence.
 - Working branch: **`mike_desktop`** (deploy/default: `master`).
 - The Risk Limits block lists **code defaults**; the live `.env` overrides several. `python scripts/doctor.py` is the source of truth for what is actually running.
@@ -287,3 +287,9 @@ Python 3.11+ · `pandas` / `numpy` / `scipy` · JSON ledgers in `data/history/` 
 ---
 
 <sub>Built on AX Platform multi-agent architecture &mdash; Claude Code is the primary development environment</sub>
+
+## Claude Code only
+
+- **Skills:** `/edge-radar`, `/edge-radar-analysis`, `betting-logic-review` and the two `edge-radar-strategy-*` skills are tracked in `skills/` at the repo root (the strategy pair moved here from `agent-skills` on 2026-11-27); `.claude/skills/` holds Windows junctions to them (git-ignored — real symlinks can't be committed with `core.symlinks=false`). **Edit `skills/`, never the junctions.** After a fresh clone: `pwsh -File scripts/setup/link_skills.ps1`.
+- Project slash commands live in `.claude/commands/`. There are no project agents; use the skills.
+- Memory is Claude Code's auto-memory for this project only (`/memory` shows where).
